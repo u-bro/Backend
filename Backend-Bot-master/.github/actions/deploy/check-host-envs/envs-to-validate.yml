@@ -1,0 +1,10 @@
+# list of env vars to be used for validation while deploying
+env_vars: 
+  - BOT_TOKEN
+  - BOT_USERNAME
+  - DB_HOST
+  - DB_PORT
+  - DB_NAME
+  - DB_USER
+  - DB_PASS
+  - FRONTEND_BASE_URL

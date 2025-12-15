@@ -1,0 +1,85 @@
+name: Check Host Envs
+description: Validate that all required environment variables are present and not empty
+inputs:
+  HOST:
+    description: 'Host IP or domain'
+    required: true
+  HOST_USERNAME:
+    description: 'Username for SSH connection'
+    required: true
+  HOST_PORT:
+    description: 'Port for SSH connection'
+    required: true
+  PROJ_PATH:
+    description: 'Path to the project directory on the host'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Load Environment Variables
+      id: load_envs
+      shell: bash
+      run: |
+        echo "Loading environment variables from envs-to-validate.yml..."
+        env_vars=$(yq '.env_vars[]' ./.github/actions/deploy/check-host-envs/envs-to-validate.yml)
+        if [ -z "$env_vars" ]; then
+          echo "Error: No environment variables loaded!"
+          exit 1
+        fi
+        echo "Loaded environment variables: $env_vars"
+        # Save variables as a single space-separated string
+        echo "envs=$(echo $env_vars | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+    - name: Validate Environment Variables in .env on Host
+      shell: bash
+      run: |
+        echo "Validating environment variables in .env file on host..."
+        env_vars="${{ steps.load_envs.outputs.envs }}"
+        missing_vars=()
+        empty_vars=()
+
+        # Check if the .env file exists in the provided project path
+        ssh -i ~/.ssh/id_rsa -p ${{ inputs.HOST_PORT }} ${{ inputs.HOST_USERNAME }}@${{ inputs.HOST }} "
+        if [ ! -f \"${{ inputs.PROJ_PATH }}/.env\" ]; then
+          echo 'Error: .env file not found in project path: ${{ inputs.PROJ_PATH }}'
+          exit 1
+        fi
+        " || exit 1
+
+        # Copy the .env file to local for parsing
+        scp -i ~/.ssh/id_rsa -P ${{ inputs.HOST_PORT }} ${{ inputs.HOST_USERNAME }}@${{ inputs.HOST }}:${{ inputs.PROJ_PATH }}/.env ./temp_env
+
+        # Parse .env file and check each variable
+        for var in $env_vars; do
+          # Проверяем, есть ли переменная в файле .env
+          if grep -qE "^$var=" ./temp_env; then
+            # Извлекаем значение, удаляя кавычки
+            value=$(grep -E "^$var=" ./temp_env | cut -d '=' -f2- | tr -d '"')
+            if [ -z "$value" ]; then
+              empty_vars+=("$var")
+            fi
+          else
+            missing_vars+=("$var")
+          fi
+        done
+
+        # Cleanup the temporary .env file
+        rm ./temp_env
+
+        # Output results
+        if [ ${#missing_vars[@]} -ne 0 ]; then
+          echo "Error: The following variables are missing in .env:"
+          printf '%s\n' "${missing_vars[@]}"
+        fi
+
+        if [ ${#empty_vars[@]} -ne 0 ]; then
+          echo "Error: The following variables are empty in .env:"
+          printf '%s\n' "${empty_vars[@]}"
+        fi
+
+        if [ ${#missing_vars[@]} -ne 0 ] || [ ${#empty_vars[@]} -ne 0 ]; then
+          exit 1
+        fi
+
+        echo "All environment variables are present and non-empty in .env!"

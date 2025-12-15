@@ -1,0 +1,17 @@
+name: Setup SSH
+description: Configure SSH for connecting to the remote host
+runs:
+  using: "composite"
+  steps:
+    - name: Configure SSH
+      shell: bash
+      run: |
+        echo "Configuring SSH..."
+        mkdir -p ~/.ssh
+        echo "${{ inputs.HOST_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+inputs:
+  HOST_SSH_PRIVATE_KEY:
+    description: 'Private SSH key for connecting to the host'
+    required: true
