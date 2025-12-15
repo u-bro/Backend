@@ -7,13 +7,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-from app.models.coin import metadata as coin_metadata
-from app.models.craft import metadata as craft_metadata
-from app.models.gpu import metadata as gpu_metadata
-from app.models.order import metadata as order_metadata
-from app.models.transaction import metadata as transaction_metadata
-from app.models.user import metadata as user_metadata
-from app.models.users_gpus_storage import metadata as users_gpus_relations_metadata
+# Use unified Base.metadata and import all models to register tables
+from app.db import Base
+import app.models  # noqa: F401 - ensures models are imported and tables registered
 
 from app.config import DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER
 
@@ -30,7 +26,8 @@ config.set_section_option(section, 'DB_USER', DB_USER)
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = [gpu_metadata]
+# Use a single metadata for autogenerate across all declarative models
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
