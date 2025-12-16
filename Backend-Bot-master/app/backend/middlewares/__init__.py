@@ -1,2 +1,2 @@
-from .db import DBSessionMiddleware
+from .db import install_db_middleware
 

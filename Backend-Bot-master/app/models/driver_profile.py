@@ -31,4 +31,5 @@ class DriverProfile(Base):
     created_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
     updated_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
 
-    user = relationship('User')
+    user = relationship('User', foreign_keys=[user_id])
+    approved_by_user = relationship('User', foreign_keys=[approved_by])

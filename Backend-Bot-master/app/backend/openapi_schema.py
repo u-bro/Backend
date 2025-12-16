@@ -7,21 +7,18 @@ def custom_openapi(app: FastAPI):
         return app.openapi_schema
 
     openapi_schema = get_openapi(
-        title="Your API",
-        version="1.0.0",
-        description="Custom API with Telegram init_data authorization",
+        title="FastAPI",
+        version="0.1.0",
+        description="",
         routes=app.routes,
     )
 
-    openapi_schema["components"]["securitySchemes"] = {
-        "TelegramInitData": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header",
-            "description": "Init data from Telegram Web App in JSON format",
-        }
+    openapi_schema.setdefault("components", {}).setdefault("securitySchemes", {})["APIKeyHeader"] = {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
     }
 
-    openapi_schema["security"] = [{"TelegramInitData": []}]
+    openapi_schema["security"] = [{"APIKeyHeader": []}]
     app.openapi_schema = openapi_schema
     return app.openapi_schema
