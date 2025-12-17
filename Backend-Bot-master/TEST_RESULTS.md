@@ -203,6 +203,8 @@ tests_live/test_real_api.py::test_health_endpoint                   PASSED
 
 ```bash
 # Полный запуск всех тестов
+docker exec WEB_APP python -m pytest tests_live/ -v
+
 pytest tests_live/ -v
 
 # Только swagger тесты
