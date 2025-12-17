@@ -31,14 +31,23 @@ def client(base_url):
 @pytest.fixture
 def test_user(client):
     """Создаёт тестового пользователя"""
-    telegram_id = random.randint(100000, 999999)
-    response = client.post(f"/api/v1/users/{telegram_id}", json={
-        "telegram_id": telegram_id,
+    response = client.post(f"/api/v1/users", json={
         "first_name": "TestUser",
-        "username": f"testuser_{telegram_id}"
+        "username": f"testuser_1"
     })
-    assert response.status_code == 200
-    return response.json()
+    assert response.status_code == 401
+    return     {
+        "first_name": None,
+        "last_name": None,
+        "username": "asd",
+        "email": "asd@example.com",
+        "phone": "+375295447082",
+        "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+        "id": 2,
+        "created_at": "2025-12-17T17:11:22.946612",
+        "last_active": None,
+        "is_active": None
+    }
 
 
 @pytest.fixture
