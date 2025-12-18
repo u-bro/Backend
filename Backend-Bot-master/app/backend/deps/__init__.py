@@ -9,3 +9,4 @@ from .require_driver_profile_owner import require_driver_profile_owner
 from .require_driver_location_owner import require_driver_location_owner
 from .require_ride_client import require_ride_client
 from .require_ride_driver import require_ride_driver
+from .get_current_driver_profile_id import get_current_driver_profile_id

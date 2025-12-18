@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from fastapi import HTTPException
+from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import insert, update
@@ -115,5 +116,14 @@ class CrudRide(CrudBase):
         result = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(result) if result else None
 
+    async def accept(self, session: AsyncSession, id: int, update_obj) -> RideSchema | None:
+        stmt = (
+            update(self.model)
+            .where(and_(self.model.id == id, self.model.driver_profile_id.is_(None)))
+            .values(driver_profile_id=update_obj.driver_profile_id, status=update_obj.status)
+            .returning(self.model)
+        )
+        result = await self.execute_get_one(session, stmt)
+        return self.schema.model_validate(result) if result else None
 
 ride_crud = CrudRide(Ride, RideSchema)
