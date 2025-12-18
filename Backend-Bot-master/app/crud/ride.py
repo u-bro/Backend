@@ -179,5 +179,140 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         ride_dict = {k: v for k, v in zip(col_names, row)}
         return RideSchema.model_validate(ride_dict)
 
+    async def accept_ride_idempotent(
+        self,
+        session: AsyncSession,
+        ride_id: int,
+        driver_profile_id: int,
+        actor_id: int,
+    ) -> tuple[RideSchema | None, str]:
+        """
+        Идемпотентное принятие заказа водителем.
+        
+        Защита от race condition: используем атомарный UPDATE с условием.
+        Только первый водитель успешно примет заказ.
+        
+        Returns:
+            (ride, status): 
+            - (ride, "accepted") - успешно принят
+            - (ride, "already_yours") - уже принят этим водителем
+            - (None, "already_taken") - уже принят другим водителем
+            - (None, "not_found") - заказ не найден
+            - (None, "invalid_status") - заказ не в статусе для принятия
+        """
+        sql = text(
+            """
+            WITH current AS (
+                SELECT id, status, driver_profile_id
+                FROM rides
+                WHERE id = :ride_id
+                FOR UPDATE NOWAIT
+            ),
+            upd AS (
+                UPDATE rides r
+                SET
+                    driver_profile_id = :driver_profile_id,
+                    status = 'accepted',
+                    status_reason = 'Driver accepted',
+                    updated_at = NOW()
+                WHERE r.id = :ride_id
+                  AND r.status IN ('requested', 'driver_assigned')
+                  AND (r.driver_profile_id IS NULL OR r.driver_profile_id = :driver_profile_id)
+                RETURNING r.*
+            ),
+            ins AS (
+                INSERT INTO ride_status_history (
+                    ride_id, from_status, to_status, changed_by, actor_role, reason, meta, created_at
+                )
+                SELECT :ride_id,
+                       (SELECT status FROM current),
+                       'accepted',
+                       :actor_id,
+                       'driver',
+                       'Driver accepted ride',
+                       '{}',
+                       NOW()
+                WHERE EXISTS (SELECT 1 FROM upd)
+                RETURNING 1
+            )
+            SELECT 
+                upd.*,
+                current.status AS prev_status,
+                current.driver_profile_id AS prev_driver_id
+            FROM current
+            LEFT JOIN upd ON true
+            """
+        )
+
+        params = {
+            "ride_id": ride_id,
+            "driver_profile_id": driver_profile_id,
+            "actor_id": actor_id,
+        }
+
+        try:
+            res = await session.execute(sql, params)
+            row = res.first()
+        except Exception as e:
+            # NOWAIT может выбросить ошибку если строка заблокирована
+            if "could not obtain lock" in str(e).lower():
+                return None, "already_taken"
+            raise
+
+        if not row:
+            return None, "not_found"
+
+        # Проверяем результат
+        prev_status = row[-2]
+        prev_driver_id = row[-1]
+        
+        # Если upd.id is NULL - обновление не произошло
+        if row[0] is None:
+            # Проверяем почему
+            if prev_driver_id == driver_profile_id:
+                # Уже принят этим водителем - идемпотентность
+                ride = await self.get_by_id(session, ride_id)
+                return ride, "already_yours"
+            elif prev_driver_id is not None:
+                return None, "already_taken"
+            elif prev_status not in ('requested', 'driver_assigned'):
+                return None, "invalid_status"
+            else:
+                return None, "already_taken"
+
+        # Успешно обновлено
+        col_names = [
+            "id", "client_id", "driver_profile_id", "status", "status_reason", "scheduled_at",
+            "started_at", "completed_at", "canceled_at", "cancellation_reason",
+            "pickup_address", "pickup_lat", "pickup_lng",
+            "dropoff_address", "dropoff_lat", "dropoff_lng",
+            "expected_fare", "expected_fare_snapshot", "driver_fare", "actual_fare",
+            "distance_meters", "duration_seconds", "transaction_id", "commission_id",
+            "is_anomaly", "anomaly_reason", "ride_metadata", "created_at", "updated_at",
+        ]
+        # Отрезаем последние 2 поля (prev_status, prev_driver_id)
+        ride_dict = {k: v for k, v in zip(col_names, row[:-2])}
+        return RideSchema.model_validate(ride_dict), "accepted"
+
+    async def get_pending_rides(
+        self,
+        session: AsyncSession,
+        limit: int = 50,
+        ride_class: str | None = None,
+    ) -> list[RideSchema]:
+        """
+        Получить заказы, ожидающие принятия водителем.
+        Для ленты заказов.
+        """
+        query = select(Ride).where(
+            Ride.status.in_(["requested", "driver_assigned"])
+        ).order_by(Ride.created_at.desc()).limit(limit)
+        
+        # TODO: фильтр по классу поездки когда будет поле ride_class
+        
+        res = await session.execute(query)
+        rides = res.scalars().all()
+        return [RideSchema.model_validate(r) for r in rides]
+
 
 ride_crud = RideCrud()
