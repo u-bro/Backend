@@ -25,6 +25,6 @@ DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{D
 TELEGRAM_OTP_BASE_URL = 'https://gatewayapi.telegram.org/'
 TELEGRAM_OTP_TOKEN = 'AAEDMAAATZrglNKgaX0kPyOE5krqBpx-M09H3bJM7Q-AdA'
 
-JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'your-secret-key-change-in-production'
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'test-secret-key'
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION_HOURS = 24

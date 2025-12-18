@@ -5,7 +5,7 @@ from app.backend.deps.get_current_user import get_current_user
 from app.models import Ride, User
 
 
-async def require_ride_owner(
+async def require_ride_driver(
     request: Request,
     id: int,
     user: User = Depends(get_current_user),
@@ -16,10 +16,11 @@ async def require_ride_owner(
 
     result = await session.execute(select(Ride).where(Ride.id == id))
     ride = result.scalar_one_or_none()
-    if ride is None:
-        raise HTTPException(status_code=404, detail="Ride not found")
+    profile = getattr(ride, "driver_profile", None)
+    if ride is None or profile is None:
+        raise HTTPException(status_code=404, detail="Ride or driver not found")
 
-    if ride.client_id != user.id:
+    if profile.user_id != user.id:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     return ride

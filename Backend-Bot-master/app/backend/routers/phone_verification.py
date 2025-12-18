@@ -54,11 +54,7 @@ class PhoneVerificationRouter(BaseRouter):
             return JSONResponse(status_code=404, content={"detail": "Item not found"})
         return item
 
-    async def send_telegram_otp(
-        self,
-        request: Request,
-        current_user: User = Depends(get_current_user)
-    ) -> PhoneVerificationSchema:
+    async def send_telegram_otp(self, request: Request, current_user: User = Depends(get_current_user)) -> PhoneVerificationSchema:
         user_id = current_user.id
         phone_number = getattr(current_user, "phone", None)
         if not phone_number:

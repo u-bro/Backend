@@ -8,5 +8,5 @@ from .commission import CommissionSchema, CommissionCreate, CommissionUpdate
 from .driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate
 from .chat_message import ChatMessageSchema, ChatMessageCreate, ChatMessageUpdate
 from .transaction import TransactionSchema, TransactionCreate, TransactionUpdate
-from .ride import RideSchema, RideCreate, RideUpdate, RideStatusChangeRequest
+from .ride import RideSchema, RideSchemaCreate, RideSchemaIn
 from .auth import AuthSchemaLogin, AuthSchemaLogout, AuthSchemaRegister, TokenResponse
