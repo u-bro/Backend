@@ -21,10 +21,4 @@ jobs:
           git pull origin master
           git status
           cd Backend-Bot-master/
-          source venv/bin/activate
-          poetry lock
-          poetry install
-          systemctl daemon-reload
-          systemctl restart ubro-backend
-          systemctl status ubro-backend
-          alembic upgrade head
+          docker compose up -d --build
