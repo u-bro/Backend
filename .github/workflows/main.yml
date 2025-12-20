@@ -27,3 +27,4 @@ jobs:
           systemctl daemon-reload
           systemctl restart ubro-backend
           systemctl status ubro-backend
+          alembic upgrade head
