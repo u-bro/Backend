@@ -46,12 +46,12 @@ class ConnectionManager:
         }
         
         disconnected = []
-        for websocket in self.active_connections[user_id]:
+        for connection in self.active_connections[user_id]:
             try:
-                await websocket.send_json(message_with_timestamp)
+                await connection.send_json(message_with_timestamp)
             except Exception as e:
                 logger.error(f"Failed to send message to user {user_id}: {e}")
-                disconnected.append(websocket)
+                disconnected.append(connection)
         
         for ws in disconnected:
             self.active_connections[user_id].remove(ws)
