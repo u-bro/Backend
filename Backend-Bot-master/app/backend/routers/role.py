@@ -34,17 +34,11 @@ class RoleRouter(BaseRouter):
         return await self.model_crud.update(request.state.session, item_id, body)
 
     async def delete_role(self, request: Request, item_id: int):
-        try:
-            result = await self.model_crud.delete(request.state.session, item_id)
-            if result is None:
-                print(f"Role with id {item_id} not found for deletion")
-                raise HTTPException(status_code=404, detail="Role not found")
-            return result
-        except IntegrityError:
-            raise HTTPException(status_code=400, detail="Role is in use and cannot be deleted")
-        except Exception as e:
-            print(f"Unexpected error during role deletion: {e}")
-            raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+        result = await self.model_crud.delete(request.state.session, item_id)
+        if result is None:
+            return None
+        return result
+
 
 
 role_router = RoleRouter().router
