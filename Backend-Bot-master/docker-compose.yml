@@ -26,8 +26,9 @@ services:
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
       PGDATA: /var/lib/postgresql/data/db-files
+      PGPORT: ${DB_PORT}
     ports:
-      - "5434:5434"
+      - "${DB_PORT}:${DB_PORT}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./config/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
