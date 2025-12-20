@@ -11,10 +11,10 @@ services:
     env_file:
       - .env
     environment:
-      # внутри сети docker контейнер обращается к БД по имени сервиса
       DB_HOST: db
     depends_on:
       - db
+      - migration
 
   db:
     image: postgres:15
@@ -32,6 +32,25 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./config/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
       - ./logs/postgres:/var/log/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  migration:
+    container_name: MIGRATION
+    command: sh -c "alembic upgrade head"
+    build:
+      context: "."
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
 
   cloudflared:
     image: cloudflare/cloudflared:latest

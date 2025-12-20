@@ -7,6 +7,8 @@ from fastapi.exceptions import ResponseValidationError
 from app.backend.middlewares.exception import setup_error_middleware
 from app.backend.openapi_schema import custom_openapi
 from app.backend.middlewares import install_db_middleware
+from app.backend.routers.auth import auth_router
+from app.backend.routers.tariff_plan import tariff_plan_router
 from app.backend.routers import user_router
 from app.backend.routers.ride import ride_router
 from app.backend.routers.role import role_router
@@ -22,6 +24,7 @@ from app.backend.routers.documents import documents_router
 from app.backend.routers.matching import matching_router
 from app.backend.routers.chat import chat_router
 
+
 app = FastAPI()
 app.openapi = lambda: custom_openapi(app)
 install_db_middleware(app)
@@ -36,6 +39,7 @@ setup_error_middleware(app)
 
 API_PREFIX = "/api/v1"
 
+app.include_router(auth_router, tags=['Auth'], prefix=API_PREFIX)
 app.include_router(user_router, tags=['Users'], prefix=API_PREFIX)
 app.include_router(ride_router, tags=['Rides'], prefix=API_PREFIX)
 app.include_router(role_router, tags=['Roles'], prefix=API_PREFIX)
@@ -46,6 +50,7 @@ app.include_router(commission_router, tags=['Commissions'], prefix=API_PREFIX)
 app.include_router(driver_location_router, tags=['DriverLocations'], prefix=API_PREFIX)
 app.include_router(chat_message_router, tags=['ChatMessages'], prefix=API_PREFIX)
 app.include_router(transaction_router, tags=['Transactions'], prefix=API_PREFIX)
+app.include_router(tariff_plan_router, tags=['TariffPlan'], prefix=API_PREFIX)
 app.include_router(websocket_router, tags=['WebSocket'], prefix=API_PREFIX)
 app.include_router(documents_router, tags=['Documents'], prefix=API_PREFIX)
 app.include_router(matching_router, tags=['Matching'], prefix=API_PREFIX)

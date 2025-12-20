@@ -1,7 +1,8 @@
 from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
-
+from . import BaseSchema
+from pydantic import Field
 
 class PhoneVerificationCreate(BaseModel):
     user_id: int
@@ -33,3 +34,12 @@ class PhoneVerificationSchema(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PhoneVerificationSchemaCreate(BaseSchema):
+    user_id: int = Field(...)
+    phone: str = Field(..., max_length=20)
+    code: str = Field(..., max_length=10)
+    expires_at: datetime | None = Field(None)
+
+class PhoneVerificationVerifyRequest(BaseSchema):
+    code: str = Field(..., max_length=10)

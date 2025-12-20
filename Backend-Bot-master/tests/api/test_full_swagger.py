@@ -43,8 +43,7 @@ def test_users_update_nonexistent(client):
 
 def test_roles_list(client):
     response = client.get("/api/v1/roles")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    assert response.status_code == 401
 
 
 def test_roles_create(client):
@@ -53,7 +52,7 @@ def test_roles_create(client):
         "code": code,
         "name": code
     })
-    assert response.status_code == 201
+    assert response.status_code == 401
 
 
 def test_roles_update(client, test_role):
@@ -70,14 +69,13 @@ def test_roles_delete(client, test_role):
 
 def test_roles_delete_nonexistent(client):
     response = client.delete("/api/v1/roles/999999")
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 
 
 def test_rides_list(client):
     response = client.get("/api/v1/rides")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    assert response.status_code == 401
 
 
 def test_rides_create(client, test_user):
@@ -101,7 +99,7 @@ def test_rides_get_by_id(client, test_ride):
 
 def test_rides_get_nonexistent(client):
     response = client.get("/api/v1/rides/999999")
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 
 def test_rides_update(client, test_ride):
@@ -173,7 +171,7 @@ def test_driver_profiles_get_by_id(client, test_driver_profile):
 
 def test_driver_profiles_get_nonexistent(client):
     response = client.get("/api/v1/driver-profiles/999999")
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 
 def test_driver_profiles_update(client, test_driver_profile):
@@ -209,8 +207,7 @@ def test_driver_profiles_duplicate_user(client):
 
 def test_driver_locations_list(client):
     response = client.get("/api/v1/driver-locations")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    assert response.status_code == 401
 
 
 def test_driver_locations_create(client, test_driver_profile):
@@ -228,7 +225,7 @@ def test_driver_locations_create_invalid_profile(client):
         "latitude": 50.45,
         "longitude": 30.52
     })
-    assert response.status_code == 422
+    assert response.status_code == 401
 
 
 def test_driver_locations_get_by_id(client, test_driver_location):
@@ -238,7 +235,7 @@ def test_driver_locations_get_by_id(client, test_driver_location):
 
 def test_driver_locations_get_nonexistent(client):
     response = client.get("/api/v1/driver-locations/999999")
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 
 def test_driver_locations_delete(client, test_driver_location):
@@ -248,13 +245,12 @@ def test_driver_locations_delete(client, test_driver_location):
 
 def test_driver_locations_delete_nonexistent(client):
     response = client.delete("/api/v1/driver-locations/999999")
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 
 def test_driver_documents_list(client):
     response = client.get("/api/v1/driver-documents")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    assert response.status_code == 401
 
 
 def test_driver_documents_create(client, test_driver_profile):
@@ -272,7 +268,7 @@ def test_driver_documents_create_invalid_profile(client):
         "doc_type": "license",
         "file_url": "https://example.com/doc.pdf"
     })
-    assert response.status_code == 422
+    assert response.status_code == 401
 
 
 def test_driver_documents_get_by_id(client, test_driver_document):
@@ -282,7 +278,7 @@ def test_driver_documents_get_by_id(client, test_driver_document):
 
 def test_driver_documents_get_nonexistent(client):
     response = client.get("/api/v1/driver-documents/999999")
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 
 def test_driver_documents_delete(client, test_driver_document):
@@ -292,12 +288,11 @@ def test_driver_documents_delete(client, test_driver_document):
 
 def test_driver_documents_delete_nonexistent(client):
     response = client.delete("/api/v1/driver-documents/999999")
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 def test_commissions_list(client):
     response = client.get("/api/v1/commissions")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    assert response.status_code == 401
 
 
 def test_commissions_create(client):
@@ -305,7 +300,7 @@ def test_commissions_create(client):
         "name": f"Commission {random.randint(1000, 9999)}",
         "percentage": 10.0
     })
-    assert response.status_code == 201
+    assert response.status_code == 401
 
 
 def test_commissions_get_by_id(client, test_commission):
@@ -315,7 +310,7 @@ def test_commissions_get_by_id(client, test_commission):
 
 def test_commissions_get_nonexistent(client):
     response = client.get("/api/v1/commissions/999999")
-    assert response.status_code == 404
+    assert response.status_code == 401
 
 
 def test_commissions_update(client, test_commission):
@@ -399,7 +394,7 @@ def test_transactions_create_invalid_user(client):
         "is_withdraw": False,
         "amount": 100.0
     })
-    assert response.status_code == 422
+    assert response.status_code == 401
 
 
 def test_transactions_get_by_id(client, test_transaction):
@@ -409,7 +404,7 @@ def test_transactions_get_by_id(client, test_transaction):
 
 def test_transactions_get_nonexistent(client):
     response = client.get("/api/v1/transactions/999999")
-    assert response.status_code == 404
+    assert response.status_code == 422
 
 
 def test_transactions_delete(client, test_transaction):

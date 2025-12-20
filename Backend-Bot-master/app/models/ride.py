@@ -1,7 +1,7 @@
 from sqlalchemy import Integer, String, TIMESTAMP, func, DECIMAL, Boolean, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.db import Base
+from app.db import Base, metadata
 
 
 class Ride(Base):
@@ -36,6 +36,8 @@ class Ride(Base):
     ride_metadata = mapped_column(JSONB, nullable=True)
     created_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
     updated_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
+    tariff_plan_id: Mapped[int] = mapped_column(Integer, ForeignKey('tariff_plans.id'))
 
     client = relationship('User', foreign_keys=[client_id])
     driver_profile = relationship('DriverProfile', foreign_keys=[driver_profile_id])
+    tariff_plan = relationship('TariffPlan', foreign_keys=[tariff_plan_id])

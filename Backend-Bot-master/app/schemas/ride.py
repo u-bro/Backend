@@ -1,80 +1,75 @@
-from typing import Optional, Any
-from pydantic import BaseModel, Field, field_validator
+from typing import Literal
+from pydantic import Field
 from datetime import datetime
+from .base import BaseSchema
+
+class RideSchemaIn(BaseSchema):
+    status: Literal["requested", "accepted", "started", "canceled", "completed"] = "requested"
+    status_reason: str | None = Field(None, max_length=255)
+    pickup_address: str = Field(None, max_length=500)
+    pickup_lat: float = Field(...)
+    pickup_lng: float = Field(...)
+    dropoff_address: str = Field(None, max_length=500)
+    dropoff_lat: float = Field(...)
+    dropoff_lng: float = Field(...)
+    scheduled_at: datetime | None = Field(None)
+    distance_meters: int = Field(..., ge=0)
+    duration_seconds: int | None = Field(None, ge=0)
+    commission_id: int | None = Field(None)
+    tariff_plan_id: int = Field(..., gt=0)
 
 
-class RideCreate(BaseModel):
-    client_id: int
-    pickup_address: Optional[str] = None
-    pickup_lat: Optional[float] = None
-    pickup_lng: Optional[float] = None
-    dropoff_address: Optional[str] = None
-    dropoff_lat: Optional[float] = None
-    dropoff_lng: Optional[float] = None
-    scheduled_at: Optional[datetime] = None
-    expected_fare: Optional[float] = None
-    expected_fare_snapshot: Optional[dict[str, Any]] = None
+class RideSchemaCreate(RideSchemaIn):
+    client_id: int = Field(..., gt=0)
 
-    @field_validator('scheduled_at', mode='before')
-    @classmethod
-    def remove_timezone(cls, v):
-        """Remove timezone info for naive TIMESTAMP columns"""
-        if v is not None and isinstance(v, datetime) and v.tzinfo is not None:
-            return v.replace(tzinfo=None)
-        return v
+class RideSchema(RideSchemaCreate):
+    id: int = Field(..., gt=0)
+    driver_profile_id: int | None = Field(None, gt=0)
+    started_at: datetime | None = Field(None)
+    completed_at: datetime | None = Field(None)
+    canceled_at: datetime | None = Field(None)
+    expected_fare: float | None = Field(None, ge=0)
+    expected_fare_snapshot: dict | None = Field(None)
+    actual_fare: float | None = Field(None, ge=0)
+    ride_metadata: dict | None = Field(None)
+    created_at: datetime | None = Field(None)
+    updated_at: datetime | None = Field(None)
+    is_anomaly: bool | None = Field(False)
+    anomaly_reason: str | None = Field(None, max_length=255)
 
 
-class RideUpdate(BaseModel):
-    driver_profile_id: Optional[int] = None
-    pickup_address: Optional[str] = None
-    pickup_lat: Optional[float] = None
-    pickup_lng: Optional[float] = None
-    dropoff_address: Optional[str] = None
-    dropoff_lat: Optional[float] = None
-    dropoff_lng: Optional[float] = None
-    scheduled_at: Optional[datetime] = None
-    expected_fare: Optional[float] = None
-    expected_fare_snapshot: Optional[dict[str, Any]] = None
+class RideSchemaUpdateByClient(BaseSchema):
+    status: Literal["requested", "canceled"] | None = Field(None, max_length=50)
+    status_reason: str | None = Field(None, max_length=255)
+    pickup_address: str | None = Field(None, max_length=500)
+    pickup_lat: float | None = Field(None)
+    pickup_lng: float | None = Field(None)
+    dropoff_address: str | None = Field(None, max_length=500)
+    dropoff_lat: float | None = Field(None)
+    dropoff_lng: float | None = Field(None)
+    distance_meters: int | None = Field(None, ge=0)
+    canceled_at: datetime | None = Field(None)
 
 
-class RideSchema(BaseModel):
-    id: int
-    client_id: int
-    driver_profile_id: Optional[int] = None
-    status: Optional[str] = None
-    status_reason: Optional[str] = None
-    pickup_address: Optional[str] = None
-    pickup_lat: Optional[float] = None
-    pickup_lng: Optional[float] = None
-    dropoff_address: Optional[str] = None
-    dropoff_lat: Optional[float] = None
-    dropoff_lng: Optional[float] = None
-    scheduled_at: Optional[datetime] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    canceled_at: Optional[datetime] = None
-    cancellation_reason: Optional[str] = None
-    expected_fare: Optional[float] = None
-    expected_fare_snapshot: Optional[dict[str, Any]] = None
-    driver_fare: Optional[float] = None
-    actual_fare: Optional[float] = None
-    distance_meters: Optional[int] = None
-    duration_seconds: Optional[int] = None
-    transaction_id: Optional[int] = None
-    commission_id: Optional[int] = None
-    is_anomaly: bool
-    anomaly_reason: Optional[str] = None
-    ride_metadata: Optional[dict[str, Any]] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+class RideSchemaUpdateByDriver(BaseSchema):
+    status: Literal["accepted", "started", "canceled"] | None = Field(None, max_length=50)
+    status_reason: str | None = Field(None, max_length=255)
+    started_at: datetime | None = Field(None)
 
 
-class RideStatusChangeRequest(BaseModel):
-    to_status: str
-    reason: Optional[str] = None
-    actor_id: Optional[int] = None
-    actor_role: str = Field(..., pattern=r"^(client|driver|system)$")
-    meta: Optional[dict[str, Any]] = None
+class RideSchemaAcceptByDriver(BaseSchema):
+    status: Literal["accepted"] = "accepted"
+    driver_profile_id: int | None = Field(None, gt=0)
+    status_reason: str | None = Field(None, max_length=255)
+    started_at: datetime | None = Field(None)
+
+
+class RideSchemaFinishByDriver(BaseSchema):
+    status: Literal["completed"] = "completed"
+    completed_at: datetime | None = Field(None)
+    actual_fare: float = Field(0, ge=0)
+
+
+class RideSchemaFinishWithAnomaly(RideSchemaFinishByDriver):
+    is_anomaly: bool | None = Field(False)
+    anomaly_reason: str | None = Field(None, max_length=255)
