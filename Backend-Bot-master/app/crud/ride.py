@@ -61,7 +61,6 @@ class CrudRide(CrudBase):
             },
         }
 
-
     async def create(self, session: AsyncSession, create_obj) -> RideSchema | None:
         data = create_obj.model_dump()
         tariff_plan = await self._get_tariff_plan(session, data.get("tariff_plan_id"))
