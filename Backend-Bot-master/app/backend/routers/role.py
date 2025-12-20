@@ -32,10 +32,7 @@ class RoleRouter(BaseRouter):
         return await self.model_crud.update(request.state.session, item_id, body)
 
     async def delete_role(self, request: Request, item_id: int):
-        result = await self.model_crud.delete(request.state.session, item_id)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Role not found")
-        return result
+        return await self.model_crud.delete(request.state.session, item_id)
 
 
 role_router = RoleRouter().router

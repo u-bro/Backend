@@ -1,12 +1,19 @@
-FROM python:3.13
+FROM python:3.13.0-alpine
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# RUN apt-get update && apt-get install -y \
+#     libpango-1.0-0 \
+#     libpangocairo-1.0-0 \
+#     libgdk-pixbuf-2.0-0 \
+#     libffi-dev \
+#     shared-mime-info \
+#     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir /mining
+RUN mkdir /project
 
-WORKDIR /mining
+WORKDIR /project
 
 COPY pyproject.toml poetry.lock ./
 

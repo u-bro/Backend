@@ -42,10 +42,7 @@ class DriverProfileRouter(BaseRouter):
         return await self.model_crud.update(request.state.session, item_id, body)
 
     async def delete_item(self, request: Request, item_id: int):
-        item = await self.model_crud.delete(request.state.session, item_id)
-        if item is None:
-            return JSONResponse(status_code=404, content={"detail": "Item not found"})
-        return item
+        return await self.model_crud.delete(request.state.session, item_id)
 
 
 driver_profile_router = DriverProfileRouter().router

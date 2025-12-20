@@ -1,7 +1,7 @@
 """added tariff_plan
 
 Revision ID: d474883cbcea
-Revises: add_update_balance
+Revises: 7c6142541c8f
 Create Date: 2025-12-17 17:13:08.618634
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = 'd474883cbcea'
-down_revision: Union[str, None] = 'add_update_balance'
+down_revision: Union[str, None] = '7c6142541c8f'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

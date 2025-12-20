@@ -41,11 +41,7 @@ class AuthRouter(BaseRouter):
         return TokenResponse(access_token=access_token, user_id=user.id)
 
     async def logout(self, request: Request, logout_obj: AuthSchemaLogout) -> JSONResponse:
-        result = await self.model_crud.logout_user(request.state.session, logout_obj.user_id)
-        
-        if not result:
-            return JSONResponse(status_code=404, content={"detail": "User not found"})
-        
+        await self.model_crud.logout_user(request.state.session, logout_obj.user_id)
         return JSONResponse(status_code=200, content={"detail": "Successfully logged out"})
 
 
