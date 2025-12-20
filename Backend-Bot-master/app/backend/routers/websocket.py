@@ -14,11 +14,7 @@ from app.services.driver_tracker import driver_tracker, DriverStatus
 
 logger = logging.getLogger(__name__)
 
-
-# === Pydantic модели для HTTP эндпоинтов ===
-
 class LocationUpdate(BaseModel):
-    """Обновление локации водителя"""
     latitude: float
     longitude: float
     heading: Optional[float] = None
@@ -27,8 +23,7 @@ class LocationUpdate(BaseModel):
 
 
 class DriverStatusUpdate(BaseModel):
-    """Обновление статуса водителя"""
-    status: str  # online, offline, busy, paused
+    status: str 
 
 router = APIRouter()
 
@@ -39,38 +34,11 @@ async def websocket_endpoint(
     user_id: int,
     token: Optional[str] = Query(None)
 ):
-    """
-    Основной WebSocket эндпоинт.
-    
-    Подключение: ws://localhost:5000/api/v1/ws/{user_id}?token=xxx
-    
-    Форматы сообщений:
-    
-    1. Подписка на поездку:
-       {"type": "join_ride", "ride_id": 123}
-    
-    2. Отписка от поездки:
-       {"type": "leave_ride", "ride_id": 123}
-    
-    3. Отправка сообщения в чат поездки:
-       {"type": "chat_message", "ride_id": 123, "text": "Привет!"}
-    
-    4. Обновление локации водителя:
-       {"type": "location_update", "lat": 55.7558, "lng": 37.6173}
-    
-    5. Ping для поддержания соединения:
-       {"type": "ping"}
-    """
-    
-    # TODO: Валидация токена
-    # if not await validate_token(token, user_id):
-    #     await websocket.close(code=4001, reason="Invalid token")
-    #     return
-    
+
+    # TODO:
     await manager.connect(websocket, user_id)
     
     try:
-        # Отправляем подтверждение подключения
         await websocket.send_json({
             "type": "connected",
             "user_id": user_id,
@@ -78,7 +46,6 @@ async def websocket_endpoint(
         })
         
         while True:
-            # Ожидаем сообщения от клиента
             data = await websocket.receive_json()
             
             await handle_message(websocket, user_id, data)
@@ -92,7 +59,6 @@ async def websocket_endpoint(
 
 
 async def handle_message(websocket: WebSocket, user_id: int, data: dict) -> None:
-    """Обработка входящих WebSocket сообщений"""
     
     message_type = data.get("type")
     
@@ -121,7 +87,6 @@ async def handle_message(websocket: WebSocket, user_id: int, data: dict) -> None
         ride_id = data.get("ride_id")
         text = data.get("text")
         if ride_id and text:
-            # Отправляем сообщение всем участникам поездки
             await manager.send_to_ride(ride_id, {
                 "type": "chat_message",
                 "ride_id": ride_id,
@@ -130,7 +95,6 @@ async def handle_message(websocket: WebSocket, user_id: int, data: dict) -> None
             })
     
     elif message_type == "location_update":
-        # Обновление локации водителя
         lat = data.get("lat") or data.get("latitude")
         lng = data.get("lng") or data.get("longitude")
         ride_id = data.get("ride_id")
@@ -138,7 +102,6 @@ async def handle_message(websocket: WebSocket, user_id: int, data: dict) -> None
         speed = data.get("speed")
         
         if lat and lng:
-            # Обновляем в DriverTracker
             state = driver_tracker.update_location_by_user(
                 user_id=user_id,
                 latitude=float(lat),
@@ -153,7 +116,6 @@ async def handle_message(websocket: WebSocket, user_id: int, data: dict) -> None
                     "status": state.status.value
                 })
             
-            # Если есть ride_id - отправляем клиенту обновление
             if ride_id:
                 await manager.send_to_ride(ride_id, {
                     "type": "driver_location",
@@ -166,7 +128,6 @@ async def handle_message(websocket: WebSocket, user_id: int, data: dict) -> None
                 }, exclude_user_id=user_id)
     
     elif message_type == "go_online":
-        # Водитель выходит на линию
         state = driver_tracker.set_status_by_user(user_id, DriverStatus.ONLINE)
         if state:
             await websocket.send_json({
@@ -176,7 +137,6 @@ async def handle_message(websocket: WebSocket, user_id: int, data: dict) -> None
             })
     
     elif message_type == "go_offline":
-        # Водитель уходит с линии
         state = driver_tracker.set_status_by_user(user_id, DriverStatus.OFFLINE)
         if state:
             await websocket.send_json({
@@ -186,7 +146,7 @@ async def handle_message(websocket: WebSocket, user_id: int, data: dict) -> None
             })
     
     elif message_type == "pause":
-        # Временная пауза
+
         state = driver_tracker.set_status_by_user(user_id, DriverStatus.PAUSED)
         if state:
             await websocket.send_json({
@@ -202,11 +162,8 @@ async def handle_message(websocket: WebSocket, user_id: int, data: dict) -> None
         })
 
 
-# === HTTP эндпоинты для управления ===
-
 @router.get("/ws/stats")
 async def get_websocket_stats():
-    """Статистика WebSocket соединений"""
     return {
         "online_users": manager.get_online_users(),
         "total_connections": manager.get_connection_count(),
@@ -216,10 +173,6 @@ async def get_websocket_stats():
 
 @router.post("/ws/notify/{user_id}")
 async def send_notification(user_id: int, message: dict):
-    """
-    Отправка уведомления пользователю через WebSocket.
-    Используется другими сервисами для push-уведомлений.
-    """
     if not manager.is_connected(user_id):
         raise HTTPException(status_code=404, detail="User not connected")
     
@@ -233,7 +186,6 @@ async def send_notification(user_id: int, message: dict):
 
 @router.post("/ws/broadcast")
 async def broadcast_message(message: dict):
-    """Broadcast сообщение всем подключённым пользователям"""
     await manager.broadcast({
         "type": "broadcast",
         **message
@@ -242,14 +194,9 @@ async def broadcast_message(message: dict):
     return {"status": "broadcasted", "recipients": manager.get_connection_count()}
 
 
-# === Эндпоинты для водителей ===
 
 @router.post("/ws/driver/{user_id}/location")
 async def update_driver_location(user_id: int, location: LocationUpdate):
-    """
-    Обновить локацию водителя через HTTP (альтернатива WebSocket).
-    Используется если WebSocket недоступен.
-    """
     state = driver_tracker.update_location_by_user(
         user_id=user_id,
         latitude=location.latitude,
@@ -274,7 +221,6 @@ async def update_driver_location(user_id: int, location: LocationUpdate):
 
 @router.post("/ws/driver/{user_id}/status")
 async def update_driver_status(user_id: int, status_update: DriverStatusUpdate):
-    """Обновить статус водителя (online/offline/busy/paused)"""
     try:
         status = DriverStatus(status_update.status.lower())
     except ValueError:
@@ -296,7 +242,6 @@ async def update_driver_status(user_id: int, status_update: DriverStatusUpdate):
 
 @router.get("/ws/driver/{user_id}/state")
 async def get_driver_state(user_id: int):
-    """Получить текущее состояние водителя"""
     state = driver_tracker.get_driver_by_user(user_id)
     
     if not state:
@@ -322,12 +267,10 @@ async def get_driver_state(user_id: int):
 
 @router.get("/ws/drivers/stats")
 async def get_drivers_stats():
-    """Статистика по водителям в трекере"""
     return {
         **driver_tracker.get_stats(),
         "ws_connections": manager.get_connection_count()
     }
 
 
-# Создание роутера для экспорта
 websocket_router = router

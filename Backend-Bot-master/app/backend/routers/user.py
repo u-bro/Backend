@@ -41,7 +41,12 @@ class UserRouter(BaseRouter):
 
     async def update_user_balance(self, request: Request, user_id: int) -> BalanceUpdateResponse:
         data = dict(parse_qsl(request.headers.get("Authorization", {}), strict_parsing=True))
-        result = await user_crud.update_user_balance(request.state.session, data.get('user_id') or user_id)
+        try:
+            result = await user_crud.update_user_balance(request.state.session, data.get('user_id') or user_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            raise HTTPException(status_code=404, detail="User not found or balance update function not available")
         if result is None:
             raise HTTPException(status_code=404, detail="User not found or balance update function not available")
         return result

@@ -32,7 +32,13 @@ class RideRouter(BaseRouter):
         return await self.model_crud.update(request.state.session, ride_id, body)
 
     async def change_status(self, request: Request, ride_id: int, body: RideStatusChangeRequest) -> RideSchema:
-        result = await self.model_crud.change_status(request.state.session, ride_id, body)
+        try:
+            result = await self.model_crud.change_status(request.state.session, ride_id, body)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            # SQLAlchemyError или другие ошибки
+            raise HTTPException(status_code=422, detail="Ride not found or status transition not allowed")
         if result is None:
             raise HTTPException(status_code=404, detail="Ride not found or status transition not allowed")
         return result

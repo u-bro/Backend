@@ -10,24 +10,20 @@ from app.schemas.user import BalanceUpdateResponse
 
 
 class CrudUser(CrudBase):
-    async def update_user_balance(self, session: AsyncSession, user_id: int) -> BalanceUpdateResponse | None:
+    async def update_user_balance(self, session: AsyncSession, user_id: int) -> BalanceUpdateResponse:
         stmt = text("SELECT update_user_balance(:user_id)").params(user_id=user_id)
-        
-        try: 
+        try:
             result = await self.execute_get_one(session, stmt)
         except SQLAlchemyError as e:
             logger.exception("DB error in update_user_balance")
-            raise
-        
+            raise ValueError("User not found or balance update function not available")
         if result is None:
-            return None
-        # result is a Row or scalar - convert to dict for validation
+            raise ValueError("User not found or balance update function not available")
         if hasattr(result, '_mapping'):
             return BalanceUpdateResponse.model_validate(dict(result._mapping))
         elif isinstance(result, dict):
             return BalanceUpdateResponse.model_validate(result)
         else:
-            # If it's a single value from the function, wrap it
             return BalanceUpdateResponse(success=bool(result))
 
     

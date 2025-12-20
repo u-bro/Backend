@@ -6,9 +6,6 @@ from app.config import DATABASE_URL
 
 metadata = MetaData()
 Base = declarative_base(metadata=metadata)
-
-# Use default async engine settings (no shared connection pool) to avoid
-# asyncpg "another operation is in progress" during concurrent test requests.
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,

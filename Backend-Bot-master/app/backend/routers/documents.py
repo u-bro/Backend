@@ -22,27 +22,15 @@ async def get_ride_receipt(
     ride_id: int,
     download: bool = Query(False, description="Скачать файл вместо отображения")
 ):
-    """
-    Генерация квитанции поездки в PDF.
-    
-    - **ride_id**: ID поездки
-    - **download**: Если true - скачивает файл, иначе открывает в браузере
-    """
-    
-    # TODO: Получить данные поездки из БД
-    # ride = await ride_crud.get_by_id(request.state.session, ride_id)
-    # if not ride:
-    #     raise HTTPException(status_code=404, detail="Ride not found")
-    
-    # Пока используем тестовые данные
+    # TODO:
     try:
         pdf_bytes = await pdf_generator.generate_ride_receipt(
             ride_id=ride_id,
-            client_name="Иван Иванов",  # TODO: из БД
-            driver_name="Пётр Петров",  # TODO: из БД
-            pickup_address="Москва, ул. Ленина 1",  # TODO: из БД
-            dropoff_address="Москва, ул. Пушкина 10",  # TODO: из БД
-            fare=500.00,  # TODO: из БД
+            client_name="Иван Иванов",  # TODO: 
+            driver_name="Пётр Петров",  # TODO: 
+            pickup_address="Москва, ул. Ленина 1",  # TODO: 
+            dropoff_address="Москва, ул. Пушкина 10",  # TODO: 
+            fare=500.00,  # TODO: 
             distance_km=12.5,
             duration_min=25,
             payment_method="Наличные"
@@ -71,22 +59,10 @@ async def get_driver_report(
     period_days: int = Query(30, ge=1, le=365, description="Период отчёта в днях"),
     download: bool = Query(False)
 ):
-    """
-    Генерация отчёта водителя за период.
-    
-    - **driver_id**: ID профиля водителя
-    - **period_days**: Период отчёта в днях (по умолчанию 30)
-    - **download**: Скачать файл
-    """
-    
+
     period_end = datetime.utcnow()
     period_start = period_end - timedelta(days=period_days)
     
-    # TODO: Получить данные из БД
-    # driver = await driver_profile_crud.get_by_id(request.state.session, driver_id)
-    # rides = await ride_crud.get_by_driver_and_period(...)
-    
-    # Тестовые данные
     test_rides = [
         {"id": 101, "date": "15.12.2025", "route": "Ленина → Пушкина", "fare": 350.00},
         {"id": 102, "date": "16.12.2025", "route": "Гагарина → Мира", "fare": 520.00},
@@ -126,18 +102,7 @@ async def get_balance_statement(
     user_id: int,
     download: bool = Query(False)
 ):
-    """
-    Генерация выписки по балансу пользователя.
-    
-    - **user_id**: ID пользователя
-    - **download**: Скачать файл
-    """
-    
-    # TODO: Получить данные из БД
-    # user = await user_crud.get_by_id(request.state.session, user_id)
-    # transactions = await transaction_crud.get_by_user(...)
-    
-    # Тестовые данные
+
     test_transactions = [
         {"id": 1, "date": "10.12.2025", "is_withdraw": False, "amount": 1000.00},
         {"id": 2, "date": "12.12.2025", "is_withdraw": True, "amount": 350.00},
@@ -147,8 +112,8 @@ async def get_balance_statement(
     
     try:
         pdf_bytes = await pdf_generator.generate_balance_statement(
-            user_name="Иван Иванов",  # TODO: из БД
-            current_balance=630.00,  # TODO: из БД
+            user_name="Иван Иванов", 
+            current_balance=630.00, 
             transactions=test_transactions
         )
     except Exception as e:
@@ -171,7 +136,6 @@ async def get_balance_statement(
 
 @router.get("/documents/health")
 async def documents_health():
-    """Проверка доступности сервиса генерации PDF"""
     return {
         "status": "ok",
         "weasyprint_available": pdf_generator.weasyprint_available,
@@ -179,5 +143,4 @@ async def documents_health():
     }
 
 
-# Создание роутера для экспорта
 documents_router = router

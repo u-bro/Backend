@@ -53,8 +53,6 @@ class CrudBase(Generic[M, S]):
 
     async def update(self, session: AsyncSession, id: int, update_obj: S) -> S | None:
         update_data = update_obj.model_dump(exclude_none=True)
-        
-        # If no fields to update, just return the existing record
         if not update_data:
             return await self.get_by_id(session, id)
         
@@ -87,26 +85,15 @@ class CrudBase(Generic[M, S]):
         on_conflict: list[str] = None,
         log: bool = False
     ) -> list[dict]:
-        """
-        Универсальный UPSERT для обновления/вставки записей.
-
-        Args:
-            not_update: Поля, по которым идентифицируем запись (если None, используется primary key)
-            log: Вывод вставки
-        """
         if not create_objs:
             return []
 
         create_dicts = [obj.model_dump() for obj in create_objs]
-
-        # Определяем поля для идентификации записей
         if not_update is None:
             mapper = inspect(self.model)
             not_update = [col.key for col in mapper.primary_key]
 
         stmt = pg_insert(self.model).values(create_dicts)
-
-        # Определяем поля для обновления (все, кроме идентификационных)
         update_fields = {
             col: getattr(stmt.excluded, col)
             for col in create_dicts[0].keys()
@@ -189,24 +176,3 @@ class CrudBase(Generic[M, S]):
                     conditions.append(column == value)
                     
         return conditions
-    
-    # # EXAMPLE:
-    #
-    # filters = {
-    # # Range filtering
-    # "price": {"from": 500, "to": 1500},  # price BETWEEN 500 AND 1500
-    # "income": {"from": 20.5},            # income >= 20.5
-    #
-    # # Exact match filtering
-    # "name": "RTX 3090",   
-    # "manufacturer": "NVIDIA",  
-    #
-    # # Boolean filtering (supports both True/False and 1/0)
-    # "is_crafted": True,  # is_crafted = TRUE
-    # "is_available": 1,   # is_available = 1 (same as True)
-    # 
-    # # List filtering (IN condition)
-    # "rarity": [1, 2, 3],        # rarity IN (1, 2, 3)
-    # "status": ["new", "used"],  # status IN ('new', 'used')
-    #
-    # # And their combinations

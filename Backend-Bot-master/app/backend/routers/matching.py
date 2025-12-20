@@ -1,12 +1,3 @@
-"""
-Matching Router
-
-API для матчинга заказов и водителей.
-- Лента заказов для водителей
-- Принятие заказов
-- Поиск водителей для заказа
-"""
-
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import Optional, List
@@ -19,25 +10,19 @@ from app.services.websocket_manager import manager
 
 router = APIRouter()
 
-
-# === Pydantic модели ===
-
 class AcceptRideRequest(BaseModel):
-    """Запрос на принятие заказа"""
     driver_profile_id: int
-    user_id: int  # Для аудита
+    user_id: int 
 
 
 class AcceptRideResponse(BaseModel):
-    """Ответ на принятие заказа"""
     success: bool
-    status: str  # accepted, already_yours, already_taken, not_found, invalid_status
+    status: str  
     ride_id: int
     message: str
 
 
 class RideFeedItem(BaseModel):
-    """Элемент ленты заказов"""
     id: int
     client_id: int
     status: str
@@ -53,7 +38,6 @@ class RideFeedItem(BaseModel):
 
 
 class DriverRegistration(BaseModel):
-    """Регистрация водителя в трекере"""
     driver_profile_id: int
     user_id: int
     classes_allowed: List[str]
@@ -61,7 +45,6 @@ class DriverRegistration(BaseModel):
 
 
 class FindDriversRequest(BaseModel):
-    """Запрос на поиск водителей"""
     ride_id: int
     ride_class: str = "economy"
     pickup_lat: float
@@ -71,23 +54,14 @@ class FindDriversRequest(BaseModel):
     search_radius_km: float = 5.0
 
 
-# === Эндпоинты для водителей ===
-
 @router.post("/matching/driver/register")
 async def register_driver(
     request: Request,
     data: DriverRegistration,
 ):
-    """
-    Регистрация водителя в системе матчинга.
-    Вызывается при запуске приложения водителя.
-    """
-    # Проверяем что профиль существует
     profile = await driver_profile_crud.get_by_id(request.state.session, data.driver_profile_id)
     if not profile:
         raise HTTPException(status_code=404, detail="Driver profile not found")
-    
-    # Регистрируем в трекере
     state = driver_tracker.register_driver(
         driver_profile_id=data.driver_profile_id,
         user_id=data.user_id,
@@ -108,11 +82,6 @@ async def get_ride_feed(
     driver_profile_id: int,
     limit: int = Query(20, ge=1, le=100),
 ):
-    """
-    Получить ленту доступных заказов для водителя.
-    Отсортировано по расстоянию от водителя.
-    """
-    # Проверяем что водитель в трекере
     driver = driver_tracker.get_driver(driver_profile_id)
     if not driver:
         raise HTTPException(
@@ -125,11 +94,7 @@ async def get_ride_feed(
             status_code=400,
             detail="Driver location not set. Send location_update via WebSocket"
         )
-    
-    # Получаем pending заказы
     pending_rides = await ride_crud.get_pending_rides(request.state.session, limit=limit * 2)
-    
-    # Конвертируем в dict для matching engine
     rides_dict = [
         {
             "id": r.id,
@@ -148,8 +113,6 @@ async def get_ride_feed(
         for r in pending_rides
         if r.pickup_lat and r.pickup_lng
     ]
-    
-    # Фильтруем и сортируем через matching engine
     feed = matching_engine.get_driver_feed(driver_profile_id, rides_dict, limit)
     
     return {
@@ -166,19 +129,6 @@ async def accept_ride(
     ride_id: int,
     data: AcceptRideRequest,
 ):
-    """
-    Принять заказ (идемпотентно).
-    
-    Если несколько водителей одновременно нажмут "Принять",
-    только первый успешно получит заказ.
-    
-    Возвращает:
-    - success=true, status="accepted" - заказ успешно принят
-    - success=true, status="already_yours" - заказ уже был принят вами (идемпотентность)
-    - success=false, status="already_taken" - заказ уже принят другим водителем
-    - success=false, status="not_found" - заказ не найден
-    - success=false, status="invalid_status" - заказ не в статусе ожидания
-    """
     ride, status = await ride_crud.accept_ride_idempotent(
         session=request.state.session,
         ride_id=ride_id,
@@ -197,10 +147,7 @@ async def accept_ride(
     }
     
     if success:
-        # Обновляем статус водителя в трекере
         driver_tracker.assign_ride(data.driver_profile_id, ride_id)
-        
-        # Уведомляем клиента через WebSocket
         if ride:
             await manager.send_personal_message(ride.client_id, {
                 "type": "ride_accepted",
@@ -219,20 +166,14 @@ async def accept_ride(
     )
 
 
-# === Эндпоинты для системы ===
-
 @router.post("/matching/find-drivers")
 async def find_drivers_for_ride(
     data: FindDriversRequest,
     limit: int = Query(10, ge=1, le=50)
 ):
-    """
-    Найти подходящих водителей для заказа.
-    Используется при создании нового заказа.
-    """
     request = RideRequest(
         ride_id=data.ride_id,
-        client_id=0,  # Не важно для поиска
+        client_id=0, 
         ride_class=data.ride_class,
         pickup_lat=data.pickup_lat,
         pickup_lng=data.pickup_lng,
@@ -254,9 +195,7 @@ async def find_drivers_for_ride(
 
 @router.get("/matching/stats")
 async def get_matching_stats():
-    """Статистика системы матчинга"""
     return matching_engine.get_stats()
 
 
-# Экспорт роутера
 matching_router = router

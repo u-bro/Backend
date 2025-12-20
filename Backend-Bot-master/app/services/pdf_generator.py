@@ -1,8 +1,3 @@
-"""
-PDF Generator Service
-Генерация PDF документов для квитанций, договоров, отчётов
-"""
-
 from typing import Optional, Dict, Any
 from datetime import datetime
 from io import BytesIO
@@ -10,7 +5,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Попытка импорта weasyprint (может не быть установлен)
 try:
     from weasyprint import HTML, CSS
     WEASYPRINT_AVAILABLE = True
@@ -18,7 +12,6 @@ except ImportError:
     WEASYPRINT_AVAILABLE = False
     logger.warning("WeasyPrint not installed. PDF generation will use fallback method.")
 
-# Fallback на reportlab если weasyprint недоступен
 try:
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import A4
@@ -32,12 +25,6 @@ except ImportError:
 
 
 class PDFGenerator:
-    """
-    Сервис генерации PDF документов.
-    Поддерживает WeasyPrint (HTML → PDF) и ReportLab (программная генерация).
-    """
-    
-    # CSS стили для PDF документов
     DEFAULT_CSS = """
         @page {
             size: A4;
@@ -122,7 +109,6 @@ class PDFGenerator:
         payment_method: str = "Наличные",
         created_at: Optional[datetime] = None
     ) -> bytes:
-        """Генерация квитанции поездки"""
         
         if created_at is None:
             created_at = datetime.utcnow()
@@ -194,7 +180,6 @@ class PDFGenerator:
         total_earnings: float,
         total_commission: float
     ) -> bytes:
-        """Генерация отчёта водителя за период"""
         
         rides_rows = ""
         for ride in rides:
@@ -259,7 +244,6 @@ class PDFGenerator:
         current_balance: float,
         transactions: list
     ) -> bytes:
-        """Генерация выписки по балансу"""
         
         transactions_rows = ""
         for tx in transactions:
@@ -315,7 +299,6 @@ class PDFGenerator:
         return await self._generate_pdf_from_html(html)
     
     async def _generate_pdf_from_html(self, html: str) -> bytes:
-        """Внутренний метод генерации PDF из HTML"""
         
         if self.weasyprint_available:
             return self._generate_with_weasyprint(html)
@@ -325,19 +308,14 @@ class PDFGenerator:
             raise RuntimeError("No PDF generation library available. Install weasyprint or reportlab.")
     
     def _generate_with_weasyprint(self, html: str) -> bytes:
-        """Генерация PDF через WeasyPrint"""
-        # WeasyPrint 60+ имеет новый API
         html_doc = HTML(string=html)
         pdf = html_doc.write_pdf()
         return pdf
     
     def _generate_fallback(self, html: str) -> bytes:
-        """Fallback генерация через ReportLab (без HTML)"""
         buffer = BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
-        
-        # Простой текст (ReportLab не парсит HTML)
+        width, height = A4 
         c.setFont("Helvetica-Bold", 16)
         c.drawString(50, height - 50, "U-BRO TAXI")
         c.setFont("Helvetica", 12)
@@ -348,7 +326,5 @@ class PDFGenerator:
         c.save()
         buffer.seek(0)
         return buffer.read()
-
-
-# Глобальный экземпляр генератора
+                                        
 pdf_generator = PDFGenerator()

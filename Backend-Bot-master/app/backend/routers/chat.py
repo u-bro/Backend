@@ -21,11 +21,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-
-# === Pydantic модели ===
-
 class SendMessageRequest(BaseModel):
-    """Запрос на отправку сообщения"""
     text: str = Field(..., min_length=1, max_length=2000)
     message_type: str = Field(default="text")
     receiver_id: Optional[int] = None
@@ -33,7 +29,6 @@ class SendMessageRequest(BaseModel):
 
 
 class SendMessageResponse(BaseModel):
-    """Ответ на отправку сообщения"""
     id: int
     ride_id: int
     sender_id: int
@@ -45,7 +40,6 @@ class SendMessageResponse(BaseModel):
 
 
 class ChatHistoryResponse(BaseModel):
-    """История чата"""
     ride_id: int
     messages: List[Dict[str, Any]]
     count: int
@@ -53,7 +47,6 @@ class ChatHistoryResponse(BaseModel):
 
 
 class ChatMessageOut(BaseModel):
-    """Сообщение чата для вывода"""
     id: int
     ride_id: Optional[int]
     sender_id: Optional[int]
@@ -68,8 +61,6 @@ class ChatMessageOut(BaseModel):
         from_attributes = True
 
 
-# === WebSocket для real-time чата ===
-
 @router.websocket("/chat/ws/{ride_id}")
 async def chat_websocket(
     websocket: WebSocket,
@@ -77,51 +68,11 @@ async def chat_websocket(
     user_id: int = Query(..., description="ID пользователя"),
     token: Optional[str] = Query(None, description="Auth token"),
 ):
-    """
-    WebSocket для real-time чата в рамках заказа.
-    
-    Подключение: ws://host/api/v1/chat/ws/{ride_id}?user_id=123
-    
-    Форматы сообщений:
-    
-    Отправка:
-    ```json
-    {
-        "type": "message",
-        "text": "Привет!",
-        "message_type": "text"
-    }
-    ```
-    
-    Получение:
-    ```json
-    {
-        "type": "new_message",
-        "message": {
-            "id": 1,
-            "sender_id": 123,
-            "text": "Привет!",
-            "created_at": "2025-12-18T12:00:00"
-        }
-    }
-    ```
-    
-    Системные события:
-    - user_joined - пользователь присоединился
-    - user_left - пользователь вышел
-    - message_deleted - сообщение удалено
-    - message_edited - сообщение отредактировано
-    """
     await websocket.accept()
     
-    # TODO: Валидация токена и доступа
-    # Пока разрешаем для тестирования
-    
-    # Регистрируем в менеджере соединений
+    # TODO: 
     await manager.connect(websocket, user_id)
     manager.join_ride(ride_id, user_id)
-    
-    # Уведомляем о присоединении
     await manager.send_to_ride(ride_id, {
         "type": "user_joined",
         "ride_id": ride_id,
@@ -129,7 +80,6 @@ async def chat_websocket(
         "timestamp": datetime.utcnow().isoformat()
     }, exclude_user_id=user_id)
     
-    # Отправляем подтверждение подключения
     await websocket.send_json({
         "type": "connected",
         "ride_id": ride_id,
@@ -145,8 +95,7 @@ async def chat_websocket(
     except WebSocketDisconnect:
         manager.disconnect(websocket, user_id)
         manager.leave_ride(ride_id, user_id)
-        
-        # Уведомляем о выходе
+
         await manager.send_to_ride(ride_id, {
             "type": "user_left",
             "ride_id": ride_id,
@@ -168,7 +117,6 @@ async def handle_chat_message(
     user_id: int, 
     data: dict
 ) -> None:
-    """Обработка сообщений в чате"""
     
     msg_type = data.get("type", "message")
     
@@ -177,7 +125,6 @@ async def handle_chat_message(
         return
     
     if msg_type == "typing":
-        # Уведомление о наборе текста
         await manager.send_to_ride(ride_id, {
             "type": "user_typing",
             "ride_id": ride_id,
@@ -197,7 +144,6 @@ async def handle_chat_message(
             })
             return
         
-        # Rate limit проверка
         allowed, error = chat_service.check_rate_limit(user_id)
         if not allowed:
             await websocket.send_json({
@@ -207,7 +153,6 @@ async def handle_chat_message(
             })
             return
         
-        # Модерация
         moderation = chat_service.moderate_message(text)
         
         if not moderation.passed:
@@ -218,15 +163,11 @@ async def handle_chat_message(
             })
             return
         
-        # Сохраняем в БД (через WebSocket нет сессии, делаем отложенно)
-        # TODO: Получить сессию для сохранения
-        # Пока отправляем без сохранения в БД (будет добавлено)
-        
-        # Формируем сообщение
+        # TODO: 
         message_data = {
             "type": "new_message",
             "message": {
-                "id": None,  # Будет после сохранения в БД
+                "id": None, 
                 "ride_id": ride_id,
                 "sender_id": user_id,
                 "text": moderation.filtered,
@@ -237,13 +178,10 @@ async def handle_chat_message(
             }
         }
         
-        # Отправляем всем участникам чата
         await manager.send_to_ride(ride_id, message_data)
         
         logger.info(f"Chat message in ride {ride_id} from user {user_id}")
 
-
-# === HTTP эндпоинты ===
 
 @router.get("/chat/{ride_id}/history", response_model=ChatHistoryResponse)
 async def get_chat_history(
@@ -252,24 +190,19 @@ async def get_chat_history(
     limit: int = Query(50, ge=1, le=100),
     before_id: Optional[int] = Query(None, description="Для пагинации - ID сообщения"),
 ):
-    """
-    Получить историю чата для заказа.
-    
-    Поддерживает пагинацию через before_id - вернёт сообщения 
-    с ID меньше указанного.
-    """
+
     session = request.state.session
     
     messages = await chat_service.get_chat_history(
         session=session,
         ride_id=ride_id,
-        limit=limit + 1,  # +1 для проверки has_more
+        limit=limit + 1,  
         before_id=before_id,
     )
     
     has_more = len(messages) > limit
     if has_more:
-        messages = messages[1:]  # Убираем лишнее
+        messages = messages[1:]  
     
     return ChatHistoryResponse(
         ride_id=ride_id,
@@ -298,26 +231,15 @@ async def send_message(
     body: SendMessageRequest,
     sender_id: int = Query(..., description="ID отправителя"),
 ):
-    """
-    Отправить сообщение в чат (HTTP fallback).
-    
-    Используйте WebSocket для real-time, этот эндпоинт - 
-    для случаев когда WebSocket недоступен.
-    """
     session = request.state.session
-    
-    # Rate limit
     allowed, error = chat_service.check_rate_limit(sender_id)
     if not allowed:
         raise HTTPException(status_code=429, detail=error)
-    
-    # Модерация
     moderation = chat_service.moderate_message(body.text)
     
     if not moderation.passed:
         raise HTTPException(status_code=400, detail=moderation.reason)
     
-    # Сохраняем
     message = await chat_service.save_message(
         session=session,
         ride_id=ride_id,
@@ -330,8 +252,6 @@ async def send_message(
     )
     
     await session.commit()
-    
-    # Отправляем через WebSocket всем участникам
     await manager.send_to_ride(ride_id, {
         "type": "new_message",
         "message": {
@@ -363,10 +283,6 @@ async def delete_message(
     message_id: int,
     user_id: int = Query(..., description="ID пользователя"),
 ):
-    """
-    Удалить сообщение (soft delete).
-    Только автор может удалить своё сообщение.
-    """
     session = request.state.session
     
     deleted = await chat_service.soft_delete_message(
@@ -383,7 +299,6 @@ async def delete_message(
     
     await session.commit()
     
-    # Уведомляем через WebSocket
     await manager.send_to_ride(ride_id, {
         "type": "message_deleted",
         "message_id": message_id,
@@ -401,10 +316,6 @@ async def edit_message(
     body: SendMessageRequest,
     user_id: int = Query(..., description="ID пользователя"),
 ):
-    """
-    Редактировать сообщение.
-    Только автор может редактировать своё сообщение.
-    """
     session = request.state.session
     
     message = await chat_service.edit_message(
@@ -422,7 +333,6 @@ async def edit_message(
     
     await session.commit()
     
-    # Уведомляем через WebSocket
     await manager.send_to_ride(ride_id, {
         "type": "message_edited",
         "message": {
@@ -444,9 +354,7 @@ async def edit_message(
 
 @router.get("/chat/stats")
 async def get_chat_stats():
-    """Статистика сервиса чата"""
     return chat_service.get_stats()
 
 
-# Экспорт роутера
 chat_router = router

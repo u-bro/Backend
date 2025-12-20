@@ -1,36 +1,17 @@
-"""
-Conftest для тестирования на реальном сервере (localhost:5000).
-Не поднимает тестовую БД, подключается к работающему приложению.
-"""
-import pytest
-import httpx
+from fastapi.testclient import TestClient
 import random
-
-
-@pytest.fixture(scope="session")
-def base_url():
-    """URL реального сервера"""
-    return "http://localhost:5000"
-
+import pytest
+import sys
+sys.path.append("../app/backend")
+from app.backend.main import app
 
 @pytest.fixture(scope="function")
-def client(base_url):
-    """HTTP клиент для работы с реальным сервером (синхронный)"""
-    with httpx.Client(
-        base_url=base_url,
-        timeout=30.0,
-        headers={"Content-Type": "application/json"}
-    ) as c:
+def client():
+    with TestClient(app) as c:
         yield c
-
-
-# ============================================================================
-# ФИКСТУРЫ ДЛЯ ТЕСТОВЫХ ДАННЫХ
-# ============================================================================
 
 @pytest.fixture
 def test_user(client):
-    """Создаёт тестового пользователя"""
     telegram_id = random.randint(100000, 999999)
     response = client.post(f"/api/v1/users/{telegram_id}", json={
         "telegram_id": telegram_id,
@@ -40,10 +21,8 @@ def test_user(client):
     assert response.status_code == 200
     return response.json()
 
-
 @pytest.fixture
 def test_role(client):
-    """Создаёт тестовую роль"""
     code = f"role_{random.randint(10000, 99999)}"
     response = client.post("/api/v1/roles", json={
         "code": code,

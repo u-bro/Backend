@@ -33,9 +33,13 @@ class ChatMessageRouter(BaseRouter):
         return await self.model_crud.update(request.state.session, item_id, body)
 
     async def delete_item(self, request: Request, item_id: int):
-        item = await self.model_crud.delete(request.state.session, item_id)
-        if item is None:
+        user_id = request.query_params.get("user_id")
+        msg = await self.model_crud.get_by_id(request.state.session, item_id)
+        if msg is None:
             return JSONResponse(status_code=404, content={"detail": "Item not found"})
+        if user_id is not None and str(msg.sender_id) != str(user_id):
+            return JSONResponse(status_code=403, content={"detail": "Forbidden: not the owner"})
+        item = await self.model_crud.delete(request.state.session, item_id)
         return item
 
 

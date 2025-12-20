@@ -1,10 +1,3 @@
-"""
-Order Dispatcher Service
-
-Сервис для рассылки новых заказов релевантным водителям.
-При создании заказа находит подходящих водителей и отправляет им push через WebSocket.
-"""
-
 from typing import Optional, List
 from datetime import datetime
 import asyncio
@@ -18,16 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class OrderDispatcher:
-    """
-    Диспетчер заказов.
-    
-    Отвечает за:
-    1. Рассылку новых заказов подходящим водителям
-    2. Отслеживание откликов
-    3. Повторную рассылку при отсутствии отклика
-    """
-    
-    # Настройки рассылки
     DEFAULT_RADIUS_KM = 3.0
     MAX_RADIUS_KM = 15.0
     RADIUS_STEP_KM = 2.0
@@ -36,7 +19,6 @@ class OrderDispatcher:
     MAX_WAVES = 5
     
     def __init__(self):
-        # ride_id -> {notified_drivers: set, created_at: datetime, waves: int}
         self._active_dispatches: dict[int, dict] = {}
     
     async def dispatch_new_ride(
@@ -52,22 +34,6 @@ class OrderDispatcher:
         pickup_address: Optional[str] = None,
         dropoff_address: Optional[str] = None,
     ) -> dict:
-        """
-        Разослать новый заказ релевантным водителям.
-        
-        Args:
-            ride_id: ID заказа
-            client_id: ID клиента
-            ride_class: Класс поездки (economy, comfort, etc.)
-            pickup_lat, pickup_lng: Координаты подачи
-            dropoff_lat, dropoff_lng: Координаты назначения (опционально)
-            expected_fare: Ожидаемая стоимость
-            pickup_address, dropoff_address: Адреса
-        
-        Returns:
-            Статистика рассылки
-        """
-        # Создаём запрос на поиск
         request = RideRequest(
             ride_id=ride_id,
             client_id=client_id,
@@ -80,7 +46,6 @@ class OrderDispatcher:
             search_radius_km=self.DEFAULT_RADIUS_KM
         )
         
-        # Ищем водителей с расширением радиуса
         drivers = matching_engine.expand_search(
             request,
             max_radius_km=self.MAX_RADIUS_KM,
@@ -95,10 +60,8 @@ class OrderDispatcher:
                 "message": "No available drivers found"
             }
         
-        # Берём первую волну водителей
         first_wave = drivers[:self.MAX_DRIVERS_PER_WAVE]
         
-        # Формируем сообщение для push
         ride_data = {
             "type": "new_ride",
             "ride_id": ride_id,
@@ -117,10 +80,8 @@ class OrderDispatcher:
             "created_at": datetime.utcnow().isoformat()
         }
         
-        # Рассылаем
         notified = []
         for driver in first_wave:
-            # Добавляем персональные данные для этого водителя
             personal_data = {
                 **ride_data,
                 "your_distance_km": driver.distance_km,
@@ -139,7 +100,6 @@ class OrderDispatcher:
                     "distance_km": driver.distance_km
                 })
         
-        # Сохраняем информацию о рассылке
         self._active_dispatches[ride_id] = {
             "notified_drivers": {d["driver_profile_id"] for d in notified},
             "all_candidates": [d.driver_profile_id for d in drivers],
@@ -161,10 +121,6 @@ class OrderDispatcher:
         }
     
     async def dispatch_next_wave(self, ride_id: int) -> dict:
-        """
-        Отправить следующую волну водителям.
-        Вызывается если первая волна не откликнулась.
-        """
         dispatch = self._active_dispatches.get(ride_id)
         if not dispatch:
             return {"error": "Dispatch not found", "ride_id": ride_id}
@@ -175,8 +131,6 @@ class OrderDispatcher:
                 "message": "Max waves reached",
                 "waves": dispatch["waves"]
             }
-        
-        # Находим водителей, которых ещё не оповещали
         already_notified = dispatch["notified_drivers"]
         all_candidates = dispatch["all_candidates"]
         
@@ -191,8 +145,6 @@ class OrderDispatcher:
                 "message": "No more drivers to notify",
                 "waves": dispatch["waves"]
             }
-        
-        # Берём следующую порцию
         next_batch = remaining[:self.MAX_DRIVERS_PER_WAVE]
         
         # TODO: Получить ride_data из БД или кэша
@@ -219,11 +171,8 @@ class OrderDispatcher:
         }
     
     async def cancel_dispatch(self, ride_id: int) -> bool:
-        """Отменить рассылку (заказ принят или отменён)"""
         if ride_id in self._active_dispatches:
             dispatch = self._active_dispatches.pop(ride_id)
-            
-            # Уведомляем всех оповещённых водителей
             for dpid in dispatch["notified_drivers"]:
                 driver = driver_tracker.get_driver(dpid)
                 if driver:
@@ -239,7 +188,6 @@ class OrderDispatcher:
         return False
     
     def get_dispatch_status(self, ride_id: int) -> Optional[dict]:
-        """Получить статус рассылки"""
         dispatch = self._active_dispatches.get(ride_id)
         if not dispatch:
             return None
@@ -253,11 +201,9 @@ class OrderDispatcher:
         }
     
     def get_active_dispatches(self) -> List[int]:
-        """Список активных рассылок"""
         return list(self._active_dispatches.keys())
     
     def cleanup_old_dispatches(self, max_age_seconds: int = 600) -> int:
-        """Удалить старые рассылки (по умолчанию старше 10 минут)"""
         threshold = datetime.utcnow()
         to_remove = []
         
@@ -273,5 +219,4 @@ class OrderDispatcher:
         return len(to_remove)
 
 
-# Глобальный экземпляр
 order_dispatcher = OrderDispatcher()

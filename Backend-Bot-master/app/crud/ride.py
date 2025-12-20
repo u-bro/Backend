@@ -11,7 +11,6 @@ from app.schemas.ride import RideSchema, RideCreate, RideUpdate, RideStatusChang
 
 
 def _convert_decimals(d: dict) -> dict:
-    """Convert Decimal values to float for JSON serialization"""
     for k, v in d.items():
         if isinstance(v, Decimal):
             d[k] = float(v)
@@ -55,7 +54,6 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         super().__init__(Ride, RideSchema)
 
     def _strip_timezone(self, values: dict) -> dict:
-        """Remove timezone from datetime fields for naive TIMESTAMP columns"""
         datetime_fields = ['scheduled_at', 'started_at', 'completed_at', 'canceled_at']
         for field in datetime_fields:
             if field in values and values[field] is not None:
@@ -97,20 +95,17 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         session: AsyncSession,
         ride_id: int,
         req: RideStatusChangeRequest,
-    ) -> RideSchema | None:
+    ) -> RideSchema:
         to_status = req.to_status
         role = req.actor_role
         if to_status not in STATUSES:
             raise ValueError("invalid status")
 
-        # Получаем допустимые "from"-статусы для заданной роли и целевого статуса
         role_map = ALLOWED_TRANSITIONS.get(role, {})
         allowed_from = [from_s for from_s, tos in role_map.items() if to_status in tos]
         if not allowed_from:
-            # Ни один статус не может перейти в to_status у данной роли
-            return None
+            raise ValueError("status transition not allowed for this role")
 
-        # Один SQL: обновляет ride и вставляет аудит, возвращая обновлённую запись
         sql = text(
             """
             WITH prev AS (
@@ -171,12 +166,8 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         res = await session.execute(sql, params)
         row = res.first()
         if not row:
-            return None
+            raise ValueError("ride not found or status transition not allowed")
 
-        # Преобразуем Row -> модель -> схема
-        # Проще повторно прочитать ORM-объект по id, но это второй запрос.
-        # Поэтому собираем словарь вручную из возврата CTE upd.
-        # Порядок колонок должен точно соответствовать порядку в таблице rides!
         col_names = [
             "id", "client_id", "driver_profile_id", "status", "status_reason",
             "pickup_address", "pickup_lat", "pickup_lng",
@@ -197,20 +188,6 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         driver_profile_id: int,
         actor_id: int,
     ) -> tuple[RideSchema | None, str]:
-        """
-        Идемпотентное принятие заказа водителем.
-        
-        Защита от race condition: используем атомарный UPDATE с условием.
-        Только первый водитель успешно примет заказ.
-        
-        Returns:
-            (ride, status): 
-            - (ride, "accepted") - успешно принят
-            - (ride, "already_yours") - уже принят этим водителем
-            - (None, "already_taken") - уже принят другим водителем
-            - (None, "not_found") - заказ не найден
-            - (None, "invalid_status") - заказ не в статусе для принятия
-        """
         sql = text(
             """
             WITH current AS (
@@ -265,7 +242,6 @@ class RideCrud(CrudBase[Ride, RideSchema]):
             res = await session.execute(sql, params)
             row = res.first()
         except Exception as e:
-            # NOWAIT может выбросить ошибку если строка заблокирована
             if "could not obtain lock" in str(e).lower():
                 return None, "already_taken"
             raise
@@ -277,11 +253,9 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         prev_status = row[-2]
         prev_driver_id = row[-1]
         
-        # Если upd.id is NULL - обновление не произошло
+
         if row[0] is None:
-            # Проверяем почему
             if prev_driver_id == driver_profile_id:
-                # Уже принят этим водителем - идемпотентность
                 ride = await self.get_by_id(session, ride_id)
                 return ride, "already_yours"
             elif prev_driver_id is not None:
@@ -290,9 +264,6 @@ class RideCrud(CrudBase[Ride, RideSchema]):
                 return None, "invalid_status"
             else:
                 return None, "already_taken"
-
-        # Успешно обновлено
-        # Порядок колонок должен точно соответствовать порядку в таблице rides!
         col_names = [
             "id", "client_id", "driver_profile_id", "status", "status_reason",
             "pickup_address", "pickup_lat", "pickup_lng",
@@ -302,7 +273,6 @@ class RideCrud(CrudBase[Ride, RideSchema]):
             "distance_meters", "duration_seconds", "transaction_id", "commission_id",
             "is_anomaly", "anomaly_reason", "ride_metadata", "created_at", "updated_at",
         ]
-        # Отрезаем последние 2 поля (prev_status, prev_driver_id)
         ride_dict = {k: v for k, v in zip(col_names, row[:-2])}
         ride_dict = _convert_decimals(ride_dict)
         return RideSchema.model_validate(ride_dict), "accepted"
@@ -313,15 +283,9 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         limit: int = 50,
         ride_class: str | None = None,
     ) -> list[RideSchema]:
-        """
-        Получить заказы, ожидающие принятия водителем.
-        Для ленты заказов.
-        """
         query = select(Ride).where(
             Ride.status.in_(["requested", "driver_assigned"])
         ).order_by(Ride.created_at.desc()).limit(limit)
-        
-        # TODO: фильтр по классу поездки когда будет поле ride_class
         
         res = await session.execute(query)
         rides = res.scalars().all()
