@@ -211,7 +211,6 @@ Base URL: `http://localhost:5000/api/v1`
 | GET | `/users` | Список пользователей (пагинация) |
 | POST | `/users/{telegram_id}` | Создать или получить пользователя |
 | PUT | `/users/{id}` | Обновить пользователя |
-| PATCH | `/users/update_user_balance/{user_id}` | Обновить баланс |
 
 ### Rides (Поездки)
 | Метод | Путь | Описание |
