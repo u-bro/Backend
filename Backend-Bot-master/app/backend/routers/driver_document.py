@@ -1,8 +1,6 @@
 from typing import List
 from fastapi import Request, Depends
 from pydantic import TypeAdapter
-from sqlalchemy.exc import IntegrityError
-from starlette.responses import JSONResponse
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_document import driver_document_crud
 from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverDocumentUpdate
@@ -28,19 +26,12 @@ class DriverDocumentRouter(BaseRouter):
         return await super().get_by_id(request, item_id)
 
     async def create_item(self, request: Request, body: DriverDocumentCreate) -> DriverDocumentSchema:
-        try:
-            return await self.model_crud.create(request.state.session, body)
-        except IntegrityError as e:
-            await request.state.session.rollback()
-            return JSONResponse(
-                status_code=422,
-                content={"detail": f"Foreign key constraint violation: {str(e.orig)}"}
-            )
+        return await self.model_crud.create(request.state.session, body)
 
-    async def update_item(self, request: Request, item_id: int, body: DriverDocumentUpdate) -> DriverDocumentSchema:
+    async def update(self, request: Request, item_id: int, body: DriverDocumentUpdate) -> DriverDocumentSchema:
         return await self.model_crud.update(request.state.session, item_id, body)
 
-    async def delete_item(self, request: Request, item_id: int):
+    async def delete(self, request: Request, item_id: int):
         return await self.model_crud.delete(request.state.session, item_id)
 
 
