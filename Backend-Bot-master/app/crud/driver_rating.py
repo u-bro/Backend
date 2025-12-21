@@ -1,6 +1,6 @@
 from app.crud.base import CrudBase
 from app.models.driver_rating import DriverRating
-from app.schemas.driver_rating import DriverRatingSchema
+from app.schemas.driver_rating import DriverRatingSchema, DriverRatingAvgOut
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.sql.expression import desc
@@ -22,6 +22,6 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
         result = await session.execute(
             select(func.avg(subq.c.rate))
         )
-        return result.scalar_one_or_none()
+        return DriverRatingAvgOut(avg=result.scalar_one_or_none())
 
 driver_rating_crud = DriverRatingCrud()

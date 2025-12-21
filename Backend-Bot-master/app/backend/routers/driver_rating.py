@@ -3,7 +3,7 @@ from fastapi import Request, Depends
 from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_rating import driver_rating_crud
-from app.schemas.driver_rating import DriverRatingSchema, DriverRatingCreate, DriverRatingUpdate, DriverRatingCreateIn
+from app.schemas.driver_rating import DriverRatingSchema, DriverRatingCreate, DriverRatingUpdate, DriverRatingCreateIn, DriverRatingAvgOut
 from app.backend.deps import require_role, require_owner, get_current_user_id
 from app.models import DriverRating
 
@@ -37,7 +37,7 @@ class DriverRatingRouter(BaseRouter):
     async def delete(self, request: Request, item_id: int):
         return await self.model_crud.delete(request.state.session, item_id)
 
-    async def get_avg_rating(self, request: Request, driver_id: int) -> float:
-        return await self.model_crud.avg_rating(request.state.session, driver_id)
+    async def get_avg_rating(self, request: Request, driver_id: int, count: int | None = None) -> DriverRatingAvgOut:
+        return await self.model_crud.avg_rating(request.state.session, driver_id, count)
 
 driver_rating_router = DriverRatingRouter().router
