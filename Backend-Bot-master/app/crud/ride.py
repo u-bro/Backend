@@ -74,6 +74,9 @@ class CrudRide(CrudBase):
             distance_meters = data.get("distance_meters", existing.distance_meters)
             self._add_expected_fare_and_snapshot(data, tariff_plan, distance_meters)
 
+        if not data:
+            return await self.get_by_id(session, id)
+
         stmt = (
             update(self.model)
             .where(self.model.id == id)
