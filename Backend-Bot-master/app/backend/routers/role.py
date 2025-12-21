@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import Request, HTTPException, Depends
+from fastapi import Request, Depends
 from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.role import role_crud

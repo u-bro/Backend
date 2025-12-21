@@ -11,11 +11,11 @@ from app.schemas.ride import RideSchema
 
 class CrudRide(CrudBase):
     @staticmethod
-    def _calculate_expected_fare(*, tariff_plan: TariffPlan, distance_meters: int | None) -> float | None:
+    def _calculate_expected_fare(tariff_plan: TariffPlan, distance_meters: int | None) -> float | None:
         return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier))) * (1 + float(tariff_plan.commission_percentage) / 100)
 
     @staticmethod
-    def _build_snapshot(*, tariff_plan: TariffPlan, distance_meters: int | None, expected_fare: float | None) -> dict:
+    def _build_snapshot(tariff_plan: TariffPlan, distance_meters: int | None, expected_fare: float | None) -> dict:
         effective_from = getattr(tariff_plan, "effective_from", None)
         effective_to = getattr(tariff_plan, "effective_to", None)
         return {
@@ -44,7 +44,7 @@ class CrudRide(CrudBase):
         }
 
     @staticmethod
-    def _add_expected_fare_and_snapshot(*, data: dict, tariff_plan: TariffPlan, distance_meters: int):
+    def _add_expected_fare_and_snapshot(data: dict, tariff_plan: TariffPlan, distance_meters: int):
         expected_fare = CrudRide._calculate_expected_fare(tariff_plan, distance_meters)
         snapshot = CrudRide._build_snapshot(tariff_plan, distance_meters, expected_fare)
         data["expected_fare"] = expected_fare

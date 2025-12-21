@@ -1,13 +1,10 @@
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-
 from app.models import User
 from .get_current_user_id import get_current_user_id
 
-async def get_current_user(request: Request) -> User:
-    user_id = get_current_user_id(request)
-
+async def get_current_user(request: Request, user_id: int = Depends(get_current_user_id)) -> User:
     session = getattr(request.state, "session", None)
     if session is None:
         raise HTTPException(status_code=500, detail="Database session is not available")

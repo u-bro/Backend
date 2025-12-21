@@ -5,7 +5,8 @@ from app.backend.routers.base import BaseRouter
 from app.crud.ride import ride_crud
 from app.models import Ride
 from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver
-from app.backend.deps import require_role, require_ride_client, require_ride_driver, get_current_user_id, get_current_driver_profile_id
+from app.backend.deps import require_role, require_ride_driver, get_current_user_id, get_current_driver_profile_id, require_owner
+from app.models import Ride
 
 
 class RideRouter(BaseRouter):
@@ -19,7 +20,7 @@ class RideRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
         
-        self.router.add_api_route(f"{self.prefix}/{{id}}/client", self.update_by_client, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["user", "admin"])), Depends(require_ride_client)])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/client", self.update_by_client, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["user", "admin"])), Depends(require_owner(Ride, 'client_id'))])
         self.router.add_api_route(f"{self.prefix}/{{id}}/driver", self.update_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"])), Depends(require_ride_driver)])
         self.router.add_api_route(f"{self.prefix}/{{id}}/accept", self.accept_ride, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}/finish", self.finish_ride_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
