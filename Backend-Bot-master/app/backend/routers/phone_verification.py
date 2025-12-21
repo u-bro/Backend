@@ -58,14 +58,7 @@ class PhoneVerificationRouter(BaseRouter):
 
 
     async def verify_telegram_otp(self, request: Request, verify_obj: PhoneVerificationVerifyRequest, user_id: int = Depends(get_current_user_id)) -> JSONResponse:
-        item = await self.model_crud.get_by_user_id(request.state.session, user_id)
-        if item is None:
-            return JSONResponse(status_code=404, content={"detail": "No phone verification record found"})
-        
-        if verify_obj.code == item.code:
-            return await self.model_crud.update_status_by_user_id(request.state.session, user_id, "confirmed")
-
-        return JSONResponse(status_code=401, content={"detail": "Code incorrect"})
+        return await self.model_crud.verify_by_user_id(request.state.session, verify_obj, user_id)
 
     @staticmethod
     def generate_otp(length: int = 6) -> str:

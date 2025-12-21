@@ -6,6 +6,7 @@ from app.schemas import PhoneVerificationSchema
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import update, desc
+from app.schemas.phone_verification import PhoneVerificationVerifyRequest
 
 
 class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]):
@@ -21,11 +22,15 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
         ver = result.scalar_one_or_none()
         return self.schema.model_validate(ver) if ver else None
 
-    async def update_status_by_user_id(self, session: AsyncSession, user_id: int, status: str) -> PhoneVerificationSchema | None:
+    async def verify_by_user_id(self, session: AsyncSession, verify_obj: PhoneVerificationVerifyRequest, user_id: int) -> PhoneVerificationSchema | None:
+        item = await self.get_by_user_id(session, user_id)
+        if item is None or verify_obj.code != item.code:
+            return None
+
         stmt = (
             update(self.model)
             .where(self.model.user_id == user_id)
-            .values(status=status)
+            .values(status="confirmed")
             .returning(self.model)
         )
         result = await self.execute_get_one(session, stmt)
