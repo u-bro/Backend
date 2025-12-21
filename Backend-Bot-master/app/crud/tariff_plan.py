@@ -6,22 +6,18 @@ from sqlalchemy.sql import insert, update
 
 from app.crud.base import CrudBase
 from app.models import TariffPlan
-from app.schemas.tariff_plan import TariffPlanSchema
+from app.schemas.tariff_plan import TariffPlanSchema, TariffPlanUpdate
 
 class CrudTariffPlan(CrudBase):
-    async def update(self, session: AsyncSession, id: int, update_obj) -> TariffPlanSchema | None:
+    async def update(self, session: AsyncSession, id: int, update_obj: TariffPlanUpdate) -> TariffPlanSchema | None:
         now = datetime.utcnow()
-
         existing_result = await session.execute(select(self.model).where(self.model.id == id))
-        existing: TariffPlan | None = existing_result.scalar_one_or_none()
-        if existing is None:
-            return None
+        existing = existing_result.scalar_one_or_none()
 
         if getattr(existing, "effective_to", None) is not None:
             raise HTTPException(status_code=400, detail="Cannot update a closed tariff plan version")
 
         data = update_obj.model_dump(exclude_none=True)
-
         new_effective_from = data.get("effective_from") or now
         if getattr(existing, "effective_from", None) and new_effective_from <= existing.effective_from:
             raise HTTPException(status_code=400, detail="effective_from must be greater than previous effective_from")
@@ -32,9 +28,7 @@ class CrudTariffPlan(CrudBase):
             .values(effective_to=new_effective_from, updated_at=now)
             .returning(self.model)
         )
-        closed = await self.execute_get_one(session, close_stmt)
-        if closed is None:
-            return None
+        await self.execute_get_one(session, close_stmt)
 
         insert_data = {
             "name": data.get("name", existing.name),
