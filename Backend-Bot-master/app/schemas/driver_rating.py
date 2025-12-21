@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
-class DriverRatingCreate(BaseModel):
+class DriverRatingCreateIn(BaseModel):
     driver_profile_id: int
     ride_id: int
     rate: int
@@ -11,9 +11,11 @@ class DriverRatingCreate(BaseModel):
     created_at: Optional[datetime] = None
 
 
-class DriverRatingUpdate(DriverRatingCreate):
-    driver_profile_id: Optional[int] = None
-    ride_id: Optional[int] = None
+class DriverRatingCreate(DriverRatingCreateIn):
+    client_id: int
+
+
+class DriverRatingUpdate(BaseModel):
     rate: Optional[int] = None
     comment: Optional[str] = None
     created_at: Optional[datetime] = None
