@@ -9,7 +9,7 @@ from app.backend.deps.get_current_user import get_current_user, get_current_user
 from app.backend.deps import require_role_unverified
 from app.models import User
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class PhoneVerificationRouter(BaseRouter):
     def __init__(self) -> None:
@@ -47,7 +47,7 @@ class PhoneVerificationRouter(BaseRouter):
         code = self.generate_otp()
         ttl = 120
         updated_at_timestamp = datetime.utcnow()
-        expires_at = datetime.utcfromtimestamp(updated_at_timestamp + ttl)
+        expires_at = updated_at_timestamp + timedelta(seconds=ttl)
         create_obj = PhoneVerificationSchemaCreate(
             user_id=user_id,
             phone=phone_number,
