@@ -2,11 +2,6 @@ from .get_current_user import get_current_user
 from .get_current_user_id import get_current_user_id
 from .require_role import require_role
 from .require_role_unverified import require_role_unverified
-from .require_chat_message_owner import require_chat_message_owner
-from .require_ride_status_history_owner import require_ride_status_history_owner
-from .require_driver_document_owner import require_driver_document_owner
-from .require_driver_profile_owner import require_driver_profile_owner
-from .require_driver_location_owner import require_driver_location_owner
-from .require_ride_client import require_ride_client
-from .require_ride_driver import require_ride_driver
 from .get_current_driver_profile_id import get_current_driver_profile_id
+from .require_owner import require_owner
+from .require_driver_profile import require_driver_profile

@@ -1,8 +1,6 @@
 from typing import List
 from fastapi import Request, Depends
 from pydantic import TypeAdapter
-from sqlalchemy.exc import IntegrityError
-from starlette.responses import JSONResponse
 from app.backend.routers.base import BaseRouter
 from app.crud.transaction import transaction_crud
 from app.schemas.transaction import TransactionSchema, TransactionCreate, TransactionUpdate
@@ -28,14 +26,7 @@ class TransactionRouter(BaseRouter):
         return await super().get_by_id(request, item_id)
 
     async def create(self, request: Request, body: TransactionCreate) -> TransactionSchema:
-        try:
-            return await self.model_crud.create(request.state.session, body)
-        except IntegrityError as e:
-            await request.state.session.rollback()
-            return JSONResponse(
-                status_code=422,
-                content={"detail": f"Foreign key constraint violation: {str(e.orig)}"}
-            )
+        return await self.model_crud.create(request.state.session, body)
 
     async def update(self, request: Request, item_id: int, body: TransactionUpdate) -> TransactionSchema:
         return await self.model_crud.update(request.state.session, item_id, body)

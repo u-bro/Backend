@@ -5,7 +5,8 @@ from app.backend.routers.base import BaseRouter
 from app.crud.ride import ride_crud
 from app.models import Ride
 from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver
-from app.backend.deps import require_role, require_ride_client, require_ride_driver, get_current_user_id, get_current_driver_profile_id
+from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile
+from app.models import Ride
 
 
 class RideRouter(BaseRouter):
@@ -19,8 +20,8 @@ class RideRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
         
-        self.router.add_api_route(f"{self.prefix}/{{id}}/client", self.update_by_client, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["user", "admin"])), Depends(require_ride_client)])
-        self.router.add_api_route(f"{self.prefix}/{{id}}/driver", self.update_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"])), Depends(require_ride_driver)])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/client", self.update_by_client, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["user", "admin"])), Depends(require_owner(Ride, 'client_id'))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/driver", self.update_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"])), Depends(require_driver_profile(Ride))])
         self.router.add_api_route(f"{self.prefix}/{{id}}/accept", self.accept_ride, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}/finish", self.finish_ride_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
 
@@ -58,8 +59,8 @@ class RideRouter(BaseRouter):
     async def update_by_driver(self, request: Request, id: int, update_obj: RideSchemaUpdateByDriver) -> RideSchema:
         return await super().update(request, id, update_obj)
 
-    async def finish_ride_by_driver(self, request: Request, id: int, update_obj: RideSchemaFinishByDriver, ride: Ride = Depends(require_ride_driver)) -> RideSchema:
-        update_obj = RideSchemaFinishWithAnomaly(is_anomaly=ride.expected_fare != update_obj.actual_fare, **update_obj.model_dump())
+    async def finish_ride_by_driver(self, request: Request, id: int, update_obj: RideSchemaFinishByDriver, ride: Ride = Depends(require_driver_profile(Ride))) -> RideSchema:
+        update_obj = RideSchemaFinishWithAnomaly(is_anomaly=str(ride.expected_fare) != str(update_obj.actual_fare), **update_obj.model_dump())
         return await super().update(request, id, update_obj)
 
 

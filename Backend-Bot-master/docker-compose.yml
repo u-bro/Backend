@@ -53,14 +53,6 @@ services:
       db:
         condition: service_healthy
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: PUBLIC_TUNNEL
-    command: tunnel --url http://fastapi_app:5000 --no-autoupdate
-    restart: unless-stopped
-    depends_on:
-      - fastapi_app
-
 
 volumes:
   postgres_data:

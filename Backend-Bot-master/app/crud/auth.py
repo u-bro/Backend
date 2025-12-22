@@ -51,65 +51,38 @@ class CrudAuth(CrudBase):
         return self.schema.model_validate(user) if user else None
 
     async def register_user(self, session: AsyncSession, register_obj: AuthSchemaRegister) -> UserSchema | None:
-        try:
-            existing_user = await self.get_by_email(session, register_obj.email)
-            if existing_user:
-                logger.warning(f"User with email {register_obj.email} already exists")
-                return None
-
-            hashed_password = self.hash_password(register_obj.password)
-            
-            role = await role_crud.get_by_code(session, "user")
-            if not role:
-                logger.warning(f"Role with code \'user\' not found")
-                return None
-            
-            user_data = {
-                "email": register_obj.email,
-                "password_hash": hashed_password,
-                "username": register_obj.username,
-                "phone": register_obj.phone,
-                "is_active": True,
-                "role_id": role.id
-            }
-            
-            new_user = self.model(**user_data)
-            session.add(new_user)
-            await session.flush()
-            await session.commit()
-            
-            return self.schema.model_validate(new_user)
-        except Exception as e:
-            await session.rollback()
-            logger.error(f"Error registering user: {e}")
+        existing_user = await self.get_by_email(session, register_obj.email)
+        if existing_user:
+            logger.warning(f"User with email {register_obj.email} already exists")
             return None
+
+        hashed_password = self.hash_password(register_obj.password)
+        
+        role = await role_crud.get_by_code(session, "user")
+        if not role:
+            logger.warning(f"Role with code \'user\' not found")
+            return None
+        
+        user_data = {
+            "email": register_obj.email,
+            "password_hash": hashed_password,
+            "username": register_obj.username,
+            "phone": register_obj.phone,
+            "is_active": True,
+            "role_id": role.id
+        }
+        
+        new_user = self.model(**user_data)
+        session.add(new_user)
+        await session.flush()
+        await session.commit()
+        
+        return self.schema.model_validate(new_user)
 
     async def login_user(self, session: AsyncSession, email: str, password: str) -> UserSchema | None:
-        try:
-            user = await self.get_by_email(session, email)
-            if not user:
-                logger.warning(f"User with email {email} not found")
-                return None
-
-            if not self.verify_password(password, user.password_hash):
-                logger.warning(f"Invalid password for user {email}")
-                return None
-
-            return user
-        except Exception as e:
-            logger.error(f"Error logging in user: {e}")
+        user = await self.get_by_email(session, email)
+        if not user or not self.verify_password(password, user.password_hash):
+            logger.warning(f"Invalid email or password")
             return None
 
-    async def logout_user(self, session: AsyncSession, user_id: int) -> bool:
-        try:
-            result = await session.execute(select(self.model).where(self.model.id == user_id))
-            user = result.scalar_one_or_none()
-            
-            if not user:
-                logger.warning(f"User with id {user_id} not found")
-                return False
-
-            return True
-        except Exception as e:
-            logger.error(f"Error logging out user: {e}")
-            return False
+        return user

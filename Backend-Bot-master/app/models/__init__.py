@@ -11,3 +11,4 @@ from .ride_status_history import RideStatusHistory
 from .driver_location import DriverLocation
 from .chat_message import ChatMessage
 from .tariff_plan import TariffPlan
+from .driver_rating import DriverRating
