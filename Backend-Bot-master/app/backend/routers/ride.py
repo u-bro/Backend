@@ -7,6 +7,8 @@ from app.models import Ride
 from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile
 from app.models import Ride
+from app.services import pdf_generator
+from app.crud import document_crud
 
 
 class RideRouter(BaseRouter):
@@ -60,7 +62,11 @@ class RideRouter(BaseRouter):
         return await super().update(request, id, update_obj)
 
     async def finish_ride_by_driver(self, request: Request, id: int, update_obj: RideSchemaFinishByDriver, ride: Ride = Depends(require_driver_profile(Ride))) -> RideSchema:
-        update_obj = RideSchemaFinishWithAnomaly(is_anomaly=str(ride.expected_fare) != str(update_obj.actual_fare), **update_obj.model_dump())
+        # key = f"receipts/rides/{id}/receipt.pdf"
+        # pdf_check = await pdf_generator.generate_ride_receipt(id, str(ride.client_id), str(ride.driver_profile_id), ride.pickup_address, ride.dropoff_address, update_obj.actual_fare, ride.distance_meters / 1000, ride.duration_seconds / 60)
+        # await document_crud.upload_pdf_bytes(key, pdf_check)
+        
+        update_obj = RideSchemaFinishWithAnomaly(is_anomaly=str(ride.expected_fare) != str(update_obj.actual_fare), ride_metadata={"receipt_s3_key": key}, **update_obj.model_dump())
         return await super().update(request, id, update_obj)
 
 
