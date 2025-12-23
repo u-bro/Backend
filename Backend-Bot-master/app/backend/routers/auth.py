@@ -3,7 +3,7 @@ from starlette.responses import JSONResponse
 from datetime import timedelta
 
 from app.crud.auth import CrudAuth
-from app.schemas import AuthSchemaRegister, AuthSchemaLogin, TokenResponse, AuthSchemaLogout, UserSchema
+from app.schemas import AuthSchemaRegister, AuthSchemaLogin, TokenResponse, UserSchema
 from app.models import User
 from app.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_HOURS
 from app.backend.routers.base import BaseRouter
@@ -29,10 +29,10 @@ class AuthRouter(BaseRouter):
         return TokenResponse(access_token=access_token, user_id=user.id)
 
     async def login(self, request: Request, login_obj: AuthSchemaLogin) -> TokenResponse:
-        user = await self.model_crud.login_user(request.state.session, login_obj.email, login_obj.password)
+        user = await self.model_crud.login_user(request.state.session, login_obj.phone)
         
         if user is None:
-            return JSONResponse(status_code=401, content={"detail": "Invalid email or password"})
+            return JSONResponse(status_code=401, content={"detail": "Invalid phone number"})
         
         expires_delta = timedelta(hours=JWT_EXPIRATION_HOURS)
         access_token = self.model_crud.create_access_token(user.id, expires_delta)

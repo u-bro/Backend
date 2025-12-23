@@ -12,6 +12,7 @@ async def get_current_user(request: Request, user_id: int = Depends(get_current_
     result = await session.execute(
         select(User)
         .options(selectinload(User.role))
+        .options(selectinload(User.driver_profile))
         .where(User.id == user_id)
     )
     user = result.scalar_one_or_none()

@@ -14,11 +14,10 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     username: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    email: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
-    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(20), nullable=True, unique=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     role_id: Mapped[int | None] = mapped_column(ForeignKey("roles.id"), nullable=True)
 
     role = relationship("Role")
     transactions = relationship("Transaction", back_populates="user")
+    driver_profile = relationship("DriverProfile", back_populates="user", uselist=False, foreign_keys="DriverProfile.user_id")

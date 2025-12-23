@@ -1,5 +1,4 @@
 import jwt
-import hashlib
 from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
@@ -14,16 +13,7 @@ class CrudAuth(CrudBase):
         self.secret_key = secret_key
         self.algorithm = algorithm
 
-    def hash_password(self, password: str) -> str:
-        return hashlib.sha256(password.encode()).hexdigest()
-
-    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        return self.hash_password(plain_password) == hashed_password
-
-    def create_access_token(self, user_id: int, expires_delta: timedelta | None = None) -> str:
-        if expires_delta is None:
-            expires_delta = timedelta(hours=24)
-        
+    def create_access_token(self, user_id: int, expires_delta: timedelta = timedelta(hours=24)) -> str:
         expire = datetime.utcnow() + expires_delta
         payload = {
             "user_id": user_id,
@@ -45,27 +35,23 @@ class CrudAuth(CrudBase):
             logger.error("Invalid token")
             return None
 
-    async def get_by_email(self, session: AsyncSession, email: str) -> UserSchema | None:
-        result = await session.execute(select(self.model).where(self.model.email == email))
+    async def get_by_phone(self, session: AsyncSession, phone: str) -> UserSchema | None:
+        result = await session.execute(select(self.model).where(self.model.phone == phone))
         user = result.scalar_one_or_none()
         return self.schema.model_validate(user) if user else None
 
     async def register_user(self, session: AsyncSession, register_obj: AuthSchemaRegister) -> UserSchema | None:
-        existing_user = await self.get_by_email(session, register_obj.email)
+        existing_user = await self.get_by_phone(session, register_obj.phone)
         if existing_user:
-            logger.warning(f"User with email {register_obj.email} already exists")
+            logger.warning(f"User with phone {register_obj.phone} already exists")
             return None
 
-        hashed_password = self.hash_password(register_obj.password)
-        
         role = await role_crud.get_by_code(session, "user")
         if not role:
             logger.warning(f"Role with code \'user\' not found")
             return None
         
         user_data = {
-            "email": register_obj.email,
-            "password_hash": hashed_password,
             "username": register_obj.username,
             "phone": register_obj.phone,
             "is_active": True,
@@ -79,10 +65,10 @@ class CrudAuth(CrudBase):
         
         return self.schema.model_validate(new_user)
 
-    async def login_user(self, session: AsyncSession, email: str, password: str) -> UserSchema | None:
-        user = await self.get_by_email(session, email)
-        if not user or not self.verify_password(password, user.password_hash):
-            logger.warning(f"Invalid email or password")
+    async def login_user(self, session: AsyncSession, phone: str) -> UserSchema | None:
+        user = await self.get_by_phone(session, phone)
+        if not user:
+            logger.warning(f"Invalid phone number")
             return None
 
         return user

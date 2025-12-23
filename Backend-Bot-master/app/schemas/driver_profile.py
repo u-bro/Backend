@@ -1,4 +1,4 @@
-from typing import Optional, Any
+from typing import Literal, Optional, Any
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -26,6 +26,11 @@ class DriverProfileCreate(BaseModel):
 
 class DriverProfileUpdate(DriverProfileCreate):
     user_id: Optional[int] = None
+
+
+class DriverProfileApprove(BaseModel):
+    approved: Literal[True] = True
+    approved_by: int
 
 
 class DriverProfileSchema(DriverProfileCreate):
