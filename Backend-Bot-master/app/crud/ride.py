@@ -2,11 +2,30 @@ from datetime import datetime
 from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from fastapi import Depends
 from sqlalchemy.sql import insert, update
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
-from app.models import Ride, TariffPlan
+from app.models import Ride, TariffPlan, RideStatusHistory, User
 from app.schemas.ride import RideSchema
+from app.backend.deps.get_current_user import get_current_user_id
+
+
+STATUSES = {
+    "requested",
+    "accepted",
+    "arrived",
+    "started",
+    "completed",
+    "canceled",
+}
+
+ALLOWED_TRANSITIONS = {
+    "requested": { "canceled"},
+    "accepted": {"arrived", "canceled"},
+    "arrived": {"started", "canceled"},
+    "started": {"completed", "canceled"},
+}
 
 
 class CrudRide(CrudBase):
@@ -56,12 +75,27 @@ class CrudRide(CrudBase):
         self._add_expected_fare_and_snapshot(data, tariff_plan, data.get("distance_meters"))
 
         stmt = insert(self.model).values(data).returning(self.model)
-        result = await self.execute_get_one(session, stmt)
-        return self.schema.model_validate(result) if result else None
+        ride = await self.execute_get_one(session, stmt)
+        if not ride:
+            return None
+        hist = insert(RideStatusHistory).values(
+            ride_id=ride.id,
+            from_status=None,
+            to_status="requested",
+            changed_by=create_obj.client_id,
+            reason=None,
+            meta=None,
+            created_at=datetime.utcnow(),
+        )
+        await session.execute(hist)
+        return self.schema.model_validate(ride)
 
-    async def update(self, session: AsyncSession, id: int, update_obj) -> RideSchema | None:
+    async def update(self, session: AsyncSession, id: int, update_obj, user = Depends(get_current_user_id)) -> RideSchema | None:
         existing_result = await session.execute(select(self.model).where(self.model.id == id))
         existing = existing_result.scalar_one_or_none()
+
+        if not self._is_status_transition_allowed(existing.status, update_obj.status):
+            return 'Incorrect ride status transition'
 
         data = update_obj.model_dump(exclude_none=True)
         data.pop("expected_fare", None)
@@ -84,7 +118,27 @@ class CrudRide(CrudBase):
             .returning(self.model)
         )
         result = await self.execute_get_one(session, stmt)
-        return self.schema.model_validate(result) if result else None
+        if not result:
+            return None
+        
+        hist = insert(RideStatusHistory).values(
+            ride_id=result.id,
+            from_status=existing.status,
+            to_status=update_obj.status,
+            changed_by=user.id,
+            reason=None,
+            meta=None,
+            created_at=datetime.utcnow(),
+        )
+        await session.execute(hist)
+        return self.schema.model_validate(result)
+
+    @staticmethod
+    def _is_status_transition_allowed(from_status: str, to_status: str) -> bool:
+        if to_status not in STATUSES or to_status not in ALLOWED_TRANSITIONS.get(from_status, []):
+            return False
+
+        return True
 
     async def accept(self, session: AsyncSession, id: int, update_obj) -> RideSchema | None:
         stmt = (
