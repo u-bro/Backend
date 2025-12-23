@@ -3,7 +3,7 @@ from fastapi import Request, Depends
 from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_profile import driver_profile_crud
-from app.schemas.driver_profile import DriverProfileSchema, DriverProfileCreate, DriverProfileUpdate, DriverProfileApprove
+from app.schemas.driver_profile import DriverProfileSchema, DriverProfileCreate, DriverProfileUpdate, DriverProfileApprove, DriverProfileApproveIn
 from app.backend.deps import require_role, require_owner, get_current_user_id, require_driver_verification
 from app.models import DriverProfile
 
@@ -36,8 +36,8 @@ class DriverProfileRouter(BaseRouter):
     async def delete(self, request: Request, id: int):
         return await self.model_crud.delete(request.state.session, id)
 
-    async def approve_profile(self, request: Request, id: int, user_id: int = Depends(get_current_user_id)) -> DriverProfileSchema:
-        return await self.model_crud.update(request.state.session, id, DriverProfileApprove(approved=True, approved_by=user_id))
+    async def approve_profile(self, request: Request, id: int, body: DriverProfileApproveIn, user_id: int = Depends(get_current_user_id)) -> DriverProfileSchema:
+        return await self.model_crud.update(request.state.session, id, DriverProfileApprove(approved_by=user_id, **body.model_dump()))
 
 
 driver_profile_router = DriverProfileRouter().router
