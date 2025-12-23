@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Документация WebSocket — Backend-Bot</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{font-family:Inter,Arial,Helvetica,sans-serif;margin:24px;color:#111}
+    h1,h2{color:#0b5;}
+    pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto}
+    code{font-family:monospace;font-size:0.95em}
+    .section{margin-bottom:18px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left}
+  </style>
+</head>
+<body>
+  <h1>WebSocket — Документация и результаты тестирования</h1>
+
+  <div class="section">
+    <h2>Краткое содержание</h2>
+    <ul>
+      <li>Файлы с результатами тестов: <strong>tests/ws_results/</strong></li>
+      <li>Собранные логи сервера: <strong>tests/ws_results/server.log</strong> (если вы их экспортировали туда)</li>
+      <li>Выполнены ручные WS‑тесты: подключение нескольких клиентов, ping/pong, join_ride, chat_message, location_update.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Основные эндпоинты (API prefix: /api/v1)</h2>
+    <pre><code>WebSocket
+
+GET
+/api/v1/ws/stats
+Get Websocket Stats
+
+
+POST
+/api/v1/ws/notify/{user_id}
+Send Notification
+
+
+POST
+/api/v1/ws/broadcast
+Broadcast Message
+
+
+POST
+/api/v1/ws/driver/{user_id}/location
+Update Driver Location
+
+
+POST
+/api/v1/ws/driver/{user_id}/status
+Update Driver Status
+
+
+GET
+/api/v1/ws/driver/{user_id}/state
+Get Driver State
+
+
+GET
+/api/v1/ws/drivers/stats
+Get Drivers Stats</code></pre>
+    <p>Используйте точные пути с префиксом <code>/api/v1</code>. Для запросов, изменяющих состояние водителя, предварительно зарегистрируйте профиль в <code>/api/v1/matching/driver/register</code> и убедитесь, что телефон подтверждён, если требуется.</p>
+  </div>
+
+  <div class="section">
+    <h2>Примеры cURL</h2>
+    <p>Получить admin token (пример регистрации/логин в тестовой среде):</p>
+    <pre><code>curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"tmpadmin@example.com","password":"strongpass","username":"tmpadmin"}' | jq .</code></pre>
+
+    <p>Отправка location (важно: <code>latitude</code> и <code>longitude</code>):</p>
+    <pre><code>curl -X POST http://localhost:5000/api/v1/ws/driver/3/location \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"latitude":55.75,"longitude":37.62,"accuracy":5}' | jq .</code></pre>
+
+    <p>Получить состояние водителя:</p>
+    <pre><code>curl -X GET http://localhost:5000/api/v1/ws/driver/3/state \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq .</code></pre>
+  </div>
+
+  <div class="section">
+    <h2>Особенности и замечания</h2>
+    <ul>
+      <li>Эндпоинты для driver требуют, чтобы профиль водителя был зарегистрирован в <code>driver_tracker</code> (вызов <code>POST /matching/driver/register</code>).</li>
+      <li>Проверка роли/доступа использует верификацию телефона — для тестов можно вставить запись в <code>phone_verifications</code> со статусом <code>confirmed</code> и <code>attempts=0</code>.</li>
+      <li>Логи показывают, что вы успешно зарегистрировали драйвера (пример: <code>Driver 2 registered</code>) и затем отправили location: см. <code>tests/ws_results/</code>.</li>
+      <li>Для генерации PDF предупреждение в логах: <code>ReportLab not installed</code> — поэтому генерация PDF из кода сервиса может быть ограничена. Можно конвертировать этот HTML в PDF внешней утилитой.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Результаты тестов</h2>
+    <p>Автотест сохранил файлы в <strong>tests/ws_results/</strong>. Основные файлы:</p>
+    <ul>
+      <li><code>ws_stats.json</code></li>
+      <li><code>ws_broadcast.json</code></li>
+      <li><code>driver_location_3.json</code>, <code>driver_status_3.json</code>, <code>driver_state_3.json</code></li>
+      <li><code>server.log</code> — записи сервера (подтверждены подключения, регистрации и обновления статуса/локации).</li>
+    </ul>
+  </div>
+</body>
+</html>

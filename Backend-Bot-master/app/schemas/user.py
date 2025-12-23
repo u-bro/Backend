@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import ConfigDict, Field
 from datetime import datetime
 
 from . import BaseSchema
@@ -19,4 +19,9 @@ class UserSchema(UserSchemaCreate):
     last_active: datetime | None = Field(None)
     phone: str | None = Field(None, max_length=20)
     is_active: bool | None = Field(None)
+
+
+class BalanceUpdateResponse(BaseSchema):
+    model_config = ConfigDict(from_attributes=True, extra="allow")
+    success: bool = True
 

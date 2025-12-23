@@ -1,8 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import update
+
+from app.logger import logger
 from app.crud.base import CrudBase
 from app.models import User
-from app.schemas import UserSchema
+from app.schemas import BalanceUpdateResponse, UserSchema
 
 
 class CrudUser(CrudBase):

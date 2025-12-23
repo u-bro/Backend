@@ -34,7 +34,27 @@ def upgrade() -> None:
     sa.Column('commission_percentage', sa.Float(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.add_column('rides', sa.Column('tariff_plan_id', sa.Integer(), nullable=False))
+    
+    # Добавляем колонку как nullable, затем заполняем значения по умолчанию, потом делаем NOT NULL
+    op.add_column('rides', sa.Column('tariff_plan_id', sa.Integer(), nullable=True))
+    
+    # Создаем тариф по умолчанию, если его нет
+    op.execute("""
+        INSERT INTO tariff_plans (name, base_fare, rate_per_meter, multiplier, commission_percentage, effective_from, created_at)
+        VALUES ('Default', 100.0, 5.0, 1.0, 10.0, NOW(), NOW())
+        ON CONFLICT DO NOTHING
+    """)
+    
+    # Обновляем существующие rides с тарифом по умолчанию
+    op.execute("""
+        UPDATE rides 
+        SET tariff_plan_id = (SELECT id FROM tariff_plans WHERE name = 'Default' LIMIT 1)
+        WHERE tariff_plan_id IS NULL
+    """)
+    
+    # Теперь делаем колонку NOT NULL
+    op.alter_column('rides', 'tariff_plan_id', nullable=False)
+    
     op.create_foreign_key(None, 'rides', 'tariff_plans', ['tariff_plan_id'], ['id'])
     op.add_column('users', sa.Column('last_name', sa.String(length=100), nullable=True))
     op.add_column('users', sa.Column('email', sa.String(length=255), nullable=True))
