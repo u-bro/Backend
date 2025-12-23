@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import Request, Depends
+from fastapi import Request, Depends, HTTPException
 from pydantic import TypeAdapter
 from starlette.responses import JSONResponse
 from app.backend.routers.base import BaseRouter

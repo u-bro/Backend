@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import update, desc
 from app.schemas.phone_verification import PhoneVerificationVerifyRequest
+from datetime import datetime
 
 
 class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]):
@@ -25,11 +26,14 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
     async def verify_by_user_id(self, session: AsyncSession, verify_obj: PhoneVerificationVerifyRequest, user_id: int) -> PhoneVerificationSchema | None:
         item = await self.get_by_user_id(session, user_id)
         if item is None or verify_obj.code != item.code:
-            return None
+            return 'Code is not correct'
+
+        if item.expires_at <= datetime.utcnow():
+            return 'Code expired'
 
         stmt = (
             update(self.model)
-            .where(self.model.user_id == user_id)
+            .where(self.model.id == item.id)
             .values(status="confirmed")
             .returning(self.model)
         )
