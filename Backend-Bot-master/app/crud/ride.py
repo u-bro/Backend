@@ -6,8 +6,10 @@ from fastapi import Depends
 from sqlalchemy.sql import insert, update
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
-from app.models import Ride, TariffPlan, RideStatusHistory, User
+from .ride_status_history import ride_status_history_crud
+from app.models import Ride, TariffPlan
 from app.schemas.ride import RideSchema
+from app.schemas.ride_status_history import RideStatusHistoryCreate
 from app.backend.deps.get_current_user import get_current_user_id
 
 
@@ -78,16 +80,7 @@ class CrudRide(CrudBase):
         ride = await self.execute_get_one(session, stmt)
         if not ride:
             return None
-        hist = insert(RideStatusHistory).values(
-            ride_id=ride.id,
-            from_status=None,
-            to_status="requested",
-            changed_by=create_obj.client_id,
-            reason=None,
-            meta=None,
-            created_at=datetime.utcnow(),
-        )
-        await session.execute(hist)
+        await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=ride.id, from_status=None, to_status='requested', changed_by=create_obj.client_id))
         return self.schema.model_validate(ride)
 
     async def update(self, session: AsyncSession, id: int, update_obj, user = Depends(get_current_user_id)) -> RideSchema | None:
@@ -121,16 +114,7 @@ class CrudRide(CrudBase):
         if not result:
             return None
         
-        hist = insert(RideStatusHistory).values(
-            ride_id=result.id,
-            from_status=existing.status,
-            to_status=update_obj.status,
-            changed_by=user.id,
-            reason=None,
-            meta=None,
-            created_at=datetime.utcnow(),
-        )
-        await session.execute(hist)
+        await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=result.id, from_status=existing.status, to_status=update_obj.status, changed_by=user.id))
         return self.schema.model_validate(result)
 
     @staticmethod
