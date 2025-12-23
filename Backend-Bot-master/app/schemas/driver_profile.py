@@ -15,9 +15,6 @@ class DriverProfileCreate(BaseModel):
     license_issued_at: Optional[datetime] = None
     license_expires_at: Optional[datetime] = None
     experience_years: Optional[int] = None
-    approved: Optional[bool] = False
-    approved_by: Optional[int] = None
-    approved_at: Optional[datetime] = None
     qualification_level: Optional[str] = None
     classes_allowed: Optional[dict[str, Any]] = None
     documents_status: Optional[str] = None
@@ -28,8 +25,11 @@ class DriverProfileUpdate(DriverProfileCreate):
     user_id: Optional[int] = None
 
 
-class DriverProfileApprove(BaseModel):
-    approved: Literal[True] = True
+class DriverProfileApproveIn(BaseModel):
+    approved: bool = True
+
+
+class DriverProfileApprove(DriverProfileApproveIn):
     approved_by: int
 
 
@@ -39,6 +39,9 @@ class DriverProfileSchema(DriverProfileCreate):
     rating_count: Optional[int] = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    approved: Optional[bool] = False
+    approved_by: Optional[int] = None
+    approved_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

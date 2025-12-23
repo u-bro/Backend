@@ -3,9 +3,10 @@ from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 from app.crud.base import CrudBase
-from app.schemas import UserSchema, AuthSchemaRegister
+from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate
 from app.logger import logger
 from .role import role_crud
+from .driver_profile import driver_profile_crud
 
 class CrudAuth(CrudBase):
     def __init__(self, model, schema, secret_key: str, algorithm: str = "HS256"):
@@ -46,9 +47,9 @@ class CrudAuth(CrudBase):
             logger.warning(f"User with phone {register_obj.phone} already exists")
             return None
 
-        role = await role_crud.get_by_code(session, "user")
+        role = await role_crud.get_by_code(session, register_obj.role_code)
         if not role:
-            logger.warning(f"Role with code \'user\' not found")
+            logger.warning(f"Role with code \'{register_obj.role_code}\' not found")
             return None
         
         user_data = {
@@ -62,6 +63,9 @@ class CrudAuth(CrudBase):
         session.add(new_user)
         await session.flush()
         await session.commit()
+
+        if register_obj.role_code == 'driver':
+            await driver_profile_crud.create(session, DriverProfileCreate(user_id=new_user.id, approved=False))
         
         return self.schema.model_validate(new_user)
 
