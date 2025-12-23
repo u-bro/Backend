@@ -9,7 +9,7 @@ from app.backend.deps import require_role
 
 class RideStatusHistoryRouter(BaseRouter):
     def __init__(self) -> None:
-        super().__init__(ride_status_history_crud, "/ride_status_history")
+        super().__init__(ride_status_history_crud, "/ride-status-history")
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])

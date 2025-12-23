@@ -1,9 +1,9 @@
 from typing import Optional, Any
-from pydantic import BaseModel
+from .base import BaseSchema
 from datetime import datetime
 
 
-class ChatMessageCreate(BaseModel):
+class ChatMessageCreate(BaseSchema):
     ride_id: Optional[int] = None
     text: Optional[str] = None
     sender_id: Optional[int] = None
@@ -19,7 +19,7 @@ class ChatMessageUpdate(ChatMessageCreate):
     pass
 
 
-class ChatMessageSchema(BaseModel):
+class ChatMessageSchema(BaseSchema):
     id: int
     ride_id: Optional[int] = None
     text: Optional[str] = None

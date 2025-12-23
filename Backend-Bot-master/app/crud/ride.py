@@ -16,7 +16,6 @@ from app.backend.deps.get_current_user import get_current_user_id
 STATUSES = {
     "requested",
     "accepted",
-    "arrived",
     "started",
     "completed",
     "canceled",
@@ -24,8 +23,7 @@ STATUSES = {
 
 ALLOWED_TRANSITIONS = {
     "requested": { "canceled"},
-    "accepted": {"arrived", "canceled"},
-    "arrived": {"started", "canceled"},
+    "accepted": {"started", "canceled"},
     "started": {"completed", "canceled"},
 }
 
@@ -83,12 +81,9 @@ class CrudRide(CrudBase):
         await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=ride.id, from_status=None, to_status='requested', changed_by=create_obj.client_id))
         return self.schema.model_validate(ride)
 
-    async def update(self, session: AsyncSession, id: int, update_obj, user = Depends(get_current_user_id)) -> RideSchema | None:
+    async def update(self, session: AsyncSession, id: int, update_obj, user_id: int) -> RideSchema | None:
         existing_result = await session.execute(select(self.model).where(self.model.id == id))
         existing = existing_result.scalar_one_or_none()
-
-        if not self._is_status_transition_allowed(existing.status, update_obj.status):
-            return 'Incorrect ride status transition'
 
         data = update_obj.model_dump(exclude_none=True)
         data.pop("expected_fare", None)
@@ -104,6 +99,11 @@ class CrudRide(CrudBase):
         if not data:
             return await self.get_by_id(session, id)
 
+        if update_obj.status and existing.status != update_obj.status:
+            if not self._is_status_transition_allowed(existing.status, update_obj.status):
+                return 'Incorrect ride status transition'
+            await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=existing.id, from_status=existing.status, to_status=update_obj.status, changed_by=int(user_id)))
+
         stmt = (
             update(self.model)
             .where(self.model.id == id)
@@ -113,8 +113,6 @@ class CrudRide(CrudBase):
         result = await self.execute_get_one(session, stmt)
         if not result:
             return None
-        
-        await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=result.id, from_status=existing.status, to_status=update_obj.status, changed_by=user.id))
         return self.schema.model_validate(result)
 
     @staticmethod
@@ -124,7 +122,7 @@ class CrudRide(CrudBase):
 
         return True
 
-    async def accept(self, session: AsyncSession, id: int, update_obj) -> RideSchema | None:
+    async def accept(self, session: AsyncSession, id: int, update_obj, user_id: int) -> RideSchema | None:
         stmt = (
             update(self.model)
             .where(and_(self.model.id == id, self.model.driver_profile_id.is_(None)))
@@ -132,6 +130,7 @@ class CrudRide(CrudBase):
             .returning(self.model)
         )
         result = await self.execute_get_one(session, stmt)
+        await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=result.id, from_status='requested', to_status=update_obj.status, changed_by=user_id))
         return self.schema.model_validate(result) if result else None
 
 ride_crud = CrudRide(Ride, RideSchema)

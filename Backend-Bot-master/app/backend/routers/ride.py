@@ -36,18 +36,18 @@ class RideRouter(BaseRouter):
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
         return await super().create(request, create_obj)
 
-    async def update(self, request: Request, id: int, update_obj: RideSchema) -> RideSchema:
-        return await super().update(request, id, update_obj)
+    async def update(self, request: Request, id: int, update_obj: RideSchema, user_id: int = Depends(get_current_user_id)) -> RideSchema:
+        return await self.model_crud.update(request.state.session, id, update_obj, user_id)
 
     async def delete(self, request: Request, id: int) -> RideSchema:
         return await super().delete(request, id)
 
-    async def update_by_client(self, request: Request, id: int, update_obj: RideSchemaUpdateByClient) -> RideSchema:
-        return await super().update(request, id, update_obj)
+    async def update_by_client(self, request: Request, id: int, update_obj: RideSchemaUpdateByClient, user_id: int = Depends(get_current_user_id)) -> RideSchema:
+        return await self.model_crud.update(request.state.session, id, update_obj, user_id)
 
-    async def accept_ride(self, request: Request, id: int, update_obj: RideSchemaAcceptByDriver, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> RideSchema:
+    async def accept_ride(self, request: Request, id: int, update_obj: RideSchemaAcceptByDriver, driver_profile_id: int = Depends(get_current_driver_profile_id), user_id: int = Depends(get_current_user_id)) -> RideSchema:
         update_obj = RideSchemaAcceptByDriver(driver_profile_id=driver_profile_id, **update_obj.model_dump(exclude={"driver_profile_id"}),)
-        accepted = await self.model_crud.accept(request.state.session, id, update_obj)
+        accepted = await self.model_crud.accept(request.state.session, id, update_obj, user_id)
         if accepted is not None:
             return accepted
 
@@ -56,12 +56,12 @@ class RideRouter(BaseRouter):
             raise HTTPException(status_code=404, detail="Ride not found")
         raise HTTPException(status_code=409, detail="Ride already accepted")
 
-    async def update_by_driver(self, request: Request, id: int, update_obj: RideSchemaUpdateByDriver) -> RideSchema:
-        return await super().update(request, id, update_obj)
+    async def update_by_driver(self, request: Request, id: int, update_obj: RideSchemaUpdateByDriver, user_id: int = Depends(get_current_user_id)) -> RideSchema:
+        return await self.model_crud.update(request.state.session, id, update_obj, user_id)
 
-    async def finish_ride_by_driver(self, request: Request, id: int, update_obj: RideSchemaFinishByDriver, ride: Ride = Depends(require_driver_profile(Ride))) -> RideSchema:
+    async def finish_ride_by_driver(self, request: Request, id: int, update_obj: RideSchemaFinishByDriver, ride: Ride = Depends(require_driver_profile(Ride)), user_id: int = Depends(get_current_user_id)) -> RideSchema:
         update_obj = RideSchemaFinishWithAnomaly(is_anomaly=str(ride.expected_fare) != str(update_obj.actual_fare), **update_obj.model_dump())
-        return await super().update(request, id, update_obj)
+        return await self.model_crud.update(request.state.session, id, update_obj, user_id)
 
 
 ride_router = RideRouter().router
