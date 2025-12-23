@@ -24,6 +24,7 @@ from app.backend.routers.documents import documents_router
 from app.backend.routers.matching import matching_router
 from app.backend.routers.chat import chat_router
 from app.backend.routers.driver_rating import driver_rating_router
+from app.backend.routers.ride_status_history import ride_status_history_router
 
 
 app = FastAPI()
@@ -57,6 +58,7 @@ app.include_router(documents_router, tags=['Documents'], prefix=API_PREFIX)
 app.include_router(matching_router, tags=['Matching'], prefix=API_PREFIX)
 app.include_router(chat_router, tags=['Chat'], prefix=API_PREFIX)
 app.include_router(driver_rating_router, tags=['DriverRatings'], prefix=API_PREFIX)
+app.include_router(ride_status_history_router, tags=['RideStatusHistory'], prefix=API_PREFIX)
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request: Request, exc: ResponseValidationError):
