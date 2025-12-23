@@ -28,6 +28,11 @@ def require_role(role_code: str | list[str]):
         if last_verification is None or getattr(last_verification, "status", None) != "confirmed":
             raise HTTPException(status_code=403, detail="Phone is not verified")
 
+        if role.code == "driver":
+            driver = getattr(user, "driver_profile", None)
+            if driver is None or not getattr(driver, "approved", False):
+                raise HTTPException(status_code=403, detail="Driver is not verified")
+
         return user
 
     return _require_role

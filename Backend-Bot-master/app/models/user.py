@@ -20,3 +20,4 @@ class User(Base):
 
     role = relationship("Role")
     transactions = relationship("Transaction", back_populates="user")
+    driver_profile = relationship("DriverProfile", back_populates="user", uselist=False, foreign_keys="DriverProfile.user_id")
