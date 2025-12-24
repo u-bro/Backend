@@ -1,15 +1,16 @@
 from fastapi import Request, Depends
-
 from app.crud import user_crud
 from app.schemas import UserSchemaCreate, UserSchema
 from app.backend.routers.base import BaseRouter
 from app.backend.deps import require_role
+from app.models import User
 
 class UserRouter(BaseRouter):
     def __init__(self, model_crud, prefix) -> None:
         super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
+        self.router.add_api_route(f"{self.prefix}/me", self.get_me, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role("admin"))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200)
@@ -34,5 +35,7 @@ class UserRouter(BaseRouter):
     async def update(self, request: Request, id: int, update_obj: UserSchema) -> UserSchema:
         return await super().update(request, id, update_obj)
 
+    async def get_me(self, request: Request, user: User = Depends(require_role(["user", "driver", "admin"]))) -> UserSchema:
+        return await self.model_crud.get_by_id(request.state.session, user.id)
 
 user_router = UserRouter(user_crud, "/users").router
