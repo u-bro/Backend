@@ -13,8 +13,11 @@ def get_current_user_id(credentials: HTTPAuthorizationCredentials | None = Depen
         raise HTTPException(status_code=401, detail="Missing authorization header")
 
     token = credentials.credentials
-    payload = auth_crud.verify_token(token)
     
+    payload = auth_crud.verify_token(token)
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
     user_id = payload.get("user_id")
     if user_id is None:
         raise HTTPException(status_code=401, detail="Invalid token payload")
