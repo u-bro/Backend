@@ -14,3 +14,8 @@ class AuthSchemaLogin(BaseSchema):
 
 class TokenResponse(BaseSchema):
     access_token: str = Field(...)
+    refresh_token: str = Field(...)
+    
+
+class RefreshTokenVerifyRequest(BaseSchema):
+    refresh_token: str = Field(...)

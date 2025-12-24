@@ -2,7 +2,7 @@ from fastapi import Request
 from starlette.responses import JSONResponse
 from app.crud.phone_verification import phone_verification_crud
 from app.crud.auth import CrudAuth, auth_crud
-from app.schemas import AuthSchemaRegister, AuthSchemaLogin, PhoneVerificationSchema, TokenResponse
+from app.schemas import AuthSchemaRegister, AuthSchemaLogin, PhoneVerificationSchema, TokenResponse, RefreshTokenVerifyRequest
 from app.schemas.phone_verification import PhoneVerificationSchemaCreate, PhoneVerificationVerifyRequest
 from app.backend.routers.base import BaseRouter
 from app.models import User
@@ -17,6 +17,7 @@ class AuthRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/register", self.register, methods=["POST"], status_code=201)
         self.router.add_api_route(f"{self.prefix}/login", self.login, methods=["POST"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/verify", self.verify_otp, methods=["POST"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/refresh", self.refresh, methods=["POST"], status_code=200)
 
     async def register(self, request: Request, register_obj: AuthSchemaRegister) -> PhoneVerificationSchema:
         user = await self.model_crud.register_user(request.state.session, register_obj)
@@ -47,8 +48,10 @@ class AuthRouter(BaseRouter):
         return await phone_verification_crud.create(request.state.session, create_obj)
 
     async def verify_otp(self, request: Request, verify_obj: PhoneVerificationVerifyRequest) -> JSONResponse:
-        token = await phone_verification_crud.verify_by_user_id(request.state.session, verify_obj)
-        return TokenResponse(access_token=token)
+        return await phone_verification_crud.verify_by_user_id(request.state.session, verify_obj)
+
+    async def refresh(self, request: Request, refresh_obj: RefreshTokenVerifyRequest) -> JSONResponse:
+        return await self.model_crud.refresh(request.state.session, refresh_obj)
 
     @staticmethod
     def generate_otp(length: int = 6) -> str:

@@ -9,4 +9,4 @@ from .driver_location import DriverLocationSchema, DriverLocationCreate, DriverL
 from .chat_message import ChatMessageSchema, ChatMessageCreate, ChatMessageUpdate
 from .transaction import TransactionSchema, TransactionCreate, TransactionUpdate
 from .ride import RideSchema, RideSchemaCreate, RideSchemaIn
-from .auth import AuthSchemaLogin, AuthSchemaRegister, TokenResponse
+from .auth import AuthSchemaLogin, AuthSchemaRegister, TokenResponse, RefreshTokenVerifyRequest
