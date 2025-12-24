@@ -14,4 +14,3 @@ class AuthSchemaLogin(BaseSchema):
 
 class TokenResponse(BaseSchema):
     access_token: str = Field(...)
-    user_id: int = Field(...)

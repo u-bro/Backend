@@ -5,6 +5,8 @@ from sqlalchemy.sql import select
 from app.crud.base import CrudBase
 from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate
 from app.logger import logger
+from app.config import JWT_SECRET_KEY, JWT_ALGORITHM
+from app.models import User
 from .role import role_crud
 from .driver_profile import driver_profile_crud
 
@@ -75,3 +77,6 @@ class CrudAuth(CrudBase):
             return None
 
         return user
+
+
+auth_crud = CrudAuth(User, UserSchema, JWT_SECRET_KEY, JWT_ALGORITHM)
