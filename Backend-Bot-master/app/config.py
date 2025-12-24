@@ -27,14 +27,14 @@ TELEGRAM_OTP_TOKEN = 'AAEDMAAATZrglNKgaX0kPyOE5krqBpx-M09H3bJM7Q-AdA'
 
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'test-secret-key'
 JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM') or 'HS256'
-JWT_EXPIRATION_MINTUES = os.environ.get('JWT_EXPIRATION_MINTUES') or 15
+JWT_EXPIRATION_MINTUES = int(os.environ.get('JWT_EXPIRATION_MINTUES', 15))
 
-REFRESH_TOKEN_EXPIRATION_DAYS = os.environ.get('REFRESH_TOKEN_EXPIRATION_DAYS') or 7
+REFRESH_TOKEN_EXPIRATION_DAYS = int(os.environ.get('REFRESH_TOKEN_EXPIRATION_DAYS', 7))
 REFRESH_TOKEN_SALT = os.environ.get('REFRESH_TOKEN_SALT') or 'test-refresh-token-salt'
 
-OTP_CONFIRMED_EXPIRATION_HOURS = 24
-JWT_ALGORITHM = 'HS256'
-JWT_EXPIRATION_HOURS = 24
+OTP_CONFIRMED_EXPIRATION_HOURS = int(os.environ.get('OTP_CONFIRMED_EXPIRATION_HOURS', 24))
 
-S3_DOCUMENTS_BUCKET="ubro-documents"
-AWS_REGION="ru-central1"
+S3_DOCUMENTS_BUCKET=os.environ.get('S3_DOCUMENTS_BUCKET') or 'ubro-documents'
+AWS_REGION=os.environ.get('AWS_REGION') or 'ru-central1'
+AWS_ACCESS_KEY=os.environ.get('AWS_ACCESS_KEY') or 'test-aws-access-key-id'
+AWS_SECRET_KEY=os.environ.get('AWS_SECRET_KEY') or 'test-aws-secret-access-key'

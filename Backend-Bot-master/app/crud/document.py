@@ -1,10 +1,11 @@
 import anyio, boto3
-from app.config import S3_DOCUMENTS_BUCKET, AWS_REGION
+from app.config import S3_DOCUMENTS_BUCKET, AWS_REGION, AWS_ACCESS_KEY, AWS_SECRET_KEY
+
 
 class CrudDocument:
     def __init__(self, bucket: str, region: str | None = None):
         self.bucket = bucket
-        self.client = boto3.client("s3", region_name=region)
+        self.client = boto3.client("s3", region_name=region, aws_access_key_id=AWS_ACCESS_KEY, aws_secret_access_key=AWS_SECRET_KEY)
 
     def _put_object(self, key: str, pdf_bytes: bytes, metadata: dict | None = None) -> None:
         extra: dict = {
