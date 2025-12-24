@@ -5,10 +5,14 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_
+from sqlalchemy.orm import selectinload
 from better_profanity import profanity
 
 from app.models.chat_message import ChatMessage
 from app.models.ride import Ride
+from app.models.user import User
+from app.models.role import Role
+from app.models.driver_profile import DriverProfile
 from app.schemas.chat_message import ChatMessageSchema, ChatMessageCreate
 
 logger = logging.getLogger(__name__)
@@ -163,7 +167,16 @@ class ChatService:
         receiver_id: Optional[int] = None,
         attachments: Optional[Dict[str, Any]] = None,
         is_moderated: bool = True,
+        idempotency_key: Optional[str] = None,
     ) -> ChatMessageSchema:
+        # Deduplication by idempotency_key
+        if idempotency_key:
+            query = select(ChatMessage).where(ChatMessage.idempotency_key == idempotency_key)
+            result = await session.execute(query)
+            existing = result.scalar_one_or_none()
+            if existing:
+                return ChatMessageSchema.model_validate(existing)
+
         message = ChatMessage(
             ride_id=ride_id,
             sender_id=sender_id,
@@ -173,6 +186,7 @@ class ChatService:
             attachments=attachments,
             is_moderated=is_moderated,
             created_at=datetime.utcnow(),
+            idempotency_key=idempotency_key,
         )
         
         session.add(message)
@@ -264,6 +278,38 @@ class ChatService:
         await session.refresh(message)
         
         return ChatMessageSchema.model_validate(message)
+    
+    async def can_access_ride_chat(self, session: AsyncSession, user_id: int, ride_id: int) -> bool:
+        """Проверяет, может ли пользователь присоединиться к чату поездки.
+        Доступ имеют: заказчик, водитель и админы."""
+        # Получить пользователя с ролью
+        user_stmt = select(User).options(selectinload(User.role)).where(User.id == user_id)
+        user = await session.scalar(user_stmt)
+        if not user:
+            return False
+
+        # Админы имеют доступ ко всем чатам
+        if user.role and user.role.code == 'admin':
+            return True
+
+        # Получить поездку с клиентом и водителем
+        ride_stmt = select(Ride).options(
+            selectinload(Ride.client),
+            selectinload(Ride.driver_profile).selectinload(DriverProfile.user)
+        ).where(Ride.id == ride_id)
+        ride = await session.scalar(ride_stmt)
+        if not ride:
+            return False
+
+        # Заказчик поездки
+        if user_id == ride.client_id:
+            return True
+
+        # Водитель поездки
+        if ride.driver_profile and ride.driver_profile.user_id == user_id:
+            return True
+
+        return False
     
     def get_stats(self) -> Dict[str, Any]:
         return {

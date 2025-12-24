@@ -14,6 +14,7 @@ class ChatMessage(Base):
     receiver_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('users.id'), nullable=True)
     message_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     attachments = mapped_column(JSONB, nullable=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_moderated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
     edited_at = mapped_column(TIMESTAMP, nullable=True)

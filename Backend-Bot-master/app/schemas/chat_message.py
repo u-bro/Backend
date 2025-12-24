@@ -11,6 +11,7 @@ class ChatMessageCreate(BaseModel):
     message_type: Optional[str] = None
     attachments: Optional[dict[str, Any]] = None
     is_moderated: Optional[bool] = False
+    idempotency_key: Optional[str] = None
     edited_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
 
@@ -28,6 +29,7 @@ class ChatMessageSchema(BaseModel):
     message_type: Optional[str] = None
     attachments: Optional[dict[str, Any]] = None
     is_moderated: bool
+    idempotency_key: Optional[str] = None
     created_at: Optional[datetime] = None
     edited_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None

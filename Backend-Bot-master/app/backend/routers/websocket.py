@@ -8,10 +8,14 @@ from typing import Any, Dict, Optional
 from fastapi import HTTPException, Query, WebSocket
 from pydantic import BaseModel
 import logging
+import uuid
 
 from app.backend.routers.websocket_base import BaseWebsocketRouter
 from app.services.websocket_manager import manager
 from app.services.driver_tracker import driver_tracker, DriverStatus
+from app.services.chat_service import chat_service
+from app.tasks.chat_tasks import save_chat_message
+from app.db import async_session_maker
 
 logger = logging.getLogger(__name__)
 
@@ -82,10 +86,20 @@ class DriverWebsocketRouter(BaseWebsocketRouter):
 
     async def handle_join_ride(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         user_id = int(context["user_id"])
-        ride_id = data.get("ride_id")
-        if ride_id:
-            manager.join_ride(ride_id, user_id)
-            await websocket.send_json({"type": "joined_ride", "ride_id": ride_id})
+        ride_id = data.get("payload", {}).get("ride_id")
+        if not ride_id:
+            await websocket.send_json({"type": "error", "message": "ride_id is required"})
+            return
+
+        # Проверка доступа к чату
+        async with async_session_maker() as session:
+            has_access = await chat_service.can_access_ride_chat(session, user_id, ride_id)
+            if not has_access:
+                await websocket.send_json({"type": "error", "message": "Access denied to ride chat"})
+                return
+
+        manager.join_ride(ride_id, user_id)
+        await websocket.send_json({"type": "joined_ride", "ride_id": ride_id})
 
     async def handle_leave_ride(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         user_id = int(context["user_id"])
@@ -99,13 +113,47 @@ class DriverWebsocketRouter(BaseWebsocketRouter):
         ride_id = data.get("ride_id")
         text = data.get("text")
         if ride_id and text:
+            # Run moderation synchronously in WS handler
+            moderation = chat_service.moderate_message(text)
+            if not moderation.passed:
+                await websocket.send_json({"type": "chat_error", "error": moderation.reason})
+                return
+
+            filtered_text = moderation.filtered
+
+            # Rate limit check
+            ok, err = chat_service.check_rate_limit(user_id)
+            if not ok:
+                await websocket.send_json({"type": "chat_error", "error": err})
+                return
+
+            # Prepare payload for background persistence (Celery task)
+            idempotency_key = uuid.uuid4().hex
+            payload = {
+                "idempotency_key": idempotency_key,
+                "ride_id": ride_id,
+                "sender_id": user_id,
+                "receiver_id": data.get("receiver_id"),
+                "message_type": data.get("message_type", "text"),
+                "text": filtered_text,
+                "attachments": data.get("attachments"),
+                "created_at": data.get("created_at"),
+            }
+
+            try:
+                save_chat_message.delay(payload)
+            except Exception:
+                logger.exception("Failed to enqueue save_chat_message task")
+
+            # Broadcast to ride participants (real-time)
             await manager.send_to_ride(
                 ride_id,
                 {
                     "type": "chat_message",
                     "ride_id": ride_id,
                     "sender_id": user_id,
-                    "text": text,
+                    "text": filtered_text,
+                    "idempotency_key": idempotency_key,
                 },
             )
 

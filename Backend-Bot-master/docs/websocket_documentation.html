@@ -2,107 +2,223 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <title>Документация WebSocket — Backend-Bot</title>
+  <title>WebSocket — Документация Проекта</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body{font-family:Inter,Arial,Helvetica,sans-serif;margin:24px;color:#111}
-    h1,h2{color:#0b5;}
-    pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto}
-    code{font-family:monospace;font-size:0.95em}
-    .section{margin-bottom:18px}
-    table{border-collapse:collapse;width:100%}
+    body{font-family:Arial,Helvetica,sans-serif;margin:20px;color:#111;font-size:15px;line-height:1.45}
+    h1{font-size:26px;color:#0a6;margin-bottom:6px}
+    h2{font-size:20px;margin-top:20px}
+    h3{font-size:16px;margin-top:14px}
+    pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto;font-size:14px}
+    code{font-family:monospace;font-size:14px}
+    .section{margin-bottom:16px}
+    .tip{background:#fff7e6;border-left:4px solid #f1c40f;padding:10px;margin:8px 0}
+    .note{background:#eef9ff;border-left:4px solid #4aa3ff;padding:10px;margin:8px 0}
+    table{border-collapse:collapse;width:100%;margin:10px 0}
     th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    th{background:#f2f2f2}
   </style>
 </head>
 <body>
-  <h1>WebSocket — Документация и результаты тестирования</h1>
+
+  <h1>WebSocket — Документация для Проекта Backend-Bot</h1>
 
   <div class="section">
-    <h2>Краткое содержание</h2>
+    <h2>Введение</h2>
+    <p>WebSocket используется в проекте для реального времени коммуникации: чат во время поездок, уведомления пользователям, обновление локаций и статусов водителей. Подключение происходит по пути <code>/api/v1/ws/{user_id}</code> с токеном аутентификации.</p>
+  </div>
+
+  <div class="section">
+    <h2>Подключение к WebSocket</h2>
+    <p>WebSocket — это протокол для двунаправленной связи в реальном времени. Подключение начинается с HTTP handshake, который апгрейдится до WebSocket.</p>
+    <h3>Шаги подключения</h3>
+    <ol>
+      <li>Клиент отправляет HTTP GET запрос на URL <code>ws://localhost:5000/api/v1/ws/{user_id}?token={your_token}</code> с заголовками <code>Upgrade: websocket</code>, <code>Connection: Upgrade</code>.</li>
+      <li>Сервер проверяет токен и user_id. Если валидно, отвечает 101 Switching Protocols.</li>
+      <li>Соединение установлено. Теперь можно обмениваться сообщениями.</li>
+    </ol>
+    <p>Пример URL: <code>ws://localhost:5000/api/v1/ws/3?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</code></p>
+    <p>Для продакшена используйте <code>wss://</code> (TLS).</p>
+    <h3>Пример подключения в браузере (JavaScript)</h3>
+    <pre><code>// 1. Создать WebSocket объект
+const ws = new WebSocket('ws://localhost:5000/api/v1/ws/3?token=YOUR_JWT_TOKEN');
+
+// 2. Обработчик открытия соединения
+ws.onopen = function(event) {
+  console.log('WebSocket соединение открыто');
+  // Теперь можно отправлять сообщения
+  ws.send(JSON.stringify({
+    type: 'join_ride',
+    payload: { ride_id: 123 }
+  }));
+};
+
+// 3. Обработчик входящих сообщений
+ws.onmessage = function(event) {
+  const message = JSON.parse(event.data);
+  console.log('Получено сообщение:', message);
+  // Обработать по типу: chat_message, notification и т.д.
+};
+
+// 4. Обработчик ошибок
+ws.onerror = function(error) {
+  console.error('WebSocket ошибка:', error);
+};
+
+// 5. Обработчик закрытия
+ws.onclose = function(event) {
+  console.log('WebSocket соединение закрыто:', event.code, event.reason);
+};
+</code></pre>
+    <p>После подключения отправляйте JSON сообщения с <code>type</code> и <code>payload</code>.</p>
+    <h3>Пример для второго участника</h3>
+    <p>Чтобы подключить второго участника (например, user_id=4), используйте его токен и user_id. Оба участника могут присоединиться к одному ride_id для чата.</p>
+    <pre><code>// Для второго участника (user_id=4)
+const ws2 = new WebSocket('ws://localhost:5000/api/v1/ws/4?token=YOUR_JWT_TOKEN_FOR_USER_4');
+
+ws2.onopen = function(event) {
+  console.log('Второй участник подключен');
+  ws2.send(JSON.stringify({
+    type: 'join_ride',
+    payload: { ride_id: 123 }  // Тот же ride_id
+  }));
+};
+
+ws2.onmessage = function(event) {
+  const message = JSON.parse(event.data);
+  console.log('Второй участник получил:', message);
+  // Теперь оба участника в чате ride_id=123
+};
+
+ws2.onerror = function(error) {
+  console.error('Ошибка второго участника:', error);
+};
+
+ws2.onclose = function(event) {
+  console.log('Второй участник отключен');
+};
+</code></pre>
+    <p>Сервер рассылает сообщения всем участникам, присоединившимся к ride_id.</p>
+  </div>
+
+  <div class="section">
+    <h2>Типы сообщений</h2>
+    <p>Сообщения отправляются в JSON формате с полями <code>type</code> и <code>payload</code>.</p>
+    <table>
+      <tr><th>Тип</th><th>Описание</th><th>Пример payload</th></tr>
+      <tr><td>join_ride</td><td>Присоединиться к чату поездки. Доступ только для заказчика, водителя и админов.</td><td><code>{"ride_id": 123}</code></td></tr>
+      <tr><td>chat_message</td><td>Отправить сообщение в чат</td><td><code>{"ride_id": 123, "text": "Hello", "idempotency_key": "unique"}</code></td></tr>
+      <tr><td>leave_ride</td><td>Покинуть чат поездки</td><td><code>{"ride_id": 123}</code></td></tr>
+      <tr><td>driver_location</td><td>Обновить локацию водителя</td><td><code>{"lat": 55.7558, "lng": 37.6173}</code></td></tr>
+      <tr><td>driver_status</td><td>Обновить статус водителя</td><td><code>{"status": "available"}</code></td></tr>
+      <tr><td>notification</td><td>Отправить уведомление</td><td><code>{"message": "Ride started"}</code></td></tr>
+    </table>
+    <p>Сервер отвечает сообщениями того же формата или ошибками с <code>type: "error"</code>.</p>
+  </div>
+
+  <div class="section">
+    <h2>Авторизация и безопасность</h2>
+    <p>Доступ к чатам поездок ограничен:</p>
     <ul>
-      <li>Файлы с результатами тестов: <strong>tests/ws_results/</strong></li>
-      <li>Собранные логи сервера: <strong>tests/ws_results/server.log</strong> (если вы их экспортировали туда)</li>
-      <li>Выполнены ручные WS‑тесты: подключение нескольких клиентов, ping/pong, join_ride, chat_message, location_update.</li>
+      <li><strong>Заказчик</strong>: пользователь, который заказал поездку (ride.client_id).</li>
+      <li><strong>Водитель</strong>: водитель, назначенный на поездку (ride.driver_profile.user_id).</li>
+      <li><strong>Админы</strong>: пользователи с ролью 'admin' имеют доступ ко всем чатам.</li>
     </ul>
+    <p>При попытке присоединиться без доступа сервер отправляет ошибку: <code>{"type": "error", "message": "Access denied to ride chat"}</code>.</p>
+    <p>Все соединения требуют валидного JWT токена. Для продакшена используйте TLS (wss://).</p>
   </div>
 
   <div class="section">
-    <h2>Основные эндпоинты (API prefix: /api/v1)</h2>
-    <pre><code>WebSocket
+    <h2>REST API для управления WebSocket</h2>
+    <p>Эти endpoints позволяют управлять WebSocket функциональностью через HTTP запросы.</p>
+    <h3>GET /api/v1/ws/stats</h3>
+    <p>Получить статистику WebSocket: активные соединения, сообщения и т.д.</p>
+    <pre><code>curl -H "Authorization: Bearer {token}" http://localhost:5000/api/v1/ws/stats</code></pre>
 
-GET
-/api/v1/ws/stats
-Get Websocket Stats
+    <h3>POST /api/v1/ws/notify/{user_id}</h3>
+    <p>Отправить уведомление пользователю по WebSocket.</p>
+    <pre><code>curl -X POST -H "Authorization: Bearer {token}" -H "Content-Type: application/json" -d '{"message": "Test"}' http://localhost:5000/api/v1/ws/notify/123</code></pre>
 
+    <h3>POST /api/v1/ws/broadcast</h3>
+    <p>Отправить сообщение всем подключенным пользователям.</p>
+    <pre><code>curl -X POST -H "Authorization: Bearer {token}" -H "Content-Type: application/json" -d '{"message": "Broadcast"}' http://localhost:5000/api/v1/ws/broadcast</code></pre>
 
-POST
-/api/v1/ws/notify/{user_id}
-Send Notification
+    <h3>POST /api/v1/ws/driver/{user_id}/location</h3>
+    <p>Обновить локацию водителя.</p>
+    <pre><code>curl -X POST -H "Authorization: Bearer {token}" -H "Content-Type: application/json" -d '{"lat": 55.7558, "lng": 37.6173}' http://localhost:5000/api/v1/ws/driver/123/location</code></pre>
 
+    <h3>POST /api/v1/ws/driver/{user_id}/status</h3>
+    <p>Обновить статус водителя.</p>
+    <pre><code>curl -X POST -H "Authorization: Bearer {token}" -H "Content-Type: application/json" -d '{"status": "busy"}' http://localhost:5000/api/v1/ws/driver/123/status</code></pre>
 
-POST
-/api/v1/ws/broadcast
-Broadcast Message
+    <h3>GET /api/v1/ws/driver/{user_id}/state</h3>
+    <p>Получить состояние водителя (локация, статус).</p>
+    <pre><code>curl -H "Authorization: Bearer {token}" http://localhost:5000/api/v1/ws/driver/123/state</code></pre>
 
-
-POST
-/api/v1/ws/driver/{user_id}/location
-Update Driver Location
-
-
-POST
-/api/v1/ws/driver/{user_id}/status
-Update Driver Status
-
-
-GET
-/api/v1/ws/driver/{user_id}/state
-Get Driver State
-
-
-GET
-/api/v1/ws/drivers/stats
-Get Drivers Stats</code></pre>
-    <p>Используйте точные пути с префиксом <code>/api/v1</code>. Для запросов, изменяющих состояние водителя, предварительно зарегистрируйте профиль в <code>/api/v1/matching/driver/register</code> и убедитесь, что телефон подтверждён, если требуется.</p>
+    <h3>GET /api/v1/ws/drivers/stats</h3>
+    <p>Получить статистику по всем водителям.</p>
+    <pre><code>curl -H "Authorization: Bearer {token}" http://localhost:5000/api/v1/ws/drivers/stats</code></pre>
   </div>
 
   <div class="section">
-    <h2>Примеры cURL</h2>
-    <p>Получить admin token (пример регистрации/логин в тестовой среде):</p>
-    <pre><code>curl -X POST http://localhost:5000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"tmpadmin@example.com","password":"strongpass","username":"tmpadmin"}' | jq .</code></pre>
+    <h2>Тестирование в браузере</h2>
+    <p>Откройте консоль браузера (F12) и вставьте код для тестирования.</p>
+    <h3>Подключение и отправка сообщения</h3>
+    <pre><code>// Замените на реальные значения
+const userId = 3;
+const token = 'YOUR_JWT_TOKEN';
+const wsUrl = `ws://localhost:5000/api/v1/ws/${userId}?token=${token}`;
 
-    <p>Отправка location (важно: <code>latitude</code> и <code>longitude</code>):</p>
-    <pre><code>curl -X POST http://localhost:5000/api/v1/ws/driver/3/location \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"latitude":55.75,"longitude":37.62,"accuracy":5}' | jq .</code></pre>
+const ws = new WebSocket(wsUrl);
 
-    <p>Получить состояние водителя:</p>
-    <pre><code>curl -X GET http://localhost:5000/api/v1/ws/driver/3/state \
-  -H "Authorization: Bearer $ADMIN_TOKEN" | jq .</code></pre>
+ws.onopen = () => {
+  console.log('Connected');
+  // Присоединиться к рейсу
+  ws.send(JSON.stringify({ type: 'join_ride', payload: { ride_id: 123 } }));
+  // Отправить сообщение
+  ws.send(JSON.stringify({ type: 'chat_message', payload: { ride_id: 123, text: 'Hello from browser!', idempotency_key: 'test123' } }));
+};
+
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  console.log('Received:', msg);
+};
+
+ws.onerror = (error) => console.error('Error:', error);
+ws.onclose = () => console.log('Closed');
+</code></pre>
+
+    <h3>Тестирование уведомлений</h3>
+    <p>Используйте fetch для отправки уведомления через REST API, затем проверьте WebSocket.</p>
+    <pre><code>fetch('/api/v1/ws/notify/3', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer YOUR_TOKEN' },
+  body: JSON.stringify({ message: 'Test notification' })
+}).then(res => console.log(res));
+</code></pre>
   </div>
 
   <div class="section">
-    <h2>Особенности и замечания</h2>
+    <h2>Серверная логика</h2>
+    <p>Сервер использует FastAPI с Uvicorn. Соединения управляются ConnectionManager. Сообщения сохраняются в PostgreSQL через Celery для асинхронности. Модерация и rate-limit применяются. Авторизация для чатов: только заказчик, водитель и админы могут присоединяться к чату поездки.</p>
+    <p><strong>Реализованные изменения:</strong></p>
     <ul>
-      <li>Эндпоинты для driver требуют, чтобы профиль водителя был зарегистрирован в <code>driver_tracker</code> (вызов <code>POST /matching/driver/register</code>).</li>
-      <li>Проверка роли/доступа использует верификацию телефона — для тестов можно вставить запись в <code>phone_verifications</code> со статусом <code>confirmed</code> и <code>attempts=0</code>.</li>
-      <li>Логи показывают, что вы успешно зарегистрировали драйвера (пример: <code>Driver 2 registered</code>) и затем отправили location: см. <code>tests/ws_results/</code>.</li>
-      <li>Для генерации PDF предупреждение в логах: <code>ReportLab not installed</code> — поэтому генерация PDF из кода сервиса может быть ограничена. Можно конвертировать этот HTML в PDF внешней утилитой.</li>
+      <li>Добавлен метод <code>can_access_ride_chat</code> в <code>ChatService</code> для проверки доступа к чату (заказчик, водитель, админ).</li>
+      <li>В <code>handle_join_ride</code> добавлена проверка авторизации перед присоединением; при отказе отправляется ошибка "Access denied to ride chat".</li>
+      <li>Исправлен баг: <code>ride_id</code> теперь правильно извлекается из <code>payload</code>.</li>
+      <li>Сообщения чата сохраняются в БД с <code>idempotency_key</code> для дедупликации; обработка через Celery для отказоустойчивости.</li>
     </ul>
+    <p>Ключевые файлы: <code>app/backend/routers/websocket.py</code>, <code>app/services/chat_service.py</code>, <code>app/tasks/chat_tasks.py</code>.</p>
   </div>
 
   <div class="section">
-    <h2>Результаты тестов</h2>
-    <p>Автотест сохранил файлы в <strong>tests/ws_results/</strong>. Основные файлы:</p>
+    <h2>Troubleshooting</h2>
     <ul>
-      <li><code>ws_stats.json</code></li>
-      <li><code>ws_broadcast.json</code></li>
-      <li><code>driver_location_3.json</code>, <code>driver_status_3.json</code>, <code>driver_state_3.json</code></li>
-      <li><code>server.log</code> — записи сервера (подтверждены подключения, регистрации и обновления статуса/локации).</li>
+      <li>401/403: Проверьте токен и user_id.</li>
+      <li>Сообщения не приходят: Убедитесь в правильном ride_id и подключении.</li>
+      <li>Дубли: Проверьте idempotency_key.</li>
+      <li>Логи: <code>docker compose logs -f app</code>.</li>
     </ul>
-  </div>
 </body>
 </html>
+  "is_available": true,

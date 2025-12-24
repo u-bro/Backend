@@ -23,6 +23,8 @@ weasyprint = "52.5"
 pydyf = "0.5.0"
 websockets = "^14.0"
 better-profanity = "^0.7.0"
+celery = "^5.3.0"
+redis = "^4.6.0"
 
 [tool.poetry.group.dev.dependencies]
 
