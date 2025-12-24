@@ -219,3 +219,41 @@ pytest tests_live/test_real_api.py -v
 ## Примечание
 
 ERROR в teardown тестов — это известная проблема совместимости pytest-asyncio с httpx.AsyncClient (закрытие event loop после каждого теста). **Не влияет на результаты тестов** — все 74 теста успешно прошли.
+
+---
+
+## WebSocket checks (ручная и автоматизированная проверка)
+
+Статус: план и инструменты подготовлены. Для воспроизведения и сбора артефактов выполните `scripts/ws_test.sh` на машине с запущенным приложением.
+
+- **Артефакты:** `tests/ws_results/` — содержит JSON ответы от эндпоинтов, собранные скриптом.
+- **Ручные шаги:**
+	- Запустить два браузерных WS-клиента (DevTools) и подключиться к `ws://localhost:5000/api/v1/ws/{user_id}` — использовать JS сниппет ниже.
+	- Отправить `join_ride`, `ping`, `location_update`, `go_online` и проверить, что соответствующие события приходят другим участникам.
+	- Вызвать HTTP `POST /api/v1/ws/notify/{user_id}` и убедиться, что клиент получает уведомление.
+
+### JS сниппет для DevTools (вставить в Console)
+
+```javascript
+const ws = new WebSocket('ws://localhost:5000/api/v1/ws/3');
+ws.addEventListener('open', ()=> console.log('open'));
+ws.addEventListener('message', (e)=> console.log('msg', JSON.parse(e.data)));
+// Пример отправки после открытия
+// ws.send(JSON.stringify({type: 'ping'}))
+```
+
+### Как запустить подготовленный скрипт
+
+В терминале проекта:
+
+```bash
+chmod +x scripts/ws_test.sh
+# при необходимости задать URL и user id
+BASE_URL=http://localhost:5000/api/v1 DRIVER_USER_ID=3 TARGET_USER_ID=3 ./scripts/ws_test.sh
+```
+
+После выполнения проверьте файлы в `tests/ws_results/` и соберите логи приложения (docker logs или system logs) для включения в доказательную базу.
+
+---
+
+Если хотите — могу запустить `scripts/ws_test.sh` и собрать результаты здесь, но для этого нужно, чтобы сервис был запущен и доступен из среды, где работает этот агент. Хотите, чтобы я попытался запустить скрипт сейчас? 
