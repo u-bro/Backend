@@ -1,21 +1,21 @@
 from typing import Optional
-from pydantic import BaseModel
+from . import BaseSchema
 from datetime import datetime
 
 
-class TransactionCreate(BaseModel):
+class TransactionCreate(BaseSchema):
     user_id: int
     is_withdraw: bool
     amount: float
 
 
-class TransactionUpdate(BaseModel):
+class TransactionUpdate(BaseSchema):
     user_id: Optional[int] = None
     is_withdraw: Optional[bool] = None
     amount: Optional[float] = None
 
 
-class TransactionSchema(BaseModel):
+class TransactionSchema(BaseSchema):
     id: int
     user_id: int
     is_withdraw: bool

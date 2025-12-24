@@ -1,10 +1,9 @@
 from typing import Optional
-from pydantic import BaseModel
 from datetime import datetime
 from . import BaseSchema
 from pydantic import Field
 
-class PhoneVerificationCreate(BaseModel):
+class PhoneVerificationCreate(BaseSchema):
     user_id: int
     phone: str
     code: str
@@ -13,7 +12,7 @@ class PhoneVerificationCreate(BaseModel):
     attempts: Optional[int] = 0
 
 
-class PhoneVerificationUpdate(BaseModel):
+class PhoneVerificationUpdate(BaseSchema):
     user_id: Optional[int] = None
     phone: Optional[str] = None
     code: Optional[str] = None
@@ -22,7 +21,7 @@ class PhoneVerificationUpdate(BaseModel):
     attempts: Optional[int] = None
 
 
-class PhoneVerificationSchema(BaseModel):
+class PhoneVerificationSchema(BaseSchema):
     id: int
     user_id: int
     phone: str
@@ -43,3 +42,4 @@ class PhoneVerificationSchemaCreate(BaseSchema):
 
 class PhoneVerificationVerifyRequest(BaseSchema):
     code: str = Field(..., max_length=10)
+    phone: str | None = Field(None, max_length=20)

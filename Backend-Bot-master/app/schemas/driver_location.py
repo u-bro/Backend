@@ -1,9 +1,9 @@
 from typing import Optional
-from pydantic import BaseModel
+from .base import BaseSchema
 from datetime import datetime
 
 
-class DriverLocationCreate(BaseModel):
+class DriverLocationCreate(BaseSchema):
     driver_profile_id: int
     latitude: Optional[float] = None
     longitude: Optional[float] = None
@@ -17,7 +17,7 @@ class DriverLocationUpdate(DriverLocationCreate):
     driver_profile_id: Optional[int] = None
 
 
-class DriverLocationSchema(BaseModel):
+class DriverLocationSchema(BaseSchema):
     id: int
     driver_profile_id: int
     latitude: Optional[float] = None

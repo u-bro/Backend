@@ -9,7 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-import os, hashlib
+import os
 
 
 # revision identifiers, used by Alembic.
@@ -22,21 +22,12 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     bind = op.get_bind()
 
-    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
-    admin_password = os.getenv("ADMIN_PASSWORD", "admin")
-    admin_username = os.getenv("ADMIN_USERNAME", "admin")
     admin_phone = os.getenv("ADMIN_PHONE")
 
-    password_hash = hashlib.sha256(admin_password.encode()).hexdigest()
-
-    # Create admin user (idempotent)
     bind.execute(
         sa.text(
             """
             INSERT INTO users (
-                email,
-                password_hash,
-                username,
                 phone,
                 is_active,
                 role_id,
@@ -44,9 +35,6 @@ def upgrade() -> None:
                 last_active_at
             )
             SELECT
-                :email,
-                :password_hash,
-                :username,
                 :phone,
                 TRUE,
                 r.id,
@@ -54,13 +42,10 @@ def upgrade() -> None:
                 NOW()
             FROM roles r
             WHERE r.code = 'admin'
-            ON CONFLICT (email) DO NOTHING
+            ON CONFLICT (phone) DO NOTHING
             """
         ),
         {
-            "email": admin_email,
-            "password_hash": password_hash,
-            "username": admin_username,
             "phone": admin_phone,
         },
     )
@@ -69,7 +54,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     bind = op.get_bind()
 
-    admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
-    bind.execute(sa.text("DELETE FROM users WHERE email = :email"), {"email": admin_email})
+    admin_phone = os.getenv("ADMIN_PHONE")
+    bind.execute(sa.text("DELETE FROM users WHERE phone = :phone"), {"phone": admin_phone})
 
     bind.execute(sa.text("DELETE FROM roles WHERE code IN ('user', 'driver', 'admin')"))

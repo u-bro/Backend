@@ -1,9 +1,9 @@
 from typing import Optional
-from pydantic import BaseModel
+from .base import BaseSchema
 from datetime import datetime
 
 
-class CommissionCreate(BaseModel):
+class CommissionCreate(BaseSchema):
     name: Optional[str] = None
     percentage: Optional[float] = None
     fixed_amount: Optional[float] = None
@@ -16,7 +16,7 @@ class CommissionUpdate(CommissionCreate):
     pass
 
 
-class CommissionSchema(BaseModel):
+class CommissionSchema(BaseSchema):
     id: int
     name: Optional[str] = None
     percentage: Optional[float] = None

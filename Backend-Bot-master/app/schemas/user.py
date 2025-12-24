@@ -7,10 +7,7 @@ from . import BaseSchema
 class UserSchemaCreate(BaseSchema):
     first_name: str | None = Field(None, max_length=100)
     last_name: str | None = Field(None, max_length=100)
-    username: str | None = Field(None, max_length=100)
-    email: str | None = Field(None, max_length=255)
     phone: str | None = Field(None, max_length=20)
-    password_hash: str | None = Field(None, max_length=255)
 
 
 class UserSchema(UserSchemaCreate):
