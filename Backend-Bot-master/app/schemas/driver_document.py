@@ -1,9 +1,9 @@
 from typing import Optional
-from pydantic import BaseModel
+from .base import BaseSchema
 from datetime import datetime
 
 
-class DriverDocumentCreate(BaseModel):
+class DriverDocumentCreate(BaseSchema):
     driver_profile_id: int
     doc_type: str
     file_url: str
@@ -12,7 +12,7 @@ class DriverDocumentCreate(BaseModel):
     reviewed_at: Optional[datetime] = None
 
 
-class DriverDocumentUpdate(BaseModel):
+class DriverDocumentUpdate(BaseSchema):
     driver_profile_id: Optional[int] = None
     doc_type: Optional[str] = None
     file_url: Optional[str] = None
@@ -21,7 +21,7 @@ class DriverDocumentUpdate(BaseModel):
     reviewed_at: Optional[datetime] = None
 
 
-class DriverDocumentSchema(BaseModel):
+class DriverDocumentSchema(BaseSchema):
     id: int
     driver_profile_id: int
     doc_type: str

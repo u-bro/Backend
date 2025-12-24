@@ -4,7 +4,7 @@ from datetime import datetime
 from .base import BaseSchema
 
 class RideSchemaIn(BaseSchema):
-    status: Literal["requested", "accepted", "started", "canceled", "completed"] = "requested"
+    status: Literal["requested"] = Field("requested", max_length=50)
     status_reason: str | None = Field(None, max_length=255)
     pickup_address: str = Field(None, max_length=500)
     pickup_lat: float = Field(...)
@@ -24,6 +24,7 @@ class RideSchemaCreate(RideSchemaIn):
 
 class RideSchema(RideSchemaCreate):
     id: int = Field(..., gt=0)
+    status: Literal["requested", "canceled", "accepted", "arrived", "started", "completed"] = Field("requested", max_length=50)
     driver_profile_id: int | None = Field(None, gt=0)
     started_at: datetime | None = Field(None)
     completed_at: datetime | None = Field(None)
@@ -52,20 +53,20 @@ class RideSchemaUpdateByClient(BaseSchema):
 
 
 class RideSchemaUpdateByDriver(BaseSchema):
-    status: Literal["accepted", "started", "canceled"] | None = Field(None, max_length=50)
+    status: Literal["accepted", "arrived", "started", "canceled"] | None = Field(None, max_length=50)
     status_reason: str | None = Field(None, max_length=255)
     started_at: datetime | None = Field(None)
 
 
 class RideSchemaAcceptByDriver(BaseSchema):
-    status: Literal["accepted"] = "accepted"
+    status: Literal["accepted"] = Field("accepted", max_length=50)
     driver_profile_id: int | None = Field(None, gt=0)
     status_reason: str | None = Field(None, max_length=255)
     started_at: datetime | None = Field(None)
 
 
 class RideSchemaFinishByDriver(BaseSchema):
-    status: Literal["completed"] = "completed"
+    status: Literal["completed"] = Field("completed", max_length=50)
     completed_at: datetime | None = Field(None)
     actual_fare: float = Field(0, ge=0)
 

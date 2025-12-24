@@ -1,21 +1,21 @@
 from typing import Optional
-from pydantic import BaseModel
+from .base import BaseSchema
 from datetime import datetime
 
 
-class RoleCreate(BaseModel):
+class RoleCreate(BaseSchema):
     code: str
     name: Optional[str] = None
     description: Optional[str] = None
 
 
-class RoleUpdate(BaseModel):
+class RoleUpdate(BaseSchema):
     code: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
 
 
-class RoleSchema(BaseModel):
+class RoleSchema(BaseSchema):
     id: int
     code: str
     name: Optional[str] = None

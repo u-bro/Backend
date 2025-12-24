@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import desc, select
-
+from datetime import datetime
 from app.models import User
 from app.models.phone_verification import PhoneVerification
 from app.backend.deps.get_current_user import get_current_user
@@ -25,7 +25,7 @@ def require_role(role_code: str | list[str]):
             .limit(1)
         )
         last_verification = result.scalar_one_or_none()
-        if last_verification is None or getattr(last_verification, "status", None) != "confirmed":
+        if last_verification is None or getattr(last_verification, "status", None) != "confirmed" or getattr(last_verification, "expires_at", None) < datetime.utcnow():
             raise HTTPException(status_code=403, detail="Phone is not verified")
 
         return user
