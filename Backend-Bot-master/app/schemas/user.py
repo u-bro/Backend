@@ -7,7 +7,6 @@ from . import BaseSchema
 class UserSchemaCreate(BaseSchema):
     first_name: str | None = Field(None, max_length=100)
     last_name: str | None = Field(None, max_length=100)
-    username: str | None = Field(None, max_length=100)
     phone: str | None = Field(None, max_length=20)
 
 

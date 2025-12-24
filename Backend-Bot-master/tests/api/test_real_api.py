@@ -7,7 +7,6 @@ def test_users_crud_full_cycle(client):
     create_response = client.post(f"/api/v1/users/{telegram_id}", json={
         "telegram_id": telegram_id,
         "first_name": "TestCRUD",
-        "username": f"testcrud_{telegram_id}"
     })
     assert create_response.status_code == 200, f"Create user failed: {create_response.text}"
     user_data = create_response.json()
@@ -16,7 +15,6 @@ def test_users_crud_full_cycle(client):
     get_response = client.post(f"/api/v1/users/{telegram_id}", json={
         "telegram_id": telegram_id,
         "first_name": "Different",
-        "username": f"different_{telegram_id}"
     })
     assert get_response.status_code == 200
     same_user = get_response.json()
@@ -25,7 +23,6 @@ def test_users_crud_full_cycle(client):
         "id": user_id,
         "telegram_id": telegram_id,
         "first_name": "UpdatedName",
-        "username": f"updated_{telegram_id}",
         "balance": 100.0
     })
     assert update_response.status_code == 200
@@ -39,8 +36,6 @@ def test_users_update_nonexistent(client):
         "id": 999999,
         "telegram_id": 999999,
         "first_name": "Ghost",
-        "username": "ghost",
-        "balance": 0.0
     })
     assert response.status_code in (404, 422)
 

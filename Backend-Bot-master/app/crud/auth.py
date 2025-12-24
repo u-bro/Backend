@@ -53,7 +53,6 @@ class CrudAuth(CrudBase):
             return None
         
         user_data = {
-            "username": register_obj.username,
             "phone": register_obj.phone,
             "is_active": True,
             "role_id": role.id

@@ -19,7 +19,6 @@ class TestUsersCRUD:
 		input_data = {
 			"telegram_id": telegram_id,
 			"first_name": "Иван",
-			"username": f"ivan_petrov_{telegram_id}"
 		}
         
 		# 1. Создаём пользователя
@@ -31,14 +30,12 @@ class TestUsersCRUD:
 		# 2. Проверяем что все поля вернулись правильно
 		assert created_user["telegram_id"] == telegram_id, "telegram_id не совпадает"
 		assert created_user["first_name"] == "Иван", "first_name не совпадает"
-		assert created_user["username"] == f"ivan_petrov_{telegram_id}", "username не совпадает"
 		assert "id" in created_user, "id отсутствует в ответе"
 		assert created_user["id"] is not None, "id равен None"
         
 		user_id = created_user["id"]
 		print(f"\n✓ Пользователь создан: id={user_id}, telegram_id={telegram_id}")
 		print(f"  first_name: {created_user['first_name']}")
-		print(f"  username: {created_user['username']}")
         
 		# 3. Получаем пользователя из БД через список и проверяем
 		list_response = client.get("/api/v1/users?page=1&page_size=1000")
@@ -65,7 +62,6 @@ class TestUsersCRUD:
 		create_resp = client.post(f"/api/v1/users/{telegram_id}", json={
 			"telegram_id": telegram_id,
 			"first_name": "До обновления",
-			"username": f"before_{telegram_id}"
 		})
 		user_id = create_resp.json()["id"]
 		original_balance = create_resp.json().get("balance", 0)
@@ -77,7 +73,6 @@ class TestUsersCRUD:
 			"id": user_id,
 			"telegram_id": telegram_id,
 			"first_name": "После обновления",
-			"username": f"after_{telegram_id}",
 			"balance": 500.50
 		}
         
@@ -88,7 +83,6 @@ class TestUsersCRUD:
         
 		# 3. Проверяем что данные обновились
 		assert updated_user["first_name"] == "После обновления", "first_name не обновился"
-		assert updated_user["username"] == f"after_{telegram_id}", "username не обновился"
 		assert updated_user["balance"] == 500.50, f"balance не обновился: {updated_user['balance']}"
         
 		print(f"✓ Пользователь обновлён: first_name='{updated_user['first_name']}', balance={updated_user['balance']}")

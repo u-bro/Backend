@@ -9,7 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-import os, hashlib
+import os
 
 
 # revision identifiers, used by Alembic.
@@ -22,14 +22,12 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     bind = op.get_bind()
 
-    admin_username = os.getenv("ADMIN_USERNAME", "admin")
     admin_phone = os.getenv("ADMIN_PHONE")
 
     bind.execute(
         sa.text(
             """
             INSERT INTO users (
-                username,
                 phone,
                 is_active,
                 role_id,
@@ -37,7 +35,6 @@ def upgrade() -> None:
                 last_active_at
             )
             SELECT
-                :username,
                 :phone,
                 TRUE,
                 r.id,
@@ -49,7 +46,6 @@ def upgrade() -> None:
             """
         ),
         {
-            "username": admin_username,
             "phone": admin_phone,
         },
     )
