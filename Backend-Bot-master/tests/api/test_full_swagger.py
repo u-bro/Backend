@@ -15,7 +15,6 @@ def test_users_create_and_get(client):
     response = client.post(f"/api/v1/users/{telegram_id}", json={
         "telegram_id": telegram_id,
         "first_name": "SwaggerTest",
-        "username": f"swagger_{telegram_id}"
     })
     assert response.status_code == 200
     data = response.json()
@@ -26,7 +25,6 @@ def test_users_update(client, test_user):
         "id": test_user["id"],
         "telegram_id": test_user["telegram_id"],
         "first_name": "UpdatedSwagger",
-        "username": test_user.get("username", "updated"),
         "balance": 200.0
     })
     assert response.status_code == 200
@@ -36,7 +34,6 @@ def test_users_update_nonexistent(client):
         "id": 999999,
         "telegram_id": 999999,
         "first_name": "Ghost",
-        "username": "ghost",
         "balance": 0.0
     })
     assert response.status_code in (404, 422)
@@ -154,7 +151,6 @@ def test_driver_profiles_create(client):
     user_response = client.post(f"/api/v1/users/{telegram_id}", json={
         "telegram_id": telegram_id,
         "first_name": "NewDriverProfile",
-        "username": f"newdriver_{telegram_id}"
     })
     user_id = user_response.json()["id"]
     
@@ -196,7 +192,6 @@ def test_driver_profiles_duplicate_user(client):
     user_response = client.post(f"/api/v1/users/{telegram_id}", json={
         "telegram_id": telegram_id,
         "first_name": "DuplicateDriver",
-        "username": f"dupdriver_{telegram_id}"
     })
     user_id = user_response.json()["id"]
     first = client.post("/api/v1/driver-profiles", json={"user_id": user_id})

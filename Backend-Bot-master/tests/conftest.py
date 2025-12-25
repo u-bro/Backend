@@ -16,13 +16,11 @@ def test_user(client):
     response = client.post(f"/api/v1/users/{telegram_id}", json={
         "telegram_id": telegram_id,
         "first_name": "TestUser",
-        "username": f"testuser_1"
     })
     assert response.status_code == 401
     return     {
         "first_name": None,
         "last_name": None,
-        "username": "asd",
         "phone": "+375295447082",
         "id": 2,
         "created_at": "2025-12-17T17:11:22.946612",
@@ -66,7 +64,6 @@ def test_driver_profile(client):
     user_response = client.post(f"/api/v1/users/{telegram_id}", json={
         "telegram_id": telegram_id,
         "first_name": "TestDriver",
-        "username": f"testdriver_{telegram_id}"
     })
     user_id = user_response.json()["id"]
     

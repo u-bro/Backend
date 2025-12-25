@@ -51,7 +51,6 @@ def upgrade() -> None:
     sa.Column('balance', sa.DECIMAL(precision=15, scale=2), nullable=False),
     sa.Column('balance_updated_at', sa.TIMESTAMP(), nullable=True),
     sa.Column('first_name', sa.String(length=100), nullable=True),
-    sa.Column('username', sa.String(length=100), nullable=True),
     sa.Column('lang_code', sa.String(length=5), nullable=True),
     sa.Column('avatar_url', sa.String(), nullable=True),
     sa.Column('user_phone_number', sa.String(length=20), nullable=True),

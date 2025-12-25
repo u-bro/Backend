@@ -25,7 +25,7 @@ def require_role(role_code: str | list[str]):
             .limit(1)
         )
         last_verification = result.scalar_one_or_none()
-        if last_verification is None or getattr(last_verification, "status", None) != "confirmed" or getattr(last_verification, "expires_at", None) < datetime.utcnow():
+        if last_verification is None or getattr(last_verification, "status", None) != "confirmed":
             raise HTTPException(status_code=403, detail="Phone is not verified")
 
         return user

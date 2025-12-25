@@ -3,10 +3,14 @@ from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 from app.crud.base import CrudBase
-from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate
+from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate, RefreshTokenVerifyRequest, TokenResponse
+from app.schemas.refresh_token import RefreshTokenIn
 from app.logger import logger
+from app.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINTUES
+from app.models import User
 from .role import role_crud
 from .driver_profile import driver_profile_crud
+from .refresh_token import refresh_token_crud
 
 class CrudAuth(CrudBase):
     def __init__(self, model, schema, secret_key: str, algorithm: str = "HS256"):
@@ -14,7 +18,7 @@ class CrudAuth(CrudBase):
         self.secret_key = secret_key
         self.algorithm = algorithm
 
-    def create_access_token(self, user_id: int, expires_delta: timedelta = timedelta(hours=24)) -> str:
+    def create_access_token(self, user_id: int, expires_delta: timedelta = timedelta(minutes=JWT_EXPIRATION_MINTUES)) -> str:
         expire = datetime.utcnow() + expires_delta
         payload = {
             "user_id": user_id,
@@ -53,7 +57,6 @@ class CrudAuth(CrudBase):
             return None
         
         user_data = {
-            "username": register_obj.username,
             "phone": register_obj.phone,
             "is_active": True,
             "role_id": role.id
@@ -76,3 +79,22 @@ class CrudAuth(CrudBase):
             return None
 
         return user
+
+    async def refresh(self, session: AsyncSession, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse | None:
+        token_hash = refresh_token_crud.hash_token(refresh_obj.refresh_token)
+        
+        found_token = await refresh_token_crud.get_by_token(session, token_hash)
+        if not found_token or found_token.revoked_at:
+            logger.warning(f"Invalid refresh token")
+            return None
+        
+        await refresh_token_crud.revoke(session, token_hash)
+
+        access_token = self.create_access_token(found_token.user_id, timedelta(hours=JWT_EXPIRATION_MINTUES))
+        refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=found_token.user_id))
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token.token
+        )
+
+auth_crud = CrudAuth(User, UserSchema, JWT_SECRET_KEY, JWT_ALGORITHM)

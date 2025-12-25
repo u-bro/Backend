@@ -42,3 +42,4 @@ class PhoneVerificationSchemaCreate(BaseSchema):
 
 class PhoneVerificationVerifyRequest(BaseSchema):
     code: str = Field(..., max_length=10)
+    phone: str | None = Field(None, max_length=20)
