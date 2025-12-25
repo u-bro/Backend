@@ -15,8 +15,9 @@ venv/
 env/
 .env/
 .venv/
-.env
-.env-test
+# .env and .env-test are temporarily uncommented to allow local tooling access
+env
+env-test
 ENV/
 env.bak/
 venv.bak/

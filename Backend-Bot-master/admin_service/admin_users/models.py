@@ -1,0 +1,23 @@
+from django.db import models
+
+
+class User(models.Model):
+    class Meta:
+        db_table = 'users'
+        managed = False
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
+
+    id = models.AutoField(primary_key=True)
+    created_at = models.DateTimeField(null=True, blank=True)
+    last_active_at = models.DateTimeField(null=True, blank=True)
+    first_name = models.CharField(max_length=100, null=True, blank=True)
+    last_name = models.CharField(max_length=100, null=True, blank=True)
+    phone = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    role_id = models.IntegerField(null=True, blank=True)
+
+    def __str__(self) -> str:  # type: ignore[override]
+        if self.phone:
+            return f"{self.phone}"
+        return str(self.id)
