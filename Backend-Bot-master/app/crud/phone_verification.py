@@ -10,7 +10,7 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import update, desc
 from app.schemas.phone_verification import PhoneVerificationVerifyRequest
 from datetime import datetime, timedelta
-from app.config import OTP_CONFIRMED_EXPIRATION_HOURS, JWT_EXPIRATION_MINTUES
+from app.config import JWT_EXPIRATION_MINTUES
 from .auth import auth_crud
 from .refresh_token import refresh_token_crud
 from fastapi import HTTPException
@@ -52,7 +52,7 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
         stmt = (
             update(self.model)
             .where(self.model.id == item.id)
-            .values(status="confirmed", expires_at=item.expires_at + timedelta(hours=OTP_CONFIRMED_EXPIRATION_HOURS))
+            .values(status="confirmed")
             .returning(self.model)
         )
         result = await self.execute_get_one(session, stmt)
