@@ -25,7 +25,7 @@
 
   <div class="section">
     <h2>Введение</h2>
-    <p>WebSocket используется в проекте для реального времени коммуникации: чат во время поездок, уведомления пользователям, обновление локаций и статусов водителей. Подключение происходит по пути <code>/api/v1/ws/{user_id}</code> с токеном аутентификации.</p>
+    <p>WebSocket используется для realtime: чат рейсов, уведомления, трекинг локаций и система распределения заказов (matching/dispatch). Подключение: <code>/api/v1/ws/{user_id}</code> с JWT (query param <code>?token=...</code> или заголовком).</p>
   </div>
 
   <div class="section">
@@ -102,11 +102,60 @@ ws2.onclose = function(event) {
   </div>
 
   <div class="section">
+    <h2>Matching & Order Dispatch (основные принципы)</h2>
+    <p>Система распределения заказов отвечает за выдачу новых заказов релевантным водителям в реальном времени через WebSocket. Ключевые требования:</p>
+    <ul>
+      <li><strong>Фильтрация:</strong> по разрешениям/тегам водителя, онлайн-статусу и географической близости.</li>
+      <li><strong>Сортировка:</strong> лист выдачи сортируется по новизне (recency) и расстоянию (distance). Обычно комбинированный скор: weight_time * freshness + weight_distance * (1 / distance).</li>
+      <li><strong>Отклики:</strong> драйверы посылают отклики (offer) на заказ; сервер принимает первое валидное подтверждение или применяет idempotent assignment.</li>
+      <li><strong>Идемпотентное назначение:</strong> назначение выполняется атомарно в БД (SELECT FOR UPDATE / conditional UPDATE), чтобы избежать двойного назначения.</li>
+    </ul>
+
+    <h3>Flow (упрощённо)</h3>
+    <ol>
+      <li>Новый заказ создаётся в системе (REST или internal service).</li>
+      <li>Matching service вычисляет список кандидатов: фильтры (skills/tags, online=true, гео within radius), затем сортирует по score.</li>
+      <li>Сервер отправляет каждому кандидату через WS сообщение <code>new_order</code> с краткой информацией (ride_id, pickup, dropoff, fare_estimate, offer_id).</li>
+      <li>Водитель отправляет <code>order_offer</code> или <code>order_reject</code>. Отклик содержит <code>offer_id</code> и, опционально, <code>idempotency_key</code>.</li>
+      <li>При получении положительного отклика сервер пытается выполнить idempotent assignment: условный UPDATE рейса (status, driver_profile_id) только если статус в allowed_from и driver_profile_id пуст.
+      <li>Результат назначениия рассылается всем участникам: <code>assign_result</code> (success/failure, assigned_driver_id).</li>
+    </ol>
+
+    <h3>Примеры сообщений (matching)</h3>
+    <table>
+      <tr><th>Тип</th><th>Кому</th><th>Описание / payload</th></tr>
+      <tr><td>new_order</td><td>driver(s)</td><td><code>{"ride_id":123, "pickup":{...}, "dropoff":{...}, "fare":100, "offer_id":"o-abc"}</code></td></tr>
+      <tr><td>order_offer</td><td>server</td><td><code>{"offer_id":"o-abc","driver_profile_id":55,"idempotency_key":"k-1"}</code></td></tr>
+      <tr><td>order_reject</td><td>server</td><td><code>{"offer_id":"o-abc","driver_profile_id":55,"reason":"busy"}</code></td></tr>
+      <tr><td>assign_result</td><td>all</td><td><code>{"ride_id":123,"status":"assigned","driver_profile_id":55}</code></td></tr>
+    </table>
+
+    <h3>Фильтрация кандидатов</h3>
+    <ul>
+      <li><strong>Permissions / tags:</strong> водитель должен соответствовать требованиям заказа (например, vehicle_type, documents).</li>
+      <li><strong>Online status:</strong> только водители с текущим статусом <code>available/online</code>.</li>
+      <li><strong>Geolocation:</strong> использовать R‑tree / PostGIS / bounding box для поиска в радиусе; дополнительно сортировать по расстоянию.</li>
+    </ul>
+
+    <h3>Идемпотентное назначение (важно)</h3>
+    <p>При принятии предложения необходимо гарантировать, что два параллельных отклика не назначат двух водителей. Рекомендуемый паттерн реализован в `app/crud/ride.py`:</p>
+    <pre><code>-- pseudocode
+BEGIN TRANSACTION;
+SELECT status FROM rides WHERE id = :ride_id FOR UPDATE;
+-- if status in allowed_from and driver_profile_id IS NULL:
+UPDATE rides SET status='accepted', driver_profile_id = :driver_profile_id WHERE id = :ride_id AND driver_profile_id IS NULL;
+-- insert into ride_status_history ...;
+COMMIT;
+</code></pre>
+    <p>Если UPDATE вернул 0 строк — другой процесс уже назначил поездку; вернуть клиенту соответствующий ответ (409 / already_taken).</p>
+  </div>
+
+  <div class="section">
     <h2>Типы сообщений</h2>
     <p>Сообщения отправляются в JSON формате с полями <code>type</code> и <code>payload</code>.</p>
     <table>
       <tr><th>Тип</th><th>Описание</th><th>Пример payload</th></tr>
-      <tr><td>join_ride</td><td>Присоединиться к чату поездки. Доступ только для заказчика, водителя и админов.</td><td><code>{"ride_id": 123}</code></td></tr>
+      <tr><td>join_ride</td><td>Присоединиться к чату поездки. Доступ разрешён только для заказчика поездки (`ride.client_id`), водителя, назначенного на поездку (`ride.driver_profile.user_id`), и пользователей с ролью <code>admin</code>. См. зависимость <code>app/backend/deps/require_ride_chat_access.py</code>.</td><td><code>{"ride_id": 123}</code></td></tr>
       <tr><td>chat_message</td><td>Отправить сообщение в чат</td><td><code>{"ride_id": 123, "text": "Hello", "idempotency_key": "unique"}</code></td></tr>
       <tr><td>leave_ride</td><td>Покинуть чат поездки</td><td><code>{"ride_id": 123}</code></td></tr>
       <tr><td>driver_location</td><td>Обновить локацию водителя</td><td><code>{"lat": 55.7558, "lng": 37.6173}</code></td></tr>
@@ -118,13 +167,25 @@ ws2.onclose = function(event) {
 
   <div class="section">
     <h2>Авторизация и безопасность</h2>
-    <p>Доступ к чатам поездок ограничен:</p>
+    <p>Правила доступа к чату поездки (строго):</p>
     <ul>
-      <li><strong>Заказчик</strong>: пользователь, который заказал поездку (ride.client_id).</li>
-      <li><strong>Водитель</strong>: водитель, назначенный на поездку (ride.driver_profile.user_id).</li>
-      <li><strong>Админы</strong>: пользователи с ролью 'admin' имеют доступ ко всем чатам.</li>
+      <li><strong>Заказчик</strong>: пользователь, указанный в <code>ride.client_id</code>.</li>
+      <li><strong>Водитель</strong>: пользователь, связанный с <code>ride.driver_profile.user_id</code> (если водитель назначен).</li>
+      <li><strong>Админ</strong>: любой пользователь с ролью <code>admin</code> имеет доступ ко всем чатам.</li>
     </ul>
-    <p>При попытке присоединиться без доступа сервер отправляет ошибку: <code>{"type": "error", "message": "Access denied to ride chat"}</code>.</p>
+    <p>Если пользователь не соответствует этим правилам, попытка выполнить <code>join_ride</code> возвращает ошибку:</p>
+    <pre><code>{"type": "error", "message": "Access denied to ride chat"}</code></pre>
+
+    <p>Реализация: в проект добавлена централизованная FastAPI-зависимость <code>app/backend/deps/require_ride_chat_access.py</code>, которая проверяет доступ и возвращает объект <code>Ride</code> при успехе или бросает <code>HTTPException(403)</code> при отсутствии прав. Пример использования:</p>
+    <pre><code># REST: использовать как Depends
+async def get_chat_history(ride: Ride = Depends(require_ride_chat_access)):
+    # тут ride уже загружен и доступ разрешён
+    ...
+
+# WebSocket: при обработке join_ride можно вызвать ту же проверку вручную
+await chat_service.can_access_ride_chat(session, user.id, ride_id)
+</code></pre>
+
     <p>Все соединения требуют валидного JWT токена. Для продакшена используйте TLS (wss://).</p>
   </div>
 
@@ -200,21 +261,91 @@ ws.onclose = () => console.log('Closed');
 
   <div class="section">
     <h2>Серверная логика</h2>
-    <p>Сервер использует FastAPI с Uvicorn. Соединения управляются ConnectionManager. Сообщения сохраняются в PostgreSQL через Celery для асинхронности. Модерация и rate-limit применяются. Авторизация для чатов: только заказчик, водитель и админы могут присоединяться к чату поездки.</p>
+    <p>Сервер использует FastAPI с Uvicorn. Соединения управляются ConnectionManager. Сообщения сохраняются в PostgreSQL через Celery для асинхронности. Модерация и rate-limit применяются.</p>
+    <p>Авторизация для чатов реализована централизованно через зависимость <code>app/backend/deps/require_ride_chat_access.py</code> и в сервисе через <code>ChatService.can_access_ride_chat</code>. Эта логика гарантирует, что лишь заказчик поездки, назначенный водитель и пользователи с ролью <code>admin</code> могут присоединяться к чату конкретной поездки.</p>
     <p><strong>Реализованные изменения:</strong></p>
     <ul>
-      <li>Добавлен метод <code>can_access_ride_chat</code> в <code>ChatService</code> для проверки доступа к чату (заказчик, водитель, админ).</li>
-      <li>В <code>handle_join_ride</code> добавлена проверка авторизации перед присоединением; при отказе отправляется ошибка "Access denied to ride chat".</li>
+      <li>Добавлена зависимость <code>app/backend/deps/require_ride_chat_access.py</code> для централизованной проверки доступа к чатам.</li>
+      <li>Добавлен метод <code>can_access_ride_chat</code> в <code>ChatService</code> и использован в обработчике <code>handle_join_ride</code> (проверка перед join).</li>
       <li>Исправлен баг: <code>ride_id</code> теперь правильно извлекается из <code>payload</code>.</li>
       <li>Сообщения чата сохраняются в БД с <code>idempotency_key</code> для дедупликации; обработка через Celery для отказоустойчивости.</li>
     </ul>
-    <p>Ключевые файлы: <code>app/backend/routers/websocket.py</code>, <code>app/services/chat_service.py</code>, <code>app/tasks/chat_tasks.py</code>.</p>
+    <p>Ключевые файлы: <code>app/backend/routers/websocket.py</code>, <code>app/services/chat_service.py</code>, <code>app/tasks/chat_tasks.py</code>, <code>app/backend/deps/require_ride_chat_access.py</code>.</p>
   </div>
 
   <div class="section">
+    <h2>Сохранение сообщений (persistence)</h2>
+    <p>Подробный flow сохранения сообщений:</p>
+    <ol>
+      <li>Клиент отправляет <code>chat_message</code> через WebSocket с полями <code>ride_id</code>, <code>text</code> и опциональным <code>idempotency_key</code>.</li>
+      <li>Сервер выполняет модерацию и rate-limit; при успехе немедленно делает <strong>broadcast</strong> сообщения всем участникам рейса через <code>ConnectionManager</code> — это улучшает UX (сообщение видно почти мгновенно).</li>
+      <li>Параллельно формируется полезная нагрузка и ставится задача в очередь Celery: <code>save_chat_message.delay(payload)</code>. Задача содержит <code>idempotency_key</code> (если передан или сгенерирован сервером).</li>
+      <li>Celery worker выполняет задачу и внутри запускает асинхронный helper, который создаёт <code>AsyncSession</code> (через <code>async_session_maker()</code>) и вызывает <code>chat_service.save_message(session, ...)</code>.</li>
+      <li><code>chat_service.save_message</code> выполняет дедупликацию по <code>idempotency_key</code>: если запись с таким ключом уже есть, задача возвращает существующее сообщение; иначе создаёт новую запись, делает <code>session.add</code>, <code>await session.flush()</code> и <code>await session.refresh(message)</code>, затем возвращает Pydantic-структуру.</li>
+      <li>Задача Celery настроена с retry-политикой (несколько попыток и задержек) — это обеспечивает отказоустойчивость при кратковременных проблемах с БД/сетью.</li>
+    </ol>
+
+    <p>Ключевые замечания и советы:</p>
+    <ul>
+      <li><strong>Idempotency:</strong> обязательно передавайте или генерируйте <code>idempotency_key</code> на клиенте/сервере, чтобы избежать дублей при retry.</li>
+      <li><strong>Celery worker:</strong> проверьте, что Celery worker запущен и подключён к брокеру (Redis), иначе данные не сохранятся.</li>
+      <li><strong>Мониторинг ошибок:</strong> просматривайте логи Celery и приложения: <code>docker compose logs -f worker</code>, <code>docker compose logs -f app</code>.</li>
+      <li><strong>Транзакции:</strong> сохранение выполняется через <code>AsyncSession</code> и flush/refresh — это даёт корректные значения PK/времён в возвращаемой структуре.</li>
+
+  <div class="section">
+    <h2>Подробная проверка persistence (Redis, Celery, БД)</h2>
+    <p>Во время ручного тестирования Redis и Celery были запущены и обрабатывали задачи: сообщения успешно попадали в очередь и сохранялись в PostgreSQL. Ниже — подробная инструкция для воспроизведения и проверки.</p>
+
+    <h3>1) Проверка статуса контейнеров</h3>
+    <pre><code>docker compose ps</code></pre>
+    <p>Убедитесь, что сервисы для приложения, Celery worker и Redis находятся в состоянии <code>Up</code>.</p>
+
+    <h3>2) Проверка Redis</h3>
+    <pre><code>docker compose logs -f redis
+    </ul>
+  </div>
+
+  <div class="section">
+
+    <h3>3) Проверка Celery worker</h3>
+    <pre><code>docker compose logs -f worker    # либо имя сервиса celery/celery_worker
     <h2>Troubleshooting</h2>
     <ul>
+
+    <h3>4) Пример полезной нагрузки задачи Celery</h3>
+    <pre><code>{
+  "ride_id": 123,
+  "sender_id": 5,
+  "text": "Hello from browser!",
+  "message_type": "text",
+  "idempotency_key": "test123",
+  "attachments": null
+}
+</code></pre>
+
+    <h3>5) Проверка сохранения в PostgreSQL</h3>
+    <p>Выполните SQL-запрос в контейнере базы данных, чтобы увидеть последние записи в таблице <code>chat_message</code>:</p>
+    <pre><code>docker compose exec db psql -U postgres -d your_db_name -c "select id, ride_id, sender_id, text, created_at from chat_message order by id desc limit 10;"
       <li>401/403: Проверьте токен и user_id.</li>
+
+    <h3>6) Последовательность событий (summary)</h3>
+    <ol>
+      <li>Client -> WS: отправка <code>chat_message</code> (payload включает <code>idempotency_key</code>).</li>
+      <li>Server: модерация и rate-limit, затем immediate broadcast через <code>ConnectionManager</code>.</li>
+      <li>Server: постановка задачи в Celery: <code>save_chat_message.delay(payload)</code>.</li>
+      <li>Celery worker: забирает задачу, вызывает асинхронный helper, открывает <code>AsyncSession</code> и вызывает <code>chat_service.save_message</code>.</li>
+      <li><code>chat_service.save_message</code>: дедупликация по <code>idempotency_key</code>, создание записи и commit (через flush/refresh).</li>
+    </ol>
+
+    <h3>7) Что посмотреть в логах при проблемах</h3>
+    <ul>
+      <li>В логах Celery — ошибки при подключении к БД или исключения при сохранении.</li>
+      <li>В логах приложения (`app`) — ошибки модерации, rate-limit, или ошибки при отправке задач в Celery.</li>
+      <li>Если в Redis нет задач — проверьте правильность broker URL в конфигурации (обычно <code>REDIS_URL</code> в env).</li>
+    </ul>
+
+    <p>Если хотите, могу добавить в документацию конкретные команды для вашего docker-compose (подставлю имена сервисов, если укажете их), либо автоматически сгенерировать скрипт для быстрых проверок.</p>
+  </div>
       <li>Сообщения не приходят: Убедитесь в правильном ride_id и подключении.</li>
       <li>Дубли: Проверьте idempotency_key.</li>
       <li>Логи: <code>docker compose logs -f app</code>.</li>

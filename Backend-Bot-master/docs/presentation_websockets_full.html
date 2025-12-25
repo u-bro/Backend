@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Презентация: WebSocket, Matching, Orders, Chat — Backend-Bot</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:22px;color:#111}
+    h1{font-size:28px;margin-bottom:6px}
+    h2{font-size:20px;margin-top:20px}
+    h3{font-size:16px;margin-top:14px}
+    p{line-height:1.45}
+    pre{background:#f6f8fa;padding:12px;border-radius:6px;overflow:auto}
+    code{font-family:monospace;background:#f3f4f6;padding:2px 4px;border-radius:3px}
+    .note{background:#eef9ff;border-left:4px solid #4aa3ff;padding:10px;margin:8px 0}
+    .check{color:green;font-weight:700}
+    ul{margin-left:18px}
+    table{border-collapse:collapse;width:100%;margin:12px 0}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    th{background:#f2f2f2}
+  </style>
+</head>
+<body>
+
+<h1>Презентация — WebSocket, Matching, Orders, Chat (Backend-Bot)</h1>
+<p>Полная, детализированная версия презентации — подготовлено для показа на созвоне. Документ включает объяснения концепций, примеры сообщений (HTTP + WS), SQL‑псевдо для atomic операций, пошаговые сценарии для демонстрации и заметки докладчика.</p>
+
+<h2>Содержание (быстрый обзор)</h2>
+<ul>
+  <li>Заказы (Orders / Rides): CRUD, State Machine, переходы, таймауты, аудит</li>
+  <li>Matching (через WebSocket): фильтрация, онлайн, гео, сортировка, отклики, идемпотентное назначение</li>
+  <li>Chat (WebSocket): обмен сообщениями в рамках заказа, модерация, rate-limit, persistence</li>
+  <li>Зависимость доступа к чату: только client, driver, admin</li>
+  <li>Проверки и demo‑скрипты для показа на созвоне</li>
+</ul>
+
+<hr>
+
+<h2>1. Заказы — краткая сводка для демонстрации</h2>
+
+<h3>Что показать (детально)</h3>
+<ul>
+  <li><strong>CRUD</strong>: создайте рейс через HTTP (POST /api/v1/rides). Поясните обязательные поля и ожидаемый ответ (201 + JSON с `id`).</li>
+  <li><strong>State Machine</strong>: продемонстрируйте допустимые переходы состояний и валидацию ролей (client/driver/system/admin).</li>
+  <li><strong>Идемпотентный accept</strong>: смоделируйте параллельные попытки принять рейс двумя водителями; покажите, что назначение выполняется атомарно и в `ride_status_history` появляется одна запись назначения.</li>
+  <li><strong>Audit</strong>: выполните SELECT из `ride_status_history` и покажите хронологию изменений статусов с `actor_role` и `reason`.</li>
+</ul>
+
+<h3>Ключевые статусы (пример)</h3>
+<pre>requested -> driver_assigned -> accepted -> arrived -> started -> completed
+                     \-> canceled (любым актором при разрешении)
+</pre>
+
+<h3>Atomic change_status — пошаговый псевдо‑SQL</h3>
+<pre>-- Операция выполняется в транзакции
+BEGIN;
+-- Блокируем строку, чтобы избежать race
+SELECT status FROM rides WHERE id = :ride_id FOR UPDATE;
+
+-- Выполняем условный апдейт только если текущий статус разрешает переход
+UPDATE rides
+SET status = :to_status,
+    driver_profile_id = COALESCE(:driver_profile_id, driver_profile_id),
+    canceled_at = CASE WHEN :to_status = 'canceled' THEN NOW() ELSE canceled_at END
+WHERE id = :ride_id
+  AND status = ANY(:allowed_from);
+
+-- Если UPDATE затронул строку, добавляем запись в историю
+INSERT INTO ride_status_history(ride_id, from_status, to_status, changed_by, actor_role, reason, meta, created_at)
+SELECT id, :from_status, :to_status, :actor_id, :actor_role, :reason, :meta, NOW()
+FROM rides WHERE id = :ride_id
+  AND (/* условие, что апдейт реально сработал, например через проверку affected rows */ true);
+
+COMMIT;
+</pre>
+
+<p class="note">Пояснение докладчику: если UPDATE вернул 0 строк — значит другой процесс уже сменил статус; нужно вернуть `409 / already_taken` или подобный код.</p>
+
+<hr>
+
+<h2>2. Matching (вебсокеты) — детально для презентации</h2>
+
+<h3>Цель</h3>
+<p>Выдавать релевантные заказы водителям в реальном времени, фильтровать неподходящих, сортировать ленту и гарантировать корректное и идемпотентное назначение.</p>
+
+<h3>Ключевые правила</h3>
+<ul>
+  <li><strong>Фильтрация:</strong> теги/permissions (vehicle_type, docs), онлайн-статус (available/online), гео (в радиусе).</li>
+  <li><strong>Сортировка:</strong> комбинированный скор по новизне и расстоянию (freshness & distance).</li>
+  <li><strong>Отклики:</strong> водитель присылает <code>order_offer</code> — сервер выполняет idempotent assignment.</li>
+</ul>
+
+<h3>Flow — что показывать шаг за шагом</h3>
+<ol>
+  <li>Создание заказа (POST /api/v1/rides) — показать JSON создаваемого рейса.</li>
+  <li>Matching service вычисляет кандидатов и шлёт по WS сообщение <code>new_order</code>.</li>
+  <li>Два-три водителя получают <code>new_order</code> (демонстрация нескольких WS клиентов в браузере).</li>
+  <li>Показать <code>order_reject</code> и <code>order_offer</code>. Первый отклик назначает водителя или возвращает already_taken.</li>
+  <li>Показать запись в БД: если назначение успешно — <code>ride.driver_profile_id</code> и <code>ride_status_history</code>.</li>
+</ol>
+
+<h3>Пояснения и готовые сценарии (скрипты) — для живого показа</h3>
+<p>Ниже — краткие команды и ожидаемые ответы, которые стоит проговаривать во время показа.</p>
+<pre>
+# 1) Create ride (пример curl)
+curl -X POST "http://localhost:5000/api/v1/rides" -H "Authorization: Bearer {token}" -H "Content-Type: application/json" -d '{
+  "client_id": 10,
+  "pickup_address": "ул. Пушкина, 1",
+  "pickup_lat": 55.75,
+  "pickup_lng": 37.61,
+  "dropoff_address": "ул. Лермонтова, 2",
+  "expected_fare": 120.0
+}'
+
+# Ожидаем: HTTP 201 и JSON с "id": 123
+
+# 2) Matching: сервер шлёт WS -> driver: new_order (пример JSON)
+{
+  "type": "new_order",
+  "payload": {"ride_id":123, "pickup":{...}, "offer_id":"o-abc"}
+}
+
+# 3) Driver отправляет отклик (order_offer)
+{
+  "type": "order_offer",
+  "payload": {"offer_id":"o-abc", "driver_profile_id":55, "idempotency_key":"k-1"}
+}
+
+# 4) Сервер пытается назначить; ожидаем assign_result -> success/failed
+{
+  "type": "assign_result",
+  "payload": {"ride_id":123, "status":"assigned", "driver_profile_id":55 }
+}
+</pre>
+
+<h3>Примеры сообщений (matching)</h3>
+<table>
+  <tr><th>Тип</th><th>Куда</th><th>Payload</th></tr>
+  <tr><td>new_order</td><td>driver</td><td><code>{"ride_id":123,"pickup":{lat,lng},"fare":100,"offer_id":"o-1"}</code></td></tr>
+  <tr><td>order_offer</td><td>server</td><td><code>{"offer_id":"o-1","driver_profile_id":55,"idempotency_key":"k-1"}</code></td></tr>
+  <tr><td>assign_result</td><td>all</td><td><code>{"ride_id":123,"status":"assigned","driver_profile_id":55}</code></td></tr>
+</table>
+
+<h3>Идемпотентное назначение — что продемонстрировать</h3>
+<ul>
+  <li>Параллельные <code>order_offer</code> от двух водителей — только один получает статус assigned.</li>
+  <li>Покажите SQL логи/affected rows: UPDATE вернул 1 для победителя, 0 для второго.</li>
+</ul>
+
+<h3>ASCII sequence diagram — Matching (упрощённо)</h3>
+<pre>
+Client -> System: POST /rides (create)
+System -> Matching: schedule matching
+Matching -> Driver A (WS): new_order(offer_id=o-1)
+Matching -> Driver B (WS): new_order(offer_id=o-1)
+Driver A -> System (WS): order_offer(offer_id=o-1)
+Driver B -> System (WS): order_offer(offer_id=o-1)
+System -> DB: SELECT ... FOR UPDATE; UPDATE ... WHERE driver_profile_id IS NULL
+alt assign success
+  System -> Driver A: assign_result(success)
+  System -> Driver B: assign_result(failed)
+end
+</pre>
+
+<hr>
+
+<h2>3. Chat (вебсокеты) — текстовый чат в рамках заказа</h2>
+
+<h3>Функционал</h3>
+<ul>
+  <li>Чат между клиентом, водителем и оператором (в рамках ride_id).</li>
+  <li>Хранение истории в таблице <code>chat_message</code>.</li>
+  <li>Базовая модерация (profanity filter), rate-limit (N сообщений / минуту), idempotency_key для дедупликации.</li>
+</ul>
+
+<h3>Типы сообщений (chat)</h3>
+<table>
+  <tr><th>type</th><th>описание</th><th>payload</th></tr>
+  <tr><td>join_ride</td><td>Запрос на присоединение к чату рейса</td><td><code>{"ride_id":123}</code></td></tr>
+  <tr><td>chat_message</td><td>Отправка сообщения</td><td><code>{"ride_id":123,"text":"Hi","idempotency_key":"k1"}</code></td></tr>
+  <tr><td>leave_ride</td><td>Покинуть чат</td><td><code>{"ride_id":123}</code></td></tr>
+</table>
+
+<h3>Persistence — как это работает</h3>
+<ol>
+  <li>Клиент отправляет <code>chat_message</code> — сервер делает immediate broadcast (улучшает UX).</li>
+  <li>Параллельно сервер ставит задачу в Celery: <code>save_chat_message.delay(payload)</code>.</li>
+  <li>Celery worker сохраняет через AsyncSession; внутри <code>chat_service.save_message</code> проверяется <code>idempotency_key</code>.</li>
+</ol>
+
+<h3>Примеры WS payloads — Chat</h3>
+<pre>
+// join
+{ "type":"join_ride", "payload": { "ride_id": 123 } }
+
+// chat message
+{ "type":"chat_message", "payload": { "ride_id":123, "text":"Привет", "idempotency_key":"u1-m1" } }
+
+// server ack (immediate broadcast)
+{ "type":"chat_message_ack", "payload": { "temp_id":"u1-m1", "status":"broadcasted" } }
+</pre>
+
+<p class="note">Докладчику: объясните отличие immediate broadcast (UX) и фонового сохранения в БД. Покажите логи worker, чтобы подтвердить, что запись действительно сохранилась.</p>
+
+<p class="note">Важно: для демонстрации покажите как сообщение видимо сразу в UI, а затем появляется в БД после выполнения задачи Celery (logs/worker).</p>
+
+<hr>
+
+<h2>4. Зависимость доступа к чату (security)</h2>
+
+<h3>Требование</h3>
+<p>Доступ к просмотру чата должен иметь только:</p>
+<ul>
+  <li>пользователь‑заказчик (ride.client_id)</li>
+  <li>водитель, который везёт (ride.driver_profile.user_id)</li>
+  <li>любой админ (role == 'admin')</li>
+</ul>
+
+<h3>Как реализовано (FastAPI)</h3>
+<pre><code># app/backend/deps/require_ride_chat_access.py (dependency)
+# псевдо:
+async def require_ride_chat_access(ride_id: int, current_user: User, session=Depends(get_db)) -> Ride:
+    ride = crud.get_ride(session, ride_id)
+    if current_user.id == ride.client_id or current_user.id == ride.driver_user_id or current_user.is_admin:
+        return ride
+    raise HTTPException(status_code=403)
+</code></pre>
+
+<h3>Как продемонстрировать: пошагово</h3>
+<ol>
+  <li>Client (client_id) подключается и выполняет <code>join_ride</code> — ожидаем success.</li>
+  <li>Driver (driver_profile user) подключается — ожидаем success.</li>
+  <li>Third-party user (не связанный) подключается — ожидаем error/403 и server logs показывают отказ.</li>
+</ol>
+
+<p>Пояснение для докладчика: при демонстрации можно сначала показать успешный join, затем попытаться подключиться с другим пользователем и показать сообщение об ошибке и отсутствие доступа к ConnectionManager.</p>
+
+<p>Для демонстрации: показать, что попытка <code>join_ride</code> от неавторизованного пользователя возвращает error/403 и не добавляет в ConnectionManager.</p>
+
+<hr>
+
+<h2>5. Проверки, команды и чеклист для демонстрации</h2>
+
+<h3>Перед созвоном</h3>
+<ul>
+  <li>Запустить приложение и worker (Uvicorn + Celery worker + Redis + Postgres).</li>
+  <li>Проверить, что DB и Celery доступны: <code>docker compose ps</code> и <code>docker compose logs -f worker</code>.</li>
+  <li>Подготовить 2 браузерные вкладки (Driver A, Driver B) и вкладку Client/Operator.</li>
+</ul>
+
+<h3>Пошаговый сценарий для показа (рекомендуется)</h3>
+<ol>
+  <li>Создать заказ (POST /api/v1/rides) — показать тело и response.</li>
+  <li>Показать как Matching рассылает <code>new_order</code> нескольким водителям (открытые WS клиентов получают событие).</li>
+  <li>Driver A откликается <code>order_offer</code>, Driver B тоже; показать логи сервера и результаты (assign success/failed) — акцент на atomic UPDATE.</li>
+  <li>Клиент и назначенный водитель присоединяются к чату: <code>join_ride</code>, отправляют <code>chat_message</code>. Показать immediate broadcast в UI и появление записи в БД после worker run.</li>
+  <li>Попытка чужого пользователя присоединиться к чату — показать отказ (403/error).</li>
+  <li>Показать запись в <code>ride_status_history</code> и <code>chat_message</code> (SQL select).
+</ol>
+
+<h3>Список готовых SQL-запросов для показа (копировать в psql)</h3>
+<pre>
+-- Посмотреть последние 10 сообщений чата
+select id, ride_id, sender_id, text, created_at from chat_message order by id desc limit 10;
+
+-- Посмотреть историю статусов для рейса
+select id, ride_id, from_status, to_status, actor_role, changed_by, reason, created_at from ride_status_history where ride_id = 123 order by id;
+
+-- Проверить текущий статус рейса
+select id, status, driver_profile_id, canceled_at from rides where id = 123;
+</pre>
+
+<h3>Команды (копировать в терминал)</h3>
+<pre>
+# запустить приложение (в виртуальной среде/poetry)
+poetry run uvicorn app.backend.main:app --host 0.0.0.0 --port 5000
+
+# запустить celery worker (пример)
+poetry run celery -A app.tasks worker --loglevel=info
+
+# проверить последние chat messages
+docker compose exec db psql -U postgres -d your_db -c "select * from chat_message order by id desc limit 10;"
+
+# проверить статус истории рейсов
+docker compose exec db psql -U postgres -d your_db -c "select * from ride_status_history where ride_id=<ID> order by id desc limit 10;"
+</pre>
+
+<hr>
+
+<h2>6. Вопросы и ответы (FAQ) — что могут спросить</h2>
+<ul>
+  <li><strong>Как защитить от дублей сообщений?</strong> — idempotency_key + deduplication в <code>chat_service.save_message</code>.</li>
+  <li><strong>Как избежать double assignment?</strong> — atomic UPDATE (SELECT FOR UPDATE + conditional UPDATE) и запись в history.</li>
+  <li><strong>Что если Celery упал?</strong> — immediate broadcast даёт UX; фоновые сообщения будут сохранены при восстановлении worker, мониторинг алертов обязателен.</li>
+  <li><strong>Можно ли тестировать matching unit-тестами?</strong> — да: покрыть фильтры, сортировку и idempotent assign (использовать тестовую БД и конкурентные тесты).</li>
+</ul>
+
+<hr>
+
+<h2>7. Резюме и подготовка к демонстрации</h2>
+<ul>
+  <li>Главные тезисы: атомарность назначений, безопасность доступа к чату, немедленная рассылка + фоновая сохранность, прозрачный аудит статусов.</li>
+  <li>Покажите flow «create ride → new_order → offer → assign → chat_message → persisted».</li>
+  <li>Приготовьте скриншоты/SQL-выводы заранее, если боитесь времени на live DB queries.</li>
+</ul>
+
+<p style="margin-top:20px">Если хотите, могу дополнительно: 
+<ul>
+  <li>сгенерировать краткий слайд (PDF/PNG) с ключевыми блоками для показа,</li>
+  <li>или вставить ASCII-диаграмму flow прямо в документ.</li>
+</ul>
+</p>
+
+</body>
+</html>
