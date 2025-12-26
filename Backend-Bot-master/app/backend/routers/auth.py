@@ -14,25 +14,12 @@ class AuthRouter(BaseRouter):
         super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
-        self.router.add_api_route(f"{self.prefix}/register", self.register, methods=["POST"], status_code=201)
-        self.router.add_api_route(f"{self.prefix}/login", self.login, methods=["POST"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/send", self.login_or_register, methods=["POST"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/verify", self.verify_otp, methods=["POST"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/refresh", self.refresh, methods=["POST"], status_code=200)
 
-    async def register(self, request: Request, register_obj: AuthSchemaRegister) -> PhoneVerificationSchema:
-        user = await self.model_crud.register_user(request.state.session, register_obj)
-        
-        if user is None:
-            return JSONResponse(status_code=400, content={"detail": "User already exists or registration failed"})
-        
-        return await self.send_otp(request, user)
-
-    async def login(self, request: Request, login_obj: AuthSchemaLogin) -> PhoneVerificationSchema:
-        user = await self.model_crud.login_user(request.state.session, login_obj.phone)
-        
-        if user is None:
-            return JSONResponse(status_code=401, content={"detail": "Invalid phone number"})
-        
+    async def login_or_register(self, request: Request, login_obj: AuthSchemaLogin) -> PhoneVerificationSchema:
+        user = await self.model_crud.login_or_register(request.state.session, login_obj.phone)
         return await self.send_otp(request, user)
 
     async def send_otp(self, request: Request, user: User) -> PhoneVerificationSchema:

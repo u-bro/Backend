@@ -72,11 +72,10 @@ class CrudAuth(CrudBase):
         
         return self.schema.model_validate(new_user)
 
-    async def login_user(self, session: AsyncSession, phone: str) -> UserSchema | None:
+    async def login_or_register(self, session: AsyncSession, phone: str) -> UserSchema | None:
         user = await self.get_by_phone(session, phone)
         if not user:
-            logger.warning(f"Invalid phone number")
-            return None
+            user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code='driver'))
 
         return user
 
