@@ -1,7 +1,11 @@
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Add admin_service to Python path
+sys.path.insert(0, str(BASE_DIR))
 
 SECRET_KEY = 'django-insecure-test-key-for-admin-service'
 
@@ -19,6 +23,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'admin_users',
     'admin_drivers',
+    'admin_tariffs',
+    'admin_rides',
+    'admin_roles',
+    'admin_driver_documents',
+    'admin_chat_messages',
+    'admin_commissions',
+    'admin_transactions',
+    'admin_ride_status_history',
 ]
 
 MIDDLEWARE = [
