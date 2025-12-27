@@ -11,7 +11,7 @@ from django.db import transaction
 # Создаем суперпользователя (без печати пароля)
 username = os.getenv('ADMIN_USERNAME', 'admin')
 email = os.getenv('ADMIN_EMAIL', 'admin@example.com')
-password = os.getenv('ADMIN_PASSWORD')  # Рекомендовано задавать через окружение
+password = os.getenv('ADMIN_PASSWORD', 'NewStrongPass123!')  # Рекомендовано задавать через окружение
 
 with transaction.atomic():
     user, created = User.objects.get_or_create(
