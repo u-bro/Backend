@@ -3,7 +3,7 @@ from fastapi import Request, Depends
 from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.phone_verification import phone_verification_crud
-from app.schemas.phone_verification import PhoneVerificationSchema, PhoneVerificationCreate, PhoneVerificationUpdate
+from app.schemas.phone_verification import PhoneVerificationSchema, PhoneVerificationSchemaCreate, PhoneVerificationUpdate
 from app.backend.deps import require_role
 
 class PhoneVerificationRouter(BaseRouter):
@@ -25,7 +25,7 @@ class PhoneVerificationRouter(BaseRouter):
     async def get_by_id(self, request: Request, item_id: int) -> PhoneVerificationSchema:
         return await super().get_by_id(request, item_id)
 
-    async def create(self, request: Request, body: PhoneVerificationCreate) -> PhoneVerificationSchema:
+    async def create(self, request: Request, body: PhoneVerificationSchemaCreate) -> PhoneVerificationSchema:
         return await self.model_crud.create(request.state.session, body)
 
     async def update(self, request: Request, item_id: int, body: PhoneVerificationUpdate) -> PhoneVerificationSchema:

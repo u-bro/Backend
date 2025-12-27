@@ -1,7 +1,7 @@
 from app.crud.base import CrudBase
 from app.models.phone_verification import PhoneVerification
 from app.schemas.phone_verification import PhoneVerificationSchema
-from app.schemas.auth import TokenResponse
+from app.schemas.auth import TokenResponseRegister
 from app.schemas.refresh_token import RefreshTokenIn
 from app.models.phone_verification import PhoneVerification
 from app.schemas import PhoneVerificationSchema
@@ -40,7 +40,7 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
         ver = result.scalar_one_or_none()
         return self.schema.model_validate(ver) if ver else None
 
-    async def verify_by_user_id(self, session: AsyncSession, verify_obj: PhoneVerificationVerifyRequest) -> TokenResponse | None:
+    async def verify_by_user_id(self, session: AsyncSession, verify_obj: PhoneVerificationVerifyRequest) -> TokenResponseRegister:
         item = await self.get_by_phone(session, verify_obj.phone)
 
         if item.expires_at <= datetime.utcnow():
@@ -60,9 +60,10 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
 
         access_token = auth_crud.create_access_token(item.user_id, timedelta(hours=JWT_EXPIRATION_MINTUES))
         refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=item.user_id))
-        return TokenResponse(
+        return TokenResponseRegister(
             access_token=access_token,
-            refresh_token=refresh_token.token
+            refresh_token=refresh_token.token,
+            is_registred=item.is_registred
         )
 
 

@@ -72,12 +72,14 @@ class CrudAuth(CrudBase):
         
         return self.schema.model_validate(new_user)
 
-    async def login_or_register(self, session: AsyncSession, phone: str) -> UserSchema | None:
+    async def login_or_register(self, session: AsyncSession, phone: str) -> (UserSchema, bool):
         user = await self.get_by_phone(session, phone)
+        is_registred = False
         if not user:
             user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code='driver'))
-
-        return user
+            is_registred = True
+            
+        return user, is_registred
 
     async def refresh(self, session: AsyncSession, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse | None:
         token_hash = refresh_token_crud.hash_token(refresh_obj.refresh_token)
