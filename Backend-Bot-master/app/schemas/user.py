@@ -1,7 +1,8 @@
-from pydantic import ConfigDict, Field
+from pydantic import Field
 from datetime import datetime
 
 from . import BaseSchema
+from .role import RoleSchema
 
 
 class UserSchemaCreate(BaseSchema):
@@ -18,7 +19,5 @@ class UserSchema(UserSchemaCreate):
     is_active: bool | None = Field(None)
 
 
-class BalanceUpdateResponse(BaseSchema):
-    model_config = ConfigDict(from_attributes=True, extra="allow")
-    success: bool = True
-
+class UserSchemaMe(UserSchema):
+    role_name: str

@@ -1,27 +1,21 @@
-from typing import Optional
 from .base import BaseSchema
 from datetime import datetime
+from pydantic import Field
 
 
 class RoleCreate(BaseSchema):
-    code: str
-    name: Optional[str] = None
-    description: Optional[str] = None
+    code: str = Field(..., max_length=50)
+    name: str = Field(..., max_length=100)
+    description: str | None = Field(None, max_length=255)
 
 
 class RoleUpdate(BaseSchema):
-    code: Optional[str] = None
-    name: Optional[str] = None
-    description: Optional[str] = None
+    code: str | None = Field(None, max_length=50)
+    name: str | None = Field(None, max_length=100)
+    description: str | None = Field(None, max_length=255)
 
 
-class RoleSchema(BaseSchema):
-    id: int
-    code: str
-    name: Optional[str] = None
-    description: Optional[str] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+class RoleSchema(RoleCreate):
+    id: int = Field(..., gt=0)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None

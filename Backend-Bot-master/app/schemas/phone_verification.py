@@ -3,14 +3,6 @@ from datetime import datetime
 from . import BaseSchema
 from pydantic import Field
 
-class PhoneVerificationCreate(BaseSchema):
-    user_id: int
-    phone: str
-    code: str
-    expires_at: Optional[datetime] = None
-    status: Optional[str] = None
-    attempts: Optional[int] = 0
-
 
 class PhoneVerificationUpdate(BaseSchema):
     user_id: Optional[int] = None
@@ -19,27 +11,24 @@ class PhoneVerificationUpdate(BaseSchema):
     expires_at: Optional[datetime] = None
     status: Optional[str] = None
     attempts: Optional[int] = None
+    is_registred: Optional[bool] = None
 
-
-class PhoneVerificationSchema(BaseSchema):
-    id: int
-    user_id: int
-    phone: str
-    code: str
-    expires_at: Optional[datetime] = None
-    status: Optional[str] = None
-    attempts: int
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
 
 class PhoneVerificationSchemaCreate(BaseSchema):
     user_id: int = Field(...)
     phone: str = Field(..., max_length=20)
     code: str = Field(..., max_length=10)
     expires_at: datetime | None = Field(None)
+    status: Optional[str] = None
+    attempts: Optional[int] = 0
+    is_registred: Optional[bool] = None
+
 
 class PhoneVerificationVerifyRequest(BaseSchema):
     code: str = Field(..., max_length=10)
     phone: str | None = Field(None, max_length=20)
+
+
+class PhoneVerificationSchema(PhoneVerificationSchemaCreate):
+    id: int
+    created_at: Optional[datetime] = None
