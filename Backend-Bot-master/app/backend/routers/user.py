@@ -1,6 +1,6 @@
 from fastapi import Request, Depends
 from app.crud import user_crud
-from app.schemas import UserSchemaCreate, UserSchema
+from app.schemas.user import UserSchemaCreate, UserSchema, UserSchemaMe
 from app.backend.routers.base import BaseRouter
 from app.backend.deps import require_role
 from app.models import User
@@ -35,7 +35,9 @@ class UserRouter(BaseRouter):
     async def update(self, request: Request, id: int, update_obj: UserSchema) -> UserSchema:
         return await super().update(request, id, update_obj)
 
-    async def get_me(self, request: Request, user: User = Depends(require_role(["user", "driver", "admin"]))) -> UserSchema:
-        return await self.model_crud.get_by_id(request.state.session, user.id)
+    async def get_me(self, request: Request, user: User = Depends(require_role(["user", "driver", "admin"]))) -> UserSchemaMe:
+        role_name = user.role.code
+        role_name = "user" if role_name == "driver" and not user.driver_profile.approved else role_name
+        return UserSchemaMe(**user.__dict__, role_name=role_name)
 
 user_router = UserRouter(user_crud, "/users").router

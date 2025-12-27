@@ -6,7 +6,7 @@ from sqlalchemy.sql import update
 from app.logger import logger
 from app.crud.base import CrudBase
 from app.models import User
-from app.schemas import BalanceUpdateResponse, UserSchema
+from app.schemas import UserSchema
 
 
 class CrudUser(CrudBase):

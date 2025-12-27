@@ -1,5 +1,5 @@
 from .base import BaseSchema
-from .user import UserSchema, UserSchemaCreate, BalanceUpdateResponse
+from .user import UserSchema, UserSchemaCreate
 from .role import RoleSchema, RoleCreate, RoleUpdate
 from .driver_profile import DriverProfileSchema, DriverProfileCreate, DriverProfileUpdate
 from .driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverDocumentUpdate
