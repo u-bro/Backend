@@ -6,3 +6,4 @@ from .get_current_driver_profile_id import get_current_driver_profile_id
 from .require_owner import require_owner
 from .require_driver_profile import require_driver_profile
 from .require_driver_verification import require_driver_verification
+from .require_ride_chat_access import require_ride_chat_access

@@ -1,11 +1,3 @@
-"""
-Chat Router
-API для чата в рамках заказа между клиентом, водителем и оператором.
-
-WebSocket: ws://host/api/v1/chat/ws/{ride_id}
-HTTP: GET/POST /api/v1/chat/{ride_id}/...
-"""
-
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Query, Request
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
@@ -14,6 +6,7 @@ import logging
 import json
 
 from app.services.chat_service import chat_service, MessageType, ModerationResult
+from app.db import async_session_maker
 from app.services.websocket_manager import manager
 from app.crud.chat_message import chat_message_crud
 
@@ -68,9 +61,6 @@ async def chat_websocket(
     user_id: int = Query(..., description="ID пользователя"),
     token: Optional[str] = Query(None, description="Auth token"),
 ):
-    await websocket.accept()
-    
-    # TODO: 
     await manager.connect(websocket, user_id)
     manager.join_ride(ride_id, user_id)
     await manager.send_to_ride(ride_id, {
@@ -133,6 +123,12 @@ async def handle_chat_message(
         return
     
     if msg_type == "message":
+        logger.info("WS received raw from user %s in ride %s: %s", user_id, ride_id, data)
+        try:
+            await websocket.send_json({"type": "echo", "message": data})
+        except Exception:
+            pass
+
         text = data.get("text", "").strip()
         message_type = data.get("message_type", MessageType.TEXT)
         
@@ -163,24 +159,42 @@ async def handle_chat_message(
             })
             return
         
-        # TODO: 
-        message_data = {
-            "type": "new_message",
-            "message": {
-                "id": None, 
-                "ride_id": ride_id,
-                "sender_id": user_id,
-                "text": moderation.filtered,
-                "message_type": message_type,
-                "is_moderated": True,
-                "created_at": datetime.utcnow().isoformat(),
-                "censored": moderation.original != moderation.filtered,
+        try:
+            async with async_session_maker() as session:
+                message = await chat_service.save_message(
+                    session=session,
+                    ride_id=ride_id,
+                    sender_id=user_id,
+                    text=moderation.filtered,
+                    message_type=message_type,
+                    is_moderated=True,
+                )
+                await session.commit()
+
+            message_payload = {
+                "type": "new_message",
+                "message": {
+                    "id": message.id,
+                    "ride_id": ride_id,
+                    "sender_id": user_id,
+                    "text": message.text,
+                    "message_type": message.message_type,
+                    "is_moderated": message.is_moderated,
+                    "created_at": message.created_at.isoformat() if message.created_at else None,
+                    "censored": moderation.original != moderation.filtered,
+                },
             }
-        }
-        
-        await manager.send_to_ride(ride_id, message_data)
-        
-        logger.info(f"Chat message in ride {ride_id} from user {user_id}")
+
+            await manager.send_to_ride(ride_id, message_payload)
+            logger.info(f"Chat message saved and broadcast for ride {ride_id} from user {user_id} (id={message.id})")
+        except Exception as exc:
+            logger.error(f"Failed to save/broadcast chat message: {exc}")
+            await websocket.send_json({
+                "type": "error",
+                "code": "save_failed",
+                "message": "Failed to save message",
+            })
+            return
 
 
 @router.get("/chat/{ride_id}/history", response_model=ChatHistoryResponse)

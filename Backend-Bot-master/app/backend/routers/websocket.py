@@ -1,8 +1,3 @@
-"""
-WebSocket Router
-Обработка WebSocket соединений для real-time функционала
-"""
-
 from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, Query, WebSocket
@@ -57,7 +52,6 @@ class DriverWebsocketRouter(BaseWebsocketRouter):
     async def on_connect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = int(context["user_id"])
 
-        # TODO:
         await manager.connect(websocket, user_id)
 
         await websocket.send_json(

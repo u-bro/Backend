@@ -9,6 +9,9 @@ from better_profanity import profanity
 
 from app.models.chat_message import ChatMessage
 from app.models.ride import Ride
+from app.models.driver_profile import DriverProfile
+from app.models.user import User
+from app.models.role import Role
 from app.schemas.chat_message import ChatMessageSchema, ChatMessageCreate
 
 logger = logging.getLogger(__name__)
@@ -54,9 +57,7 @@ class ChatService:
         self.max_message_length = 2000
         self.min_message_length = 1
         
-        # Инициализация better-profanity с дополнительными словами
         profanity.load_censor_words()
-        # Добавляем наши кастомные слова к словарю библиотеки (как список)
         profanity.add_censor_words(list(BANNED_WORDS))
     
     def _normalize_text(self, text: str) -> str:
@@ -66,11 +67,8 @@ class ChatService:
         return result
     
     def _contains_banned_words(self, text: str) -> tuple[bool, Optional[str]]:
-        # Сначала проверяем через better-profanity
         if profanity.contains_profanity(text):
             return True, "profanity"
-        
-        # Затем наша кастомная проверка с нормализацией
         normalized = self._normalize_text(text)
         
         for word in BANNED_WORDS:
@@ -80,15 +78,11 @@ class ChatService:
         return False, None
     
     def _censor_text(self, text: str) -> str:
-        # Используем better-profanity для основной цензуры
         censored = profanity.censor(text)
-        
-        # Дополнительная цензура для наших кастомных слов
         normalized = self._normalize_text(censored)
         
         for word in BANNED_WORDS:
             if word in normalized:
-                # Ищем оригинальное слово в тексте и заменяем его
                 pattern = re.compile(re.escape(word), re.IGNORECASE)
                 censored = pattern.sub('*' * len(word), censored)
         
@@ -137,21 +131,31 @@ class ChatService:
         query = select(Ride).where(Ride.id == ride_id)
         result = await session.execute(query)
         ride = result.scalar_one_or_none()
-        
+
         if not ride:
             return False, "Ride not found", None
         if ride.client_id == user_id:
             return True, None, "client"
-        
         if ride.driver_profile_id:
-            # Нужно проверить user_id водителя через driver_profile
-            # Пока упрощённо — считаем что driver_profile_id связан с user
-            # TODO: связать через driver_profile.user_id
-            pass
-        
-        # TODO: Проверка на оператора (по роли пользователя)
-        # Пока разрешаем для тестирования
-        return True, None, "operator"
+            dp_q = select(DriverProfile).where(DriverProfile.id == ride.driver_profile_id)
+            dp_res = await session.execute(dp_q)
+            driver_profile = dp_res.scalar_one_or_none()
+            if driver_profile and getattr(driver_profile, "user_id", None) == user_id:
+                return True, None, "driver"
+
+        role_q = (
+            select(Role.code)
+            .select_from(Role)
+            .join(User, Role.id == User.role_id)
+            .where(User.id == user_id)
+        )
+        role_res = await session.execute(role_q)
+        role_code = role_res.scalar_one_or_none()
+
+        if role_code and role_code.lower() in {"admin", "operator", "support"}:
+            return True, None, role_code
+
+        return False, "Access denied", None
     
     async def save_message(
         self,
@@ -280,19 +284,6 @@ class ChatService:
             }
         }
     
-    def test_profanity_detection(self, text: str) -> Dict[str, Any]:
-        """Тестовый метод для проверки работы модерации"""
-        has_profanity = profanity.contains_profanity(text)
-        custom_check, word = self._contains_banned_words(text)
-        censored = self._censor_text(text)
-        
-        return {
-            "original": text,
-            "has_profanity": has_profanity,
-            "custom_check": custom_check,
-            "found_word": word,
-            "censored": censored,
-            "is_changed": text != censored
-        }
+    
 
 chat_service = ChatService()
