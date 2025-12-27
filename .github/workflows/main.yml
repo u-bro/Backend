@@ -23,8 +23,4 @@ jobs:
           git pull origin master
           git status
           cd Backend-Bot-master/
-          # Build migration image and run migrations before starting services
-          docker compose build migration
-          docker compose run --rm migration
-          # Start services after successful migrations
           docker compose up -d --build
