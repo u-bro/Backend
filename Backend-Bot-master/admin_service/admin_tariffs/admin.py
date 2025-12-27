@@ -26,6 +26,7 @@ class TariffPlanAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+    list_editable = tuple([f for f in list_display if f != 'id'])
     list_filter = ("effective_from", "effective_to")
     search_fields = ("name",)
 

@@ -14,6 +14,7 @@ class DriverDocumentAdmin(admin.ModelAdmin):
         "reviewed_at",
         "created_at",
     )
+    list_editable = tuple([f for f in list_display if f != 'id'])
     list_filter = ("doc_type", "status", "created_at")
     search_fields = ("doc_type", "file_url")
 

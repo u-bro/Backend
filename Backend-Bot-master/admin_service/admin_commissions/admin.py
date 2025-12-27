@@ -15,6 +15,7 @@ class CommissionAdmin(admin.ModelAdmin):
         "valid_to",
         "created_at",
     )
+    list_editable = tuple([f for f in list_display if f != 'id'])
     list_filter = ("valid_from", "valid_to", "created_at")
     search_fields = ("name", "currency")
 

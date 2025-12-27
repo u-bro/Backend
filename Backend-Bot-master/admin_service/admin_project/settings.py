@@ -21,16 +21,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'admin_users',
-    'admin_drivers',
-    'admin_tariffs',
-    'admin_rides',
-    'admin_roles',
-    'admin_driver_documents',
-    'admin_chat_messages',
-    'admin_commissions',
-    'admin_transactions',
-    'admin_ride_status_history',
+    'admin_users.apps.AdminUsersConfig',
+    'admin_drivers.apps.AdminDriversConfig',
+    'admin_tariffs.apps.AdminTariffsConfig',
+    'admin_rides.apps.AdminRidesConfig',
+    'admin_roles.apps.AdminRolesConfig',
+    'admin_driver_documents.apps.AdminDriverDocumentsConfig',
+    'admin_chat_messages.apps.AdminChatMessagesConfig',
+    'admin_commissions.apps.AdminCommissionsConfig',
+    'admin_transactions.apps.AdminTransactionsConfig',
+    'admin_ride_status_history.apps.AdminRideStatusHistoryConfig',
 ]
 
 MIDDLEWARE = [
@@ -73,7 +73,7 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '5432'),
         'OPTIONS': {
-            'options': '-c search_path=public_admin,public'
+            'options': '-c search_path=admin_public,public'
         }
     }
 }
@@ -106,3 +106,19 @@ JAZZMIN_SETTINGS = {
     "site_brand": "Admin",
     "welcome_sign": "Добро пожаловать в админ панель",
 }
+
+# Security / proxy settings for deployments behind HTTPS proxy (nginx/ELB)
+# Add your public origin(s) so Django accepts POSTs with Origin header.
+CSRF_TRUSTED_ORIGINS = [
+    'https://api.dev.u-bro.ru',
+]
+
+# If Django is behind a proxy that terminates TLS, enable this so
+# request.is_secure() respects X-Forwarded-Proto header (nginx should set it).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# In production you should enable secure cookies. When DEBUG=True it's
+# okay to leave them False for local testing, but in prod set them True.
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+

@@ -68,8 +68,10 @@ services:
       - .env
     environment:
       DB_HOST: db
-      DB_SCHEMA: public_admin
+      DB_SCHEMA: admin_public
     depends_on:
+      migration:
+        condition: service_healthy
       db:
         condition: service_healthy
 
