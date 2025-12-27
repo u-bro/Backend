@@ -11,7 +11,7 @@ SECRET_KEY = 'django-insecure-test-key-for-admin-service'
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'api.dev.u-bro.ru']
 
 INSTALLED_APPS = [
     'jazzmin',
@@ -106,3 +106,19 @@ JAZZMIN_SETTINGS = {
     "site_brand": "Admin",
     "welcome_sign": "Добро пожаловать в админ панель",
 }
+
+# Security / proxy settings for deployments behind HTTPS proxy (nginx/ELB)
+# Add your public origin(s) so Django accepts POSTs with Origin header.
+CSRF_TRUSTED_ORIGINS = [
+    'https://api.dev.u-bro.ru',
+]
+
+# If Django is behind a proxy that terminates TLS, enable this so
+# request.is_secure() respects X-Forwarded-Proto header (nginx should set it).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# In production you should enable secure cookies. When DEBUG=True it's
+# okay to leave them False for local testing, but in prod set them True.
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+
