@@ -70,10 +70,8 @@ services:
       DB_HOST: db
       DB_SCHEMA: admin_public
     depends_on:
-      migration:
-        condition: service_healthy
-      db:
-        condition: service_healthy
+      - migration
+      - db
 
 
 volumes:

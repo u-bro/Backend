@@ -4,7 +4,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Add admin_service to Python path
+
 sys.path.insert(0, str(BASE_DIR))
 
 SECRET_KEY = 'django-insecure-test-key-for-admin-service'
@@ -63,7 +63,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'admin_project.wsgi.application'
 
-# Database
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -78,7 +78,7 @@ DATABASES = {
     }
 }
 
-# Password validation
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -86,20 +86,20 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
+
 LANGUAGE_CODE = 'ru-ru'
 TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
+
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Default primary key field type
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Jazzmin settings
+
 JAZZMIN_SETTINGS = {
     "site_title": "Admin Panel",
     "site_header": "Admin Panel",
@@ -107,18 +107,13 @@ JAZZMIN_SETTINGS = {
     "welcome_sign": "Добро пожаловать в админ панель",
 }
 
-# Security / proxy settings for deployments behind HTTPS proxy (nginx/ELB)
-# Add your public origin(s) so Django accepts POSTs with Origin header.
+
 CSRF_TRUSTED_ORIGINS = [
     'https://api.dev.u-bro.ru',
 ]
 
-# If Django is behind a proxy that terminates TLS, enable this so
-# request.is_secure() respects X-Forwarded-Proto header (nginx should set it).
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# In production you should enable secure cookies. When DEBUG=True it's
-# okay to leave them False for local testing, but in prod set them True.
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False
 
