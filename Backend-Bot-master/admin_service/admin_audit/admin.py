@@ -13,9 +13,10 @@ class AdminAuditLogAdmin(admin.ModelAdmin):
         "target_id",
         "created_at",
     )
+    list_editable = tuple([f for f in list_display if f != 'id'])
     list_filter = ("action", "target_type", "created_at")
     search_fields = ("action", "target_type")
-    readonly_fields = ("admin_user_id", "action", "target_type", "target_id", "old_values", "new_values", "ip_address", "user_agent", "created_at")
+    # Allow editing of audit records via admin (if needed)
 
     def has_add_permission(self, request):  # type: ignore[override]
         return False

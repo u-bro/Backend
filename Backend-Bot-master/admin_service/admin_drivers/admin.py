@@ -24,6 +24,11 @@ class DriverProfileAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+    # Only include real model fields in list_editable (exclude admin methods like `user_is_active`)
+    # Compute membership directly to avoid referencing an intermediate name that could be undefined
+    list_editable = tuple(
+        [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields)]
+    )
     list_filter = ("approved", "documents_status")
     search_fields = ("display_name", "first_name", "last_name")
     actions = ["approve_drivers", "reject_drivers", "block_drivers", "unblock_drivers"]

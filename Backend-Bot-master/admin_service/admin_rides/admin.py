@@ -34,10 +34,11 @@ class RideAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+    list_editable = tuple([f for f in list_display if f != 'id'])
     list_filter = ("status", "is_anomaly", "created_at")
     search_fields = ("pickup_address", "dropoff_address")
     actions = ["cancel_rides", "mark_anomaly_resolved"]
-    readonly_fields = ("created_at", "updated_at", "ride_actions")
+    # Allow editing from admin — keep timestamps editable if necessary
 
     def has_add_permission(self, request):  # type: ignore[override]
         return False

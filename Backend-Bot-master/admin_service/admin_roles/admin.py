@@ -6,6 +6,7 @@ from .models import Role
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
     list_display = ("id", "code", "name", "description", "created_at", "updated_at")
+    list_editable = tuple([f for f in list_display if f != 'id'])
     list_filter = ("created_at", "updated_at")
     search_fields = ("code", "name", "description")
 
