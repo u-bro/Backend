@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     command: uvicorn app.backend.main:app --workers 1 --host 0.0.0.0 --port 5000
     ports:
-      - "127.0.0.1:6666:5000"
+       - "8000:5000"
     restart: unless-stopped
     env_file:
       - .env
@@ -49,6 +49,24 @@ services:
       - .env
     environment:
       DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  admin_service:
+    container_name: ADMIN_PANEL
+    build:
+      context: "./admin_service"
+      dockerfile: Dockerfile
+    command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8001:8000"
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_SCHEMA: public_admin
     depends_on:
       db:
         condition: service_healthy

@@ -25,6 +25,7 @@ websockets = "^14.0"
 better-profanity = "^0.7.0"
 
 [tool.poetry.group.dev.dependencies]
+pytest = "^8.2.0"
 
 [build-system]
 requires = ["poetry-core"]
