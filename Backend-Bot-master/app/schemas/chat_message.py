@@ -37,7 +37,6 @@ class ChatMessageSchema(BaseSchema):
 class SendMessageRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=2000)
     message_type: str = Field(default="text")
-    receiver_id: Optional[int] = None
     attachments: Optional[Dict[str, Any]] = None
 
 
