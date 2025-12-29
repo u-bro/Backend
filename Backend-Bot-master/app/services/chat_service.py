@@ -128,42 +128,7 @@ class ChatService:
         self._message_timestamps[user_id].append(now)
         return True, None
     
-    async def validate_chat_access(
-        self, 
-        session: AsyncSession, 
-        ride_id: int, 
-        user_id: int
-    ) -> tuple[bool, Optional[str], Optional[str]]:
-        query = select(Ride).where(Ride.id == ride_id)
-        result = await session.execute(query)
-        ride = result.scalar_one_or_none()
-        
-        if not ride:
-            return False, "Ride not found", None
-        if ride.client_id == user_id:
-            return True, None, "client"
-        
-        if ride.driver_profile_id:
-            # Нужно проверить user_id водителя через driver_profile
-            # Пока упрощённо — считаем что driver_profile_id связан с user
-            # TODO: связать через driver_profile.user_id
-            pass
-        
-        # TODO: Проверка на оператора (по роли пользователя)
-        # Пока разрешаем для тестирования
-        return True, None, "operator"
-    
-    async def save_message(
-        self,
-        session: AsyncSession,
-        ride_id: int,
-        sender_id: int,
-        text: str,
-        message_type: str = MessageType.TEXT,
-        receiver_id: Optional[int] = None,
-        attachments: Optional[Dict[str, Any]] = None,
-        is_moderated: bool = True,
-    ) -> ChatMessageSchema:
+    async def save_message(self, session: AsyncSession, ride_id: int, sender_id: int, text: str, message_type: str = MessageType.TEXT, receiver_id: Optional[int] = None, attachments: Optional[Dict[str, Any]] = None, is_moderated: bool = True) -> ChatMessageSchema:
         message = ChatMessage(
             ride_id=ride_id,
             sender_id=sender_id,

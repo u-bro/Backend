@@ -7,5 +7,4 @@ from .driver_document import driver_document_crud
 from .phone_verification import phone_verification_crud
 from .commission import commission_crud
 from .driver_location import driver_location_crud
-from .chat_message import chat_message_crud
 from .transaction import transaction_crud
