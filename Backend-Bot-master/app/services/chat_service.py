@@ -1,15 +1,13 @@
 import re
-import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 from better_profanity import profanity
 from sqlalchemy.orm import selectinload
 from app.models.chat_message import ChatMessage
 from app.models.ride import Ride
-from app.models import DriverProfile
 from app.schemas.chat_message import ChatMessageSchema
 from app.logger import logger
 
