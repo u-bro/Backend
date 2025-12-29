@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any, Dict, Optional
-from fastapi import HTTPException, Query, Request, WebSocket, Depends
+from fastapi import HTTPException, Query, Request, WebSocket, Depends, WebSocketException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.routers.websocket_base import BaseWebsocketRouter
 from app.db import async_session_maker
@@ -9,6 +9,7 @@ from app.schemas.chat_message import ChatHistoryResponse, SendMessageRequest, Se
 from app.services.chat_service import MessageType, chat_service
 from app.services.websocket_manager import manager
 from app.backend.deps import get_current_user_id, get_current_user_id_ws
+from starlette.status import WS_1008_POLICY_VIOLATION
 
 
 class ChatWebsocketRouter(BaseWebsocketRouter):
@@ -42,15 +43,11 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
         user_id = int(context["user_id"])
         session: AsyncSession = context["session"]
 
-        # TODO:
+        is_ride_participant = await chat_service.verify_ride_user(session=session, ride_id=ride_id, user_id=user_id)
+        if not is_ride_participant:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason=f"Not a participant of ride {ride_id}")
+
         await manager.connect(websocket, user_id)
-
-        # if not ok:
-        #     await websocket.send_json({"type": "error", "code": "access_denied", "message": err or "Access denied"})
-        #     await websocket.close(code=1008)
-        #     manager.disconnect(websocket, user_id)
-        #     return
-
         manager.join_ride(ride_id, user_id)
 
         await manager.send_to_ride(
@@ -141,7 +138,6 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             await websocket.send_json({"type": "error", "code": "moderation_failed", "message": moderation.reason})
             return
 
-        # TODO:
         message = await chat_service.save_message(
             session=session,
             ride_id=ride_id,
@@ -152,7 +148,6 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             attachments=data.get("attachments"),
             is_moderated=True,
         )
-        await session.commit()
 
         await manager.send_to_ride(
             ride_id,
@@ -173,13 +168,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
 
         logger.info(f"Chat message in ride {ride_id} from user {user_id}")
 
-    async def get_chat_history(
-        self,
-        request: Request,
-        ride_id: int,
-        limit: int = Query(50, ge=1, le=100),
-        before_id: Optional[int] = Query(None, description="Для пагинации - ID сообщения"),
-    ) -> ChatHistoryResponse:
+    async def get_chat_history(self, request: Request, ride_id: int, limit: int = Query(50, ge=1, le=100), before_id: Optional[int] = Query(None, description="message id")) -> ChatHistoryResponse:
         session = request.state.session
 
         messages = await chat_service.get_chat_history(
@@ -259,13 +248,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             moderation_note="Censored" if moderation.original != moderation.filtered else None,
         )
 
-    async def delete_message(
-        self,
-        request: Request,
-        ride_id: int,
-        message_id: int,
-        user_id: int = Query(..., description="ID пользователя"),
-    ) -> Dict[str, Any]:
+    async def delete_message(self, request: Request, ride_id: int, message_id: int, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
         session = request.state.session
 
         deleted = await chat_service.soft_delete_message(
@@ -273,11 +256,8 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             message_id=message_id,
             user_id=user_id,
         )
-
         if not deleted:
             raise HTTPException(status_code=404, detail="Message not found or you don't have permission")
-
-        await session.commit()
 
         await manager.send_to_ride(
             ride_id,
@@ -290,14 +270,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
 
         return {"status": "deleted", "message_id": message_id}
 
-    async def edit_message(
-        self,
-        request: Request,
-        ride_id: int,
-        message_id: int,
-        body: SendMessageRequest,
-        user_id: int = Query(..., description="ID пользователя"),
-    ) -> Dict[str, Any]:
+    async def edit_message(self, request: Request, ride_id: int, message_id: int, body: SendMessageRequest, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
         session = request.state.session
 
         message = await chat_service.edit_message(
@@ -306,11 +279,8 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             user_id=user_id,
             new_text=body.text,
         )
-
         if not message:
             raise HTTPException(status_code=404, detail="Message not found or you don't have permission")
-
-        await session.commit()
 
         await manager.send_to_ride(
             ride_id,
