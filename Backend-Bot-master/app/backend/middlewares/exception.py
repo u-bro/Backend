@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
-from typing import Union, Dict, Any
+from typing import Union, Any
 
 from pydantic import ValidationError
 from app.logger import logger

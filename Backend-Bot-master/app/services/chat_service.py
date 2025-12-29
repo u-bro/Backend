@@ -1,20 +1,15 @@
 import re
-import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_
 from better_profanity import profanity
-
+from sqlalchemy.orm import selectinload
 from app.models.chat_message import ChatMessage
 from app.models.ride import Ride
-from app.models.driver_profile import DriverProfile
-from app.models.user import User
-from app.models.role import Role
-from app.schemas.chat_message import ChatMessageSchema, ChatMessageCreate
-
-logger = logging.getLogger(__name__)
+from app.schemas.chat_message import ChatMessageSchema
+from app.logger import logger
 
 
 
@@ -122,52 +117,27 @@ class ChatService:
         self._message_timestamps[user_id].append(now)
         return True, None
     
-    async def validate_chat_access(
-        self, 
-        session: AsyncSession, 
-        ride_id: int, 
-        user_id: int
-    ) -> tuple[bool, Optional[str], Optional[str]]:
-        query = select(Ride).where(Ride.id == ride_id)
+    async def verify_ride_user(self, session: AsyncSession, ride_id: int, user_id: int) -> bool:
+        query = select(Ride).options(selectinload(Ride.driver_profile)).where(Ride.id == ride_id)
         result = await session.execute(query)
         ride = result.scalar_one_or_none()
 
         if not ride:
-            return False, "Ride not found", None
-        if ride.client_id == user_id:
-            return True, None, "client"
-        if ride.driver_profile_id:
-            dp_q = select(DriverProfile).where(DriverProfile.id == ride.driver_profile_id)
-            dp_res = await session.execute(dp_q)
-            driver_profile = dp_res.scalar_one_or_none()
-            if driver_profile and getattr(driver_profile, "user_id", None) == user_id:
-                return True, None, "driver"
+            logger.error(f"Ride {ride_id} not found")
+            return False
+        
+        driver_profile = getattr(ride, "driver_profile", None)
+        if not driver_profile:
+            logger.error(f"Driver profile not found for ride {ride_id}")
+            return False
 
-        role_q = (
-            select(Role.code)
-            .select_from(Role)
-            .join(User, Role.id == User.role_id)
-            .where(User.id == user_id)
-        )
-        role_res = await session.execute(role_q)
-        role_code = role_res.scalar_one_or_none()
+        if ride.client_id != user_id and driver_profile.user_id != user_id:
+            logger.error(f"User {user_id} is not a client or driver for ride {ride_id}")
+            return False
 
-        if role_code and role_code.lower() in {"admin", "operator", "support"}:
-            return True, None, role_code
-
-        return False, "Access denied", None
+        return True
     
-    async def save_message(
-        self,
-        session: AsyncSession,
-        ride_id: int,
-        sender_id: int,
-        text: str,
-        message_type: str = MessageType.TEXT,
-        receiver_id: Optional[int] = None,
-        attachments: Optional[Dict[str, Any]] = None,
-        is_moderated: bool = True,
-    ) -> ChatMessageSchema:
+    async def save_message(self, session: AsyncSession, ride_id: int, sender_id: int, text: str, message_type: str = MessageType.TEXT, receiver_id: Optional[int] = None, attachments: Optional[Dict[str, Any]] = None, is_moderated: bool = True) -> ChatMessageSchema:
         message = ChatMessage(
             ride_id=ride_id,
             sender_id=sender_id,
@@ -213,12 +183,7 @@ class ChatService:
         
         return [ChatMessageSchema.model_validate(m) for m in reversed(messages)]
     
-    async def soft_delete_message(
-        self,
-        session: AsyncSession,
-        message_id: int,
-        user_id: int,
-    ) -> bool:
+    async def soft_delete_message(self, session: AsyncSession, message_id: int, user_id: int) -> bool:
         query = select(ChatMessage).where(
             and_(
                 ChatMessage.id == message_id,
@@ -237,13 +202,7 @@ class ChatService:
         await session.flush()
         return True
     
-    async def edit_message(
-        self,
-        session: AsyncSession,
-        message_id: int,
-        user_id: int,
-        new_text: str,
-    ) -> Optional[ChatMessageSchema]:
+    async def edit_message(self, session: AsyncSession, message_id: int, user_id: int, new_text: str) -> Optional[ChatMessageSchema]:
         query = select(ChatMessage).where(
             and_(
                 ChatMessage.id == message_id,

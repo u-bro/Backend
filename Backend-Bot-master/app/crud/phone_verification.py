@@ -58,7 +58,7 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
         result = await self.execute_get_one(session, stmt)
         self.schema.model_validate(result)
 
-        access_token = auth_crud.create_access_token(item.user_id, timedelta(hours=JWT_EXPIRATION_MINTUES))
+        access_token = auth_crud.create_access_token(item.user_id, timedelta(minutes=JWT_EXPIRATION_MINTUES))
         refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=item.user_id))
         return TokenResponseRegister(
             access_token=access_token,

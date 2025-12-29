@@ -1,12 +1,8 @@
 from __future__ import annotations
-
-import logging
 from typing import Any, Awaitable, Callable, Dict
-
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect
-
-logger = logging.getLogger(__name__)
+from app.logger import logger
 
 MessageHandler = Callable[[WebSocket, Dict[str, Any], Dict[str, Any]], Awaitable[None]]
 

@@ -1,14 +1,10 @@
 from typing import Any, Dict, Optional
-
 from fastapi import HTTPException, Query, WebSocket
 from pydantic import BaseModel
-import logging
-
 from app.backend.routers.websocket_base import BaseWebsocketRouter
 from app.services.websocket_manager import manager
 from app.services.driver_tracker import driver_tracker, DriverStatus
-
-logger = logging.getLogger(__name__)
+from app.logger import logger
 
 class LocationUpdate(BaseModel):
     latitude: float
