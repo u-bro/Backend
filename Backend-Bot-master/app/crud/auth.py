@@ -86,8 +86,8 @@ class CrudAuth(CrudBase):
         
         found_token = await refresh_token_crud.get_by_token(session, token_hash)
         if not found_token or found_token.revoked_at:
-            logger.warning(f"Invalid refresh token")
-            return None
+            logger.warning("Invalid refresh token")
+            return "Invalid refresh token"
         
         await refresh_token_crud.revoke(session, token_hash)
 
