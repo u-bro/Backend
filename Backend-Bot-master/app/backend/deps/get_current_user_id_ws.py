@@ -9,7 +9,7 @@ from app.config import JWT_SECRET_KEY, JWT_ALGORITHM
 auth_crud = CrudAuth(User, UserSchema, JWT_SECRET_KEY, JWT_ALGORITHM)
 
 async def get_current_user_id_ws(websocket: WebSocket) -> int:
-    token = websocket.query_params.get("token") or websocket.headers.get("Authorization")
+    token = websocket.query_params.get("token") or websocket.headers.get("authorization")
     if not token:
         raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Missing authorization token")
 
