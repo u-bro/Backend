@@ -4,7 +4,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Add admin_service to Python path
+
 sys.path.insert(0, str(BASE_DIR))
 
 SECRET_KEY = 'django-insecure-test-key-for-admin-service'
@@ -21,16 +21,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'admin_users',
-    'admin_drivers',
-    'admin_tariffs',
-    'admin_rides',
-    'admin_roles',
-    'admin_driver_documents',
-    'admin_chat_messages',
-    'admin_commissions',
-    'admin_transactions',
-    'admin_ride_status_history',
+    'admin_users.apps.AdminUsersConfig',
+    'admin_drivers.apps.AdminDriversConfig',
+    'admin_tariffs.apps.AdminTariffsConfig',
+    'admin_rides.apps.AdminRidesConfig',
+    'admin_roles.apps.AdminRolesConfig',
+    'admin_driver_documents.apps.AdminDriverDocumentsConfig',
+    'admin_chat_messages.apps.AdminChatMessagesConfig',
+    'admin_commissions.apps.AdminCommissionsConfig',
+    'admin_transactions.apps.AdminTransactionsConfig',
+    'admin_ride_status_history.apps.AdminRideStatusHistoryConfig',
 ]
 
 MIDDLEWARE = [
@@ -63,7 +63,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'admin_project.wsgi.application'
 
-# Database
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -73,12 +73,12 @@ DATABASES = {
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '5432'),
         'OPTIONS': {
-            'options': '-c search_path=public_admin,public'
+            'options': '-c search_path=admin_public,public'
         }
     }
 }
 
-# Password validation
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -86,23 +86,34 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
+
 LANGUAGE_CODE = 'ru-ru'
 TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
+
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Default primary key field type
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Jazzmin settings
+
 JAZZMIN_SETTINGS = {
     "site_title": "Admin Panel",
     "site_header": "Admin Panel",
     "site_brand": "Admin",
     "welcome_sign": "Добро пожаловать в админ панель",
 }
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://api.dev.u-bro.ru',
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+

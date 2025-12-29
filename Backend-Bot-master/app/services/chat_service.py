@@ -52,9 +52,7 @@ class ChatService:
         self.max_message_length = 2000
         self.min_message_length = 1
         
-        # Инициализация better-profanity с дополнительными словами
         profanity.load_censor_words()
-        # Добавляем наши кастомные слова к словарю библиотеки (как список)
         profanity.add_censor_words(list(BANNED_WORDS))
     
     def _normalize_text(self, text: str) -> str:
@@ -64,11 +62,8 @@ class ChatService:
         return result
     
     def _contains_banned_words(self, text: str) -> tuple[bool, Optional[str]]:
-        # Сначала проверяем через better-profanity
         if profanity.contains_profanity(text):
             return True, "profanity"
-        
-        # Затем наша кастомная проверка с нормализацией
         normalized = self._normalize_text(text)
         
         for word in BANNED_WORDS:
@@ -78,15 +73,11 @@ class ChatService:
         return False, None
     
     def _censor_text(self, text: str) -> str:
-        # Используем better-profanity для основной цензуры
         censored = profanity.censor(text)
-        
-        # Дополнительная цензура для наших кастомных слов
         normalized = self._normalize_text(censored)
         
         for word in BANNED_WORDS:
             if word in normalized:
-                # Ищем оригинальное слово в тексте и заменяем его
                 pattern = re.compile(re.escape(word), re.IGNORECASE)
                 censored = pattern.sub('*' * len(word), censored)
         
@@ -252,19 +243,6 @@ class ChatService:
             }
         }
     
-    def test_profanity_detection(self, text: str) -> Dict[str, Any]:
-        """Тестовый метод для проверки работы модерации"""
-        has_profanity = profanity.contains_profanity(text)
-        custom_check, word = self._contains_banned_words(text)
-        censored = self._censor_text(text)
-        
-        return {
-            "original": text,
-            "has_profanity": has_profanity,
-            "custom_check": custom_check,
-            "found_word": word,
-            "censored": censored,
-            "is_changed": text != censored
-        }
+    
 
 chat_service = ChatService()
