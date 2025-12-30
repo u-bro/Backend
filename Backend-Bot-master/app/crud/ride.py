@@ -6,6 +6,7 @@ from sqlalchemy.sql import insert, update
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
 from .ride_status_history import ride_status_history_crud
+from .driver_profile import driver_profile_crud
 from app.models import Ride, TariffPlan
 from app.schemas.ride import RideSchema
 from app.schemas.ride_status_history import RideStatusHistoryCreate
@@ -130,6 +131,7 @@ class CrudRide(CrudBase):
         )
         result = await self.execute_get_one(session, stmt)
         await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=result.id, from_status='requested', to_status=update_obj.status, changed_by=user_id))
+        await driver_profile_crud.ride_count_increment(session, update_obj.driver_profile_id)
         return self.schema.model_validate(result) if result else None
 
 ride_crud = CrudRide(Ride, RideSchema)

@@ -28,6 +28,7 @@ class DriverProfile(Base):
     documents_review_notes: Mapped[str | None] = mapped_column(String, nullable=True)
     rating_avg = mapped_column(Integer, nullable=True)
     rating_count = mapped_column(Integer, nullable=True, default=0)
+    ride_count = mapped_column(Integer, nullable=True, default=0)
     created_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
     updated_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
 
