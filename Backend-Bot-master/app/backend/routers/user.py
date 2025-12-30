@@ -41,7 +41,7 @@ class UserRouter(BaseRouter):
         role_name = "user" if role_name == "driver" and (not user.driver_profile or not user.driver_profile.approved) else role_name
         return UserSchemaMe(**user.__dict__, role_name=role_name)
 
-    async def update_me(self, request: Request, update_obj: UserSchemaUpdateMe, user_id: User = Depends(get_current_user_id)) -> UserSchema:
+    async def update_me(self, request: Request, update_obj: UserSchemaUpdateMe, user_id: int = Depends(get_current_user_id)) -> UserSchema:
         return await self.model_crud.update(request.state.session, user_id, update_obj)
 
 user_router = UserRouter(user_crud, "/users").router
