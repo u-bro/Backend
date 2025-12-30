@@ -1,6 +1,6 @@
 from pydantic import Field
 from datetime import datetime
-from . import BaseSchema
+from .base import BaseSchema
 
 
 class UserSchemaCreate(BaseSchema):
@@ -11,6 +11,10 @@ class UserSchemaCreate(BaseSchema):
     email: str | None = Field(None, max_length=255)
     city: str | None = Field(None, max_length=100)
     photo_url: str | None = Field(None)
+
+
+class UserSchemaUpdate(UserSchemaCreate):
+    pass
 
 
 class UserSchema(UserSchemaCreate):

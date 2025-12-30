@@ -20,7 +20,7 @@ def require_role(role_code: str | list[str]):
 
         result = await session.execute(
             select(PhoneVerification)
-            .where(PhoneVerification.user_id == user.id)
+            .where(PhoneVerification.phone == user.phone)
             .order_by(desc(PhoneVerification.created_at))
             .limit(1)
         )

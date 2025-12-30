@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import ResponseValidationError
-
+from fastapi.encoders import jsonable_encoder
 from app.backend.middlewares.exception import setup_error_middleware
 from app.backend.openapi_schema import custom_openapi
 from app.backend.middlewares import install_db_middleware
@@ -66,7 +66,7 @@ async def validation_exception_handler(request: Request, exc: ResponseValidation
         status_code=422,
         content={
             "detail": "Validation error occurred",
-            "body": exc.body,
+            "body": jsonable_encoder(exc.body),
         },
     )
 
