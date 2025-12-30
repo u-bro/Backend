@@ -19,7 +19,7 @@ class User(Base):
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    role_id: Mapped[int | None] = mapped_column(ForeignKey("roles.id"), nullable=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=False)
 
     role = relationship("Role")
     transactions = relationship("Transaction", back_populates="user")

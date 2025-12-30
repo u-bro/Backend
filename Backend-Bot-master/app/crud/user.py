@@ -22,6 +22,11 @@ class CrudUser(CrudBase):
         result = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(result) if result else None
 
+    async def get_by_email(self, session: AsyncSession, email: str) -> UserSchema | None:
+        stmt = select(self.model).where(self.model.email == email)
+        result = await self.execute_get_one(session, stmt)
+        return self.schema.model_validate(result) if result else None
+
     async def update(self, session: AsyncSession, id: int, update_obj: UserSchemaUpdate) -> UserSchema | None:
         update_data = update_obj.model_dump(exclude_none=True)
         if not update_data:
@@ -31,6 +36,11 @@ class CrudUser(CrudBase):
             existing_user = await self.get_by_phone(session, update_data.get("phone"))
             if existing_user and existing_user.id != id:
                 raise HTTPException(status_code=400, detail="Phone number already exists")
+
+        if "email" in update_data:
+            existing_user = await self.get_by_email(session, update_data.get("email"))
+            if existing_user and existing_user.id != id:
+                raise HTTPException(status_code=400, detail="Email already exists")
 
         stmt = (
             update(self.model)

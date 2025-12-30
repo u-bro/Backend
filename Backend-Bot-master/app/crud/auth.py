@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 from app.crud.base import CrudBase
-from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate, RefreshTokenVerifyRequest, TokenResponse
+from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate, RefreshTokenVerifyRequest, TokenResponse, UserSchemaCreate
 from app.schemas.refresh_token import RefreshTokenIn
 from app.logger import logger
 from app.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINTUES
@@ -56,16 +56,7 @@ class CrudAuth(CrudBase):
             logger.warning(f"Role with code \'{register_obj.role_code}\' not found")
             raise HTTPException(status_code=400, detail="Role not found")
         
-        user_data = {
-            "phone": register_obj.phone,
-            "is_active": True,
-            "role_id": role.id
-        }
-        
-        new_user = self.model(**user_data)
-        session.add(new_user)
-        await session.flush()
-        await session.commit()
+        new_user = await super().create(session, UserSchemaCreate(phone=register_obj.phone, is_active=True, role_id=role.id))
 
         if register_obj.role_code == 'driver':
             await driver_profile_crud.create(session, DriverProfileCreate(user_id=new_user.id, approved=False))
