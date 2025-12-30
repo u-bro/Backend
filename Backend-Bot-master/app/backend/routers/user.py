@@ -37,7 +37,7 @@ class UserRouter(BaseRouter):
 
     async def get_me(self, request: Request, user: User = Depends(require_role(["user", "driver", "admin"]))) -> UserSchemaMe:
         role_name = user.role.code
-        role_name = "user" if role_name == "driver" and not user.driver_profile.approved else role_name
+        role_name = "user" if role_name == "driver" and (not user.driver_profile or not user.driver_profile.approved) else role_name
         return UserSchemaMe(**user.__dict__, role_name=role_name)
 
 user_router = UserRouter(user_crud, "/users").router
