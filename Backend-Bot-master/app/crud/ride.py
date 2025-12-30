@@ -2,7 +2,6 @@ from datetime import datetime
 from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from fastapi import Depends
 from sqlalchemy.sql import insert, update
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
@@ -10,7 +9,7 @@ from .ride_status_history import ride_status_history_crud
 from app.models import Ride, TariffPlan
 from app.schemas.ride import RideSchema
 from app.schemas.ride_status_history import RideStatusHistoryCreate
-from app.backend.deps.get_current_user import get_current_user_id
+from fastapi import HTTPException
 
 
 STATUSES = {
@@ -77,7 +76,7 @@ class CrudRide(CrudBase):
         stmt = insert(self.model).values(data).returning(self.model)
         ride = await self.execute_get_one(session, stmt)
         if not ride:
-            return None
+            raise HTTPException(status_code=400, detail="Ride wasn;t created")
         await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=ride.id, from_status=None, to_status='requested', changed_by=create_obj.client_id))
         return self.schema.model_validate(ride)
 
@@ -101,7 +100,7 @@ class CrudRide(CrudBase):
 
         if update_obj.status and existing.status != update_obj.status:
             if not self._is_status_transition_allowed(existing.status, update_obj.status):
-                return 'Incorrect ride status transition'
+                raise HTTPException(status_code=400, detail="Incorrect ride status transition")
             await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=existing.id, from_status=existing.status, to_status=update_obj.status, changed_by=int(user_id)))
 
         stmt = (

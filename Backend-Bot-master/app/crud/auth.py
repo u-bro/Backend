@@ -11,6 +11,8 @@ from app.models import User
 from .role import role_crud
 from .driver_profile import driver_profile_crud
 from .refresh_token import refresh_token_crud
+from fastapi import HTTPException
+
 
 class CrudAuth(CrudBase):
     def __init__(self, model, schema, secret_key: str, algorithm: str = "HS256"):
@@ -34,11 +36,9 @@ class CrudAuth(CrudBase):
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             return payload
         except jwt.ExpiredSignatureError:
-            logger.error("Token has expired")
-            return None
+            raise HTTPException(status_code=400, detail="Token has expired")
         except jwt.InvalidTokenError:
-            logger.error("Invalid token")
-            return None
+            raise HTTPException(status_code=400, detail="Invalid token")
 
     async def get_by_phone(self, session: AsyncSession, phone: str) -> UserSchema | None:
         result = await session.execute(select(self.model).where(self.model.phone == phone))
@@ -49,12 +49,12 @@ class CrudAuth(CrudBase):
         existing_user = await self.get_by_phone(session, register_obj.phone)
         if existing_user:
             logger.warning(f"User with phone {register_obj.phone} already exists")
-            return None
+            raise HTTPException(status_code=400, detail="User with phone already exists")
 
         role = await role_crud.get_by_code(session, register_obj.role_code)
         if not role:
             logger.warning(f"Role with code \'{register_obj.role_code}\' not found")
-            return None
+            raise HTTPException(status_code=400, detail="Role not found")
         
         user_data = {
             "phone": register_obj.phone,
@@ -86,8 +86,7 @@ class CrudAuth(CrudBase):
         
         found_token = await refresh_token_crud.get_by_token(session, token_hash)
         if not found_token or found_token.revoked_at:
-            logger.warning("Invalid refresh token")
-            return "Invalid refresh token"
+            raise HTTPException(status_code=400, detail="Invalid refresh token")
         
         await refresh_token_crud.revoke(session, token_hash)
 
