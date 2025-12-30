@@ -2,7 +2,7 @@ from datetime import datetime
 from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.sql import insert, update
+from sqlalchemy.sql import insert, update, delete
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
 from .ride_status_history import ride_status_history_crud
@@ -132,6 +132,12 @@ class CrudRide(CrudBase):
         result = await self.execute_get_one(session, stmt)
         await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=result.id, from_status='requested', to_status=update_obj.status, changed_by=user_id))
         await driver_profile_crud.ride_count_increment(session, update_obj.driver_profile_id)
+        return self.schema.model_validate(result) if result else None
+
+    async def delete(self, session: AsyncSession, id: int):
+        stmt = delete(self.model).where(self.model.id == id).returning(self.model)
+        result = await self.execute_get_one(session, stmt)
+        await driver_profile_crud.ride_count_decrement(session, result.driver_profile_id)
         return self.schema.model_validate(result) if result else None
 
 ride_crud = CrudRide(Ride, RideSchema)
