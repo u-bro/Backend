@@ -19,6 +19,7 @@ class DriverProfileCreate(BaseSchema):
     classes_allowed: Optional[dict[str, Any]] = None
     documents_status: Optional[str] = None
     documents_review_notes: Optional[str] = None
+    current_class: Optional[str] = None
     ride_count: int = 0
 
 

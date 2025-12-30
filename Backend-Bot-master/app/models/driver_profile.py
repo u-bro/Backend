@@ -24,6 +24,7 @@ class DriverProfile(Base):
     approved_at = mapped_column(TIMESTAMP, nullable=True)
     qualification_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     classes_allowed = mapped_column(JSONB, nullable=True)
+    current_class = mapped_column(String(50), nullable=True)
     documents_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     documents_review_notes: Mapped[str | None] = mapped_column(String, nullable=True)
     rating_avg = mapped_column(Integer, nullable=True)
