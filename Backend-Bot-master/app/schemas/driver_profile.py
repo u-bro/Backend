@@ -1,9 +1,9 @@
-from typing import Literal, Optional, Any
-from pydantic import BaseModel
+from typing import Optional
+from .base import BaseSchema
 from datetime import datetime
 
 
-class DriverProfileCreate(BaseModel):
+class DriverProfileCreate(BaseSchema):
     user_id: int
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -16,16 +16,31 @@ class DriverProfileCreate(BaseModel):
     license_expires_at: Optional[datetime] = None
     experience_years: Optional[int] = None
     qualification_level: Optional[str] = None
-    classes_allowed: Optional[dict[str, Any]] = None
+    classes_allowed: list[str] = []
     documents_status: Optional[str] = None
     documents_review_notes: Optional[str] = None
+    current_class: Optional[str] = None
+    ride_count: int = 0
+
+
+class DriverProfileUpdateMe(BaseSchema):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    display_name: Optional[str] = None
+    birth_date: Optional[datetime] = None
+    photo_url: Optional[str] = None
+    license_number: Optional[str] = None
+    license_category: Optional[str] = None
+    experience_years: Optional[int] = None
+    current_class: Optional[str] = None
 
 
 class DriverProfileUpdate(DriverProfileCreate):
     user_id: Optional[int] = None
+    classes_allowed: Optional[list[str]] = None
 
 
-class DriverProfileApproveIn(BaseModel):
+class DriverProfileApproveIn(BaseSchema):
     approved: bool = True
 
 
@@ -42,6 +57,3 @@ class DriverProfileSchema(DriverProfileCreate):
     approved: Optional[bool] = False
     approved_by: Optional[int] = None
     approved_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
