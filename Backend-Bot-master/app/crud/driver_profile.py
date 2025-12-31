@@ -22,6 +22,9 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
 
     async def update(self, session: AsyncSession, id: int, update_obj):
         existing_result = await self.get_by_id(session, id)
+        if not existing_result:
+            raise HTTPException(status_code=404, detail="Driver profile not found")
+
         update_data = update_obj.model_dump(exclude_none=True)
         if not update_data:
             return existing_result

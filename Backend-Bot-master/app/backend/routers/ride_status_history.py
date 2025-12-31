@@ -21,14 +21,14 @@ class RideStatusHistoryRouter(BaseRouter):
         items = await super().get_paginated(request, page, page_size)
         return TypeAdapter(List[RideStatusHistorySchema]).validate_python(items)
 
-    async def get_by_id(self, request: Request, item_id: int) -> RideStatusHistorySchema:
-        return await super().get_by_id(request, item_id)
+    async def get_by_id(self, request: Request, id: int) -> RideStatusHistorySchema:
+        return await super().get_by_id(request, id)
 
     async def create(self, request: Request, body: RideStatusHistoryCreate) -> RideStatusHistorySchema:
         return await self.model_crud.create(request.state.session, body)
 
-    async def delete(self, request: Request, item_id: int):
-        return await self.model_crud.delete(request.state.session, item_id)
+    async def delete(self, request: Request, id: int):
+        return await self.model_crud.delete(request.state.session, id)
 
 
 ride_status_history_router = RideStatusHistoryRouter().router

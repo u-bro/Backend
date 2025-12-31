@@ -28,7 +28,7 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
             )
         )
         if existing_rating.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="Rating already exists for this ride")
+            raise HTTPException(status_code=409, detail="Rating already exists for this ride")
         
         return await super().create(session, create_obj, **kwargs)
 

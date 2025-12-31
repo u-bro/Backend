@@ -72,12 +72,17 @@ class CrudRide(CrudBase):
     async def create(self, session: AsyncSession, create_obj) -> RideSchema | None:
         data = create_obj.model_dump()
         tariff_plan = await tariff_plan_crud.get_by_id(session, data.get("tariff_plan_id"))
-        self._add_expected_fare_and_snapshot(data, tariff_plan, data.get("distance_meters"))
 
+        if not tariff_plan:
+            raise HTTPException(status_code=404, detail="Tariff plan not found")
+        if tariff_plan.effective_to and tariff_plan.effective_to <= datetime.utcnow():
+            raise HTTPException(status_code=400, detail="This version of tariff plan has closed")
+
+        self._add_expected_fare_and_snapshot(data, tariff_plan, data.get("distance_meters"))
         stmt = insert(self.model).values(data).returning(self.model)
         ride = await self.execute_get_one(session, stmt)
         if not ride:
-            raise HTTPException(status_code=400, detail="Ride wasn;t created")
+            raise HTTPException(status_code=400, detail="Ride wasn't created")
         await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=ride.id, from_status=None, to_status='requested', changed_by=create_obj.client_id))
         return self.schema.model_validate(ride)
 

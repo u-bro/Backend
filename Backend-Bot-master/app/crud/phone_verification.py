@@ -44,7 +44,7 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
         item = await self.get_by_phone(session, verify_obj.phone)
 
         if item.expires_at <= datetime.utcnow():
-            raise HTTPException(status_code=400, detail='Code expired')
+            raise HTTPException(status_code=401, detail='Code expired')
 
         if item is None or verify_obj.code != item.code or item.status == 'confirmed':
             raise HTTPException(status_code=400, detail='Code is not correct')
