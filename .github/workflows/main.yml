@@ -24,12 +24,12 @@ jobs:
           git reset --hard origin/master
           git status
           cd Backend-Bot-master/
-          # Create .env file from GitHub Secrets
-          echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
-          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
-          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
-          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-          echo "DB_PASS=${{ secrets.DB_PASS }}" >> .env
+          # Create .env file with test credentials
+          echo "DB_HOST=localhost" > .env
+          echo "DB_PORT=5432" >> .env
+          echo "DB_NAME=test" >> .env
+          echo "DB_USER=test" >> .env
+          echo "DB_PASS=test" >> .env
           cat .env
           docker compose up -d --build fastapi_app admin_service
           sleep 5
