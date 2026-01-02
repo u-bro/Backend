@@ -33,3 +33,10 @@ jobs:
           DB_PASS=${{ secrets.DB_PASS }}
           ENVEOF
           docker compose up -d --build fastapi_app admin_service
+          sleep 5
+          echo "=== Container status ==="
+          docker compose ps
+          echo "=== FastAPI logs ==="
+          docker compose logs --tail=50 fastapi_app
+          echo "=== Admin logs ==="
+          docker compose logs --tail=50 admin_service
