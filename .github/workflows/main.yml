@@ -26,6 +26,10 @@ jobs:
           cd Backend-Bot-master/
           echo "=== Current .env file ==="
           cat .env || echo ".env file not found"
+          echo "=== PostgreSQL listen addresses ==="
+          sudo cat /etc/postgresql/*/main/postgresql.conf | grep listen_addresses
+          echo "=== PostgreSQL client authentication ==="
+          sudo cat /etc/postgresql/*/main/pg_hba.conf | grep -v "^#" | grep -v "^$"
           echo "=== Admin service logs ==="
           docker compose logs admin_service --tail=20
           docker compose up -d --build
