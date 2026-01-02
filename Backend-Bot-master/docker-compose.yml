@@ -10,11 +10,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      DB_HOST: db
-    depends_on:
-      - db
-      - migration
+    extra_hosts:
+      - "db:host-gateway"
     volumes:
     - /www/api.dev.u-bro.ru/staticfiles:/app/staticfiles
 
@@ -67,11 +64,9 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: db
       DB_SCHEMA: admin_public
-    depends_on:
-      - migration
-      - db
+    extra_hosts:
+      - "db:host-gateway"
 
 
 volumes:
