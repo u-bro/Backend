@@ -6,7 +6,7 @@ from .models import Transaction
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
     list_display = ("id", "user_id", "is_withdraw", "amount", "created_at")
-    list_editable = tuple([f for f in list_display if f != 'id'])
+    list_editable = ()  # has_change_permission=False, no editing allowed
     list_filter = ("is_withdraw", "created_at")
     search_fields = ("user_id",)
 

@@ -12,7 +12,7 @@ from django.db import transaction
 username = os.getenv('ADMIN_USERNAME', 'admin')
 email = os.getenv('ADMIN_EMAIL', 'admin@example.com')
 password = os.getenv('ADMIN_PASSWORD')  # Рекомендовано задавать через окружение
-
+ 
 with transaction.atomic():
     user, created = User.objects.get_or_create(
         username=username,

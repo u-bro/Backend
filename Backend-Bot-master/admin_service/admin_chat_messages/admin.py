@@ -23,7 +23,7 @@ class ChatMessageAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
 
     def has_delete_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+        return request.user.groups.filter(name='Admin').exists()
