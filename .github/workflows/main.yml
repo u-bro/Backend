@@ -24,4 +24,8 @@ jobs:
           git reset --hard origin/master
           git status
           cd Backend-Bot-master/
+          echo "=== Current .env file ==="
+          cat .env || echo ".env file not found"
+          echo "=== Admin service logs ==="
+          docker compose logs admin_service --tail=20
           docker compose up -d --build
