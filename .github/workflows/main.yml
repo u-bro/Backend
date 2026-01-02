@@ -48,4 +48,10 @@ jobs:
           docker compose exec -T fastapi_app python -c "import psycopg2; conn = psycopg2.connect(host='db', port=5432, dbname='test', user='test', password='test'); print('SUCCESS'); conn.close()" || echo "FastAPI DB connection FAILED"
           echo "=== Admin service logs ==="
           docker compose logs admin_service --tail=20
+          echo "=== Adding Docker network to pg_hba.conf ==="
+          sudo bash -c 'grep -q "172.17.0.0/16" /etc/postgresql/14/main/pg_hba.conf || echo "host all all 172.17.0.0/16 scram-sha-256" >> /etc/postgresql/14/main/pg_hba.conf'
+          echo "=== Reloading PostgreSQL ==="
+          sudo systemctl reload postgresql
+          echo "=== PostgreSQL client authentication (updated) ==="
+          sudo cat /etc/postgresql/14/main/pg_hba.conf | grep -v "^#" | grep -v "^$"
           docker compose up -d --build
