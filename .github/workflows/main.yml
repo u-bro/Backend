@@ -25,13 +25,12 @@ jobs:
           git status
           cd Backend-Bot-master/
           # Create .env file from GitHub Secrets
-          cat > .env << 'ENVEOF'
-          DB_HOST=${{ secrets.DB_HOST }}
-          DB_PORT=${{ secrets.DB_PORT }}
-          DB_NAME=${{ secrets.DB_NAME }}
-          DB_USER=${{ secrets.DB_USER }}
-          DB_PASS=${{ secrets.DB_PASS }}
-          ENVEOF
+          echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASS=${{ secrets.DB_PASS }}" >> .env
+          cat .env
           docker compose up -d --build fastapi_app admin_service
           sleep 5
           echo "=== Container status ==="
