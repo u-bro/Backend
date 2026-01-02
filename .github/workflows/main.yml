@@ -38,6 +38,8 @@ jobs:
           env | grep DB_ || echo "No system DB_ vars"
           echo "=== Check for .env files ==="
           find . -name ".env*" -type f 2>/dev/null || echo "No .env files found"
+          echo "=== Content of .env-test ==="
+          cat .env-test 2>/dev/null || echo ".env-test not found"
           echo "=== Admin container environment variables ==="
           docker compose exec -T admin_service env | grep DB_ || echo "No DB_ vars"
           echo "=== FastAPI logs ==="
