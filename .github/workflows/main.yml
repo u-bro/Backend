@@ -24,8 +24,8 @@ jobs:
           git reset --hard origin/master
           git status
           cd Backend-Bot-master/
-          # Create .env file with test credentials
-          echo "DB_HOST=localhost" > .env
+          # Create .env file with test credentials (use 'db' for extra_hosts mapping)
+          echo "DB_HOST=db" > .env
           echo "DB_PORT=5432" >> .env
           echo "DB_NAME=test" >> .env
           echo "DB_USER=test" >> .env
@@ -36,6 +36,6 @@ jobs:
           echo "=== Container status ==="
           docker compose ps
           echo "=== FastAPI logs ==="
-          docker compose logs --tail=50 fastapi_app
+          docker compose logs --tail=30 fastapi_app
           echo "=== Admin logs ==="
-          docker compose logs --tail=50 admin_service
+          docker compose logs --tail=30 admin_service
