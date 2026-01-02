@@ -23,7 +23,4 @@ jobs:
           git pull origin master
           git status
           cd Backend-Bot-master/
-          # build and run migrations first — fail fast if migrations error
-          docker compose build migration
-          docker compose run --rm migration || { echo "MIGRATIONS FAILED"; exit 1; }
           docker compose up -d --build
