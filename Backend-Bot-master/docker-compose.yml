@@ -43,7 +43,7 @@ services:
 
   migration:
     container_name: MIGRATION
-    command: sh -c "alembic upgrade head"
+    command: sh -c "alembic upgrade heads"
     build:
       context: "."
       dockerfile: Dockerfile
