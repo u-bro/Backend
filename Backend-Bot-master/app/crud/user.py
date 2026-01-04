@@ -35,12 +35,12 @@ class CrudUser(CrudBase):
         if "phone" in update_data:
             existing_user = await self.get_by_phone(session, update_data.get("phone"))
             if existing_user and existing_user.id != id:
-                raise HTTPException(status_code=400, detail="Phone number already exists")
+                raise HTTPException(status_code=409, detail="Phone number already exists")
 
         if "email" in update_data:
             existing_user = await self.get_by_email(session, update_data.get("email"))
             if existing_user and existing_user.id != id:
-                raise HTTPException(status_code=400, detail="Email already exists")
+                raise HTTPException(status_code=409, detail="Email already exists")
 
         stmt = (
             update(self.model)
