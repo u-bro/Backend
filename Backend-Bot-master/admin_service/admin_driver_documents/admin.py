@@ -19,10 +19,10 @@ class DriverDocumentAdmin(admin.ModelAdmin):
     search_fields = ("doc_type", "file_url")
 
     def has_add_permission(self, request):  # type: ignore[override]
-        return False
+        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
 
     def has_change_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
 
     def has_delete_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+        return request.user.groups.filter(name='Admin').exists()

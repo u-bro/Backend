@@ -20,10 +20,10 @@ class CommissionAdmin(admin.ModelAdmin):
     search_fields = ("name", "currency")
 
     def has_add_permission(self, request):  # type: ignore[override]
-        return False
+        return request.user.groups.filter(name='Admin').exists()
 
     def has_change_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+        return request.user.groups.filter(name='Admin').exists()
 
     def has_delete_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+        return request.user.groups.filter(name='Admin').exists()

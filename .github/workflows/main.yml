@@ -24,18 +24,34 @@ jobs:
           git reset --hard origin/master
           git status
           cd Backend-Bot-master/
-          # Create .env file with test credentials (use 'db' for extra_hosts mapping)
-          echo "DB_HOST=db" > .env
-          echo "DB_PORT=5432" >> .env
-          echo "DB_NAME=test" >> .env
-          echo "DB_USER=test" >> .env
-          echo "DB_PASS=test" >> .env
-          cat .env
-          docker compose up -d --build fastapi_app admin_service
-          sleep 5
-          echo "=== Container status ==="
-          docker compose ps
+          echo "=== Current .env file ==="
+          cat .env || echo ".env file not found"
+          echo "=== PostgreSQL listen addresses ==="
+          sudo cat /etc/postgresql/*/main/postgresql.conf | grep listen_addresses
+          echo "=== PostgreSQL client authentication ==="
+          sudo cat /etc/postgresql/*/main/pg_hba.conf | grep -v "^#" | grep -v "^$"
+          echo "=== Active PostgreSQL connections ==="
+          sudo -u postgres psql -c "SELECT client_addr, usename, datname, application_name FROM pg_stat_activity WHERE datname IS NOT NULL;" || echo "Failed to check connections"
+          echo "=== FastAPI container environment variables ==="
+          docker compose exec -T fastapi_app env | grep DB_ || echo "No DB_ vars"
+          echo "=== System environment variables (deploy user) ==="
+          env | grep DB_ || echo "No system DB_ vars"
+          echo "=== Check for .env files ==="
+          find . -name ".env*" -type f 2>/dev/null || echo "No .env files found"
+          echo "=== Content of .env-test ==="
+          cat .env-test 2>/dev/null || echo ".env-test not found"
+          echo "=== Admin container environment variables ==="
+          docker compose exec -T admin_service env | grep DB_ || echo "No DB_ vars"
           echo "=== FastAPI logs ==="
-          docker compose logs --tail=30 fastapi_app
-          echo "=== Admin logs ==="
-          docker compose logs --tail=30 admin_service
+          docker compose logs fastapi_app --tail=10
+          echo "=== Test FastAPI DB connection ==="
+          docker compose exec -T fastapi_app python -c "import psycopg2; conn = psycopg2.connect(host='db', port=5432, dbname='test', user='test', password='test'); print('SUCCESS'); conn.close()" || echo "FastAPI DB connection FAILED"
+          echo "=== Admin service logs ==="
+          docker compose logs admin_service --tail=20
+          echo "=== Adding Docker network to pg_hba.conf ==="
+          sudo bash -c 'grep -q "172.17.0.0/16" /etc/postgresql/14/main/pg_hba.conf || echo "host all all 172.17.0.0/16 scram-sha-256" >> /etc/postgresql/14/main/pg_hba.conf'
+          echo "=== Reloading PostgreSQL ==="
+          sudo systemctl reload postgresql
+          echo "=== PostgreSQL client authentication (updated) ==="
+          sudo cat /etc/postgresql/14/main/pg_hba.conf | grep -v "^#" | grep -v "^$"
+          docker compose up -d --build
