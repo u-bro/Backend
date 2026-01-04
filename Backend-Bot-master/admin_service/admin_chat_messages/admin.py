@@ -15,7 +15,7 @@ class ChatMessageAdmin(admin.ModelAdmin):
         "created_at",
         "edited_at",
     )
-    list_editable = tuple([f for f in list_display if f != 'id'])
+    list_editable = ()  # Read-only: has_change_permission=False
     list_filter = ("message_type", "is_moderated", "created_at")
     search_fields = ("text",)
 

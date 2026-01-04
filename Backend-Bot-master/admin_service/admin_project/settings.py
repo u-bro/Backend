@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'admin_project',
     'admin_users.apps.AdminUsersConfig',
     'admin_drivers.apps.AdminDriversConfig',
     'admin_tariffs.apps.AdminTariffsConfig',

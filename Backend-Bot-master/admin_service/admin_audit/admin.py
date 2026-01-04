@@ -13,7 +13,7 @@ class AdminAuditLogAdmin(admin.ModelAdmin):
         "target_id",
         "created_at",
     )
-    list_editable = tuple([f for f in list_display if f != 'id'])
+    list_editable = ()  # Read-only: has_change_permission=False
     list_filter = ("action", "target_type", "created_at")
     search_fields = ("action", "target_type")
     # Allow editing of audit records via admin (if needed)

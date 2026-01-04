@@ -14,7 +14,7 @@ class RideStatusHistoryAdmin(admin.ModelAdmin):
         "actor_role",
         "created_at",
     )
-    list_editable = tuple([f for f in list_display if f != 'id'])
+    list_editable = ()  # Read-only: has_change_permission=False
     list_filter = ("from_status", "to_status", "actor_role", "created_at")
     search_fields = ("reason",)
 
