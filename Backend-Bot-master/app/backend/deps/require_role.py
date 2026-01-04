@@ -20,12 +20,12 @@ def require_role(role_code: str | list[str]):
 
         result = await session.execute(
             select(PhoneVerification)
-            .where(PhoneVerification.user_id == user.id)
+            .where(PhoneVerification.phone == user.phone)
             .order_by(desc(PhoneVerification.created_at))
             .limit(1)
         )
         last_verification = result.scalar_one_or_none()
-        if last_verification is None or getattr(last_verification, "status", None) != "confirmed" or getattr(last_verification, "expires_at", None) < datetime.utcnow():
+        if last_verification is None or getattr(last_verification, "status", None) != "confirmed":
             raise HTTPException(status_code=403, detail="Phone is not verified")
 
         return user

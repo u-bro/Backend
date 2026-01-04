@@ -37,8 +37,8 @@ class CrudBase(Generic[M, S]):
 
     async def get_by_id(self, session: AsyncSession, id: int) -> S | None:
         result = await session.execute(select(self.model).where(self.model.id == id))
-        gpu = result.scalar_one_or_none()
-        return self.schema.model_validate(gpu) if gpu else None
+        item = result.scalar_one_or_none()
+        return self.schema.model_validate(item) if item else None
 
     async def create(self, session: AsyncSession, create_obj: S) -> S | None:
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)

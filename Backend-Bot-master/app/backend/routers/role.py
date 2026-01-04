@@ -22,17 +22,17 @@ class RoleRouter(BaseRouter):
         items = await super().get_paginated(request, page, page_size)
         return TypeAdapter(List[RoleSchema]).validate_python(items)
 
-    async def get_by_id(self, request: Request, item_id: int) -> RoleSchema:
-        return await super().get_by_id(request, item_id)
+    async def get_by_id(self, request: Request, id: int) -> RoleSchema:
+        return await super().get_by_id(request, id)
 
-    async def create_role(self, request: Request, body: RoleCreate) -> RoleSchema:
+    async def create(self, request: Request, body: RoleCreate) -> RoleSchema:
         return await self.model_crud.create(request.state.session, body)
 
-    async def update_role(self, request: Request, item_id: int, body: RoleUpdate) -> RoleSchema:
-        return await self.model_crud.update(request.state.session, item_id, body)
+    async def update(self, request: Request, id: int, body: RoleUpdate) -> RoleSchema:
+        return await self.model_crud.update(request.state.session, id, body)
 
-    async def delete_role(self, request: Request, item_id: int):
-        return await self.model_crud.delete(request.state.session, item_id)
+    async def delete(self, request: Request, id: int):
+        return await self.model_crud.delete(request.state.session, id)
 
 
 role_router = RoleRouter().router

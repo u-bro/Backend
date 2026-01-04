@@ -33,4 +33,4 @@ class TariffPlanRouter(BaseRouter):
         return await super().delete(request, id)
 
 
-tariff_plan_router = TariffPlanRouter(tariff_plan_crud, "/tariff_plans").router
+tariff_plan_router = TariffPlanRouter(tariff_plan_crud, "/tariff-plans").router

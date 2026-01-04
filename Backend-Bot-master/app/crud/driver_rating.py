@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.sql.expression import desc
 from .ride import ride_crud
+from fastapi import HTTPException
+
 
 class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
     def __init__(self) -> None:
@@ -14,10 +16,10 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
         ride = await ride_crud.get_by_id(session, create_obj.ride_id)
 
         if ride is None or create_obj.client_id != ride.client_id:
-            return "Client ID does not match the ride's client"
+            raise HTTPException(status_code=400, detail="Client ID does not match the ride's client")
         
         if create_obj.driver_profile_id != ride.driver_profile_id:
-            return "Driver profile ID does not match the ride's driver"
+            raise HTTPException(status_code=400, detail="Driver profile ID does not match the ride's driver")
         
         existing_rating = await session.execute(
             select(self.model).where(
@@ -26,7 +28,7 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
             )
         )
         if existing_rating.scalar_one_or_none():
-            return "Rating already exists for this ride"
+            raise HTTPException(status_code=409, detail="Rating already exists for this ride")
         
         return await super().create(session, create_obj, **kwargs)
 

@@ -1,8 +1,5 @@
 from typing import TypeVar
-
 from fastapi import APIRouter, HTTPException, Request
-from starlette.responses import JSONResponse
-
 from app.crud import CrudBase
 
 
@@ -28,22 +25,19 @@ class BaseRouter:
     async def get_by_id(self, request: Request, id: int) -> T:
         item = await self.model_crud.get_by_id(request.state.session, id)
         if item is None:
-            return JSONResponse(status_code=404, content="Item not found")
+            raise HTTPException(status_code=404, detail="Item not found")
         return item
 
     async def create(self, request: Request, create_obj: T) -> T:
         return await self.model_crud.create(request.state.session, create_obj)
 
     async def delete(self, request: Request, id: int) -> T:
-        item = await self.model_crud.delete(request.state.session, id)
-        if item is None:
-            return JSONResponse(status_code=404, content="Item not found")
-        return item
+        return await self.model_crud.delete(request.state.session, id)
 
     async def update(self, request: Request, id: int, update_obj: T) -> T:
         item = await self.model_crud.update(request.state.session, id, update_obj)
         if item is None:
-            return JSONResponse(status_code=404, content="Item not found")
+            raise HTTPException(status_code=404, detail="Item not found")
         return item
 
     async def batch_create(self, request: Request, create_objs: list[T]) -> list[T]:

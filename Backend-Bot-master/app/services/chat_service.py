@@ -1,16 +1,15 @@
 import re
-import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
-
+from sqlalchemy import select, and_
+from better_profanity import profanity
+from sqlalchemy.orm import selectinload
 from app.models.chat_message import ChatMessage
 from app.models.ride import Ride
-from app.schemas.chat_message import ChatMessageSchema, ChatMessageCreate
-
-logger = logging.getLogger(__name__)
+from app.schemas.chat_message import ChatMessageSchema
+from app.logger import logger
 
 
 
@@ -52,6 +51,9 @@ class ChatService:
         self.rate_limit_period = 60  
         self.max_message_length = 2000
         self.min_message_length = 1
+        
+        profanity.load_censor_words()
+        profanity.add_censor_words(list(BANNED_WORDS))
     
     def _normalize_text(self, text: str) -> str:
         result = text.lower()
@@ -60,6 +62,8 @@ class ChatService:
         return result
     
     def _contains_banned_words(self, text: str) -> tuple[bool, Optional[str]]:
+        if profanity.contains_profanity(text):
+            return True, "profanity"
         normalized = self._normalize_text(text)
         
         for word in BANNED_WORDS:
@@ -69,15 +73,15 @@ class ChatService:
         return False, None
     
     def _censor_text(self, text: str) -> str:
-        result = text
-        normalized = self._normalize_text(text)
+        censored = profanity.censor(text)
+        normalized = self._normalize_text(censored)
         
         for word in BANNED_WORDS:
             if word in normalized:
                 pattern = re.compile(re.escape(word), re.IGNORECASE)
-                result = pattern.sub('*' * len(word), result)
+                censored = pattern.sub('*' * len(word), censored)
         
-        return result
+        return censored
     
     def moderate_message(self, text: str) -> ModerationResult:
         if not text:
@@ -113,42 +117,27 @@ class ChatService:
         self._message_timestamps[user_id].append(now)
         return True, None
     
-    async def validate_chat_access(
-        self, 
-        session: AsyncSession, 
-        ride_id: int, 
-        user_id: int
-    ) -> tuple[bool, Optional[str], Optional[str]]:
-        query = select(Ride).where(Ride.id == ride_id)
+    async def verify_ride_user(self, session: AsyncSession, ride_id: int, user_id: int) -> bool:
+        query = select(Ride).options(selectinload(Ride.driver_profile)).where(Ride.id == ride_id)
         result = await session.execute(query)
         ride = result.scalar_one_or_none()
-        
+
         if not ride:
-            return False, "Ride not found", None
-        if ride.client_id == user_id:
-            return True, None, "client"
+            logger.error(f"Ride {ride_id} not found")
+            return False
         
-        if ride.driver_profile_id:
-            # Нужно проверить user_id водителя через driver_profile
-            # Пока упрощённо — считаем что driver_profile_id связан с user
-            # TODO: связать через driver_profile.user_id
-            pass
-        
-        # TODO: Проверка на оператора (по роли пользователя)
-        # Пока разрешаем для тестирования
-        return True, None, "operator"
+        driver_profile = getattr(ride, "driver_profile", None)
+        if not driver_profile:
+            logger.error(f"Driver profile not found for ride {ride_id}")
+            return False
+
+        if ride.client_id != user_id and driver_profile.user_id != user_id:
+            logger.error(f"User {user_id} is not a client or driver for ride {ride_id}")
+            return False
+
+        return True
     
-    async def save_message(
-        self,
-        session: AsyncSession,
-        ride_id: int,
-        sender_id: int,
-        text: str,
-        message_type: str = MessageType.TEXT,
-        receiver_id: Optional[int] = None,
-        attachments: Optional[Dict[str, Any]] = None,
-        is_moderated: bool = True,
-    ) -> ChatMessageSchema:
+    async def save_message(self, session: AsyncSession, ride_id: int, sender_id: int, text: str, message_type: str = MessageType.TEXT, receiver_id: Optional[int] = None, attachments: Optional[Dict[str, Any]] = None, is_moderated: bool = True) -> ChatMessageSchema:
         message = ChatMessage(
             ride_id=ride_id,
             sender_id=sender_id,
@@ -194,12 +183,7 @@ class ChatService:
         
         return [ChatMessageSchema.model_validate(m) for m in reversed(messages)]
     
-    async def soft_delete_message(
-        self,
-        session: AsyncSession,
-        message_id: int,
-        user_id: int,
-    ) -> bool:
+    async def soft_delete_message(self, session: AsyncSession, message_id: int, user_id: int) -> bool:
         query = select(ChatMessage).where(
             and_(
                 ChatMessage.id == message_id,
@@ -218,13 +202,7 @@ class ChatService:
         await session.flush()
         return True
     
-    async def edit_message(
-        self,
-        session: AsyncSession,
-        message_id: int,
-        user_id: int,
-        new_text: str,
-    ) -> Optional[ChatMessageSchema]:
+    async def edit_message(self, session: AsyncSession, message_id: int, user_id: int, new_text: str) -> Optional[ChatMessageSchema]:
         query = select(ChatMessage).where(
             and_(
                 ChatMessage.id == message_id,
@@ -258,6 +236,13 @@ class ChatService:
                 "period_seconds": self.rate_limit_period,
             },
             "max_message_length": self.max_message_length,
+            "moderation": {
+                "custom_words_count": len(BANNED_WORDS),
+                "leet_replacements_count": len(LEET_REPLACEMENTS),
+                "uses_better_profanity": True,
+            }
         }
+    
+    
 
 chat_service = ChatService()

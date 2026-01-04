@@ -32,8 +32,6 @@ JWT_EXPIRATION_MINTUES = int(os.environ.get('JWT_EXPIRATION_MINTUES', 15))
 REFRESH_TOKEN_EXPIRATION_DAYS = int(os.environ.get('REFRESH_TOKEN_EXPIRATION_DAYS', 7))
 REFRESH_TOKEN_SALT = os.environ.get('REFRESH_TOKEN_SALT') or 'test-refresh-token-salt'
 
-OTP_CONFIRMED_EXPIRATION_HOURS = int(os.environ.get('OTP_CONFIRMED_EXPIRATION_HOURS', 24))
-
 S3_DOCUMENTS_BUCKET=os.environ.get('S3_DOCUMENTS_BUCKET') or 'ubro-documents'
 AWS_REGION=os.environ.get('AWS_REGION') or 'ru-central1'
 AWS_ACCESS_KEY=os.environ.get('AWS_ACCESS_KEY') or 'test-aws-access-key-id'

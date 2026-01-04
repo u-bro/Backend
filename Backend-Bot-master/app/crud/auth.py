@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 from app.crud.base import CrudBase
-from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate, RefreshTokenVerifyRequest, TokenResponse
+from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate, RefreshTokenVerifyRequest, TokenResponse, UserSchemaCreate
 from app.schemas.refresh_token import RefreshTokenIn
 from app.logger import logger
 from app.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINTUES
@@ -11,6 +11,8 @@ from app.models import User
 from .role import role_crud
 from .driver_profile import driver_profile_crud
 from .refresh_token import refresh_token_crud
+from fastapi import HTTPException
+
 
 class CrudAuth(CrudBase):
     def __init__(self, model, schema, secret_key: str, algorithm: str = "HS256"):
@@ -34,11 +36,9 @@ class CrudAuth(CrudBase):
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             return payload
         except jwt.ExpiredSignatureError:
-            logger.error("Token has expired")
-            return None
+            raise HTTPException(status_code=401, detail="Token has expired")
         except jwt.InvalidTokenError:
-            logger.error("Invalid token")
-            return None
+            raise HTTPException(status_code=401, detail="Invalid token")
 
     async def get_by_phone(self, session: AsyncSession, phone: str) -> UserSchema | None:
         result = await session.execute(select(self.model).where(self.model.phone == phone))
@@ -49,44 +49,35 @@ class CrudAuth(CrudBase):
         existing_user = await self.get_by_phone(session, register_obj.phone)
         if existing_user:
             logger.warning(f"User with phone {register_obj.phone} already exists")
-            return None
+            raise HTTPException(status_code=409, detail="User with phone already exists")
 
         role = await role_crud.get_by_code(session, register_obj.role_code)
         if not role:
             logger.warning(f"Role with code \'{register_obj.role_code}\' not found")
-            return None
+            raise HTTPException(status_code=404, detail="Role not found")
         
-        user_data = {
-            "phone": register_obj.phone,
-            "is_active": True,
-            "role_id": role.id
-        }
-        
-        new_user = self.model(**user_data)
-        session.add(new_user)
-        await session.flush()
-        await session.commit()
+        new_user = await super().create(session, UserSchemaCreate(phone=register_obj.phone, is_active=True, role_id=role.id))
 
         if register_obj.role_code == 'driver':
             await driver_profile_crud.create(session, DriverProfileCreate(user_id=new_user.id, approved=False))
         
         return self.schema.model_validate(new_user)
 
-    async def login_user(self, session: AsyncSession, phone: str) -> UserSchema | None:
+    async def login_or_register(self, session: AsyncSession, phone: str) -> (UserSchema, bool):
         user = await self.get_by_phone(session, phone)
+        is_registred = False
         if not user:
-            logger.warning(f"Invalid phone number")
-            return None
-
-        return user
+            user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code='driver'))
+            is_registred = True
+            
+        return user, is_registred
 
     async def refresh(self, session: AsyncSession, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse | None:
         token_hash = refresh_token_crud.hash_token(refresh_obj.refresh_token)
         
         found_token = await refresh_token_crud.get_by_token(session, token_hash)
         if not found_token or found_token.revoked_at:
-            logger.warning(f"Invalid refresh token")
-            return None
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
         
         await refresh_token_crud.revoke(session, token_hash)
 

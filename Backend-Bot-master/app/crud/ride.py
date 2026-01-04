@@ -2,15 +2,15 @@ from datetime import datetime
 from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from fastapi import Depends
-from sqlalchemy.sql import insert, update
+from sqlalchemy.sql import insert, update, delete
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
 from .ride_status_history import ride_status_history_crud
+from .driver_profile import driver_profile_crud
 from app.models import Ride, TariffPlan
 from app.schemas.ride import RideSchema
 from app.schemas.ride_status_history import RideStatusHistoryCreate
-from app.backend.deps.get_current_user import get_current_user_id
+from fastapi import HTTPException
 
 
 STATUSES = {
@@ -72,12 +72,17 @@ class CrudRide(CrudBase):
     async def create(self, session: AsyncSession, create_obj) -> RideSchema | None:
         data = create_obj.model_dump()
         tariff_plan = await tariff_plan_crud.get_by_id(session, data.get("tariff_plan_id"))
-        self._add_expected_fare_and_snapshot(data, tariff_plan, data.get("distance_meters"))
 
+        if not tariff_plan:
+            raise HTTPException(status_code=404, detail="Tariff plan not found")
+        if tariff_plan.effective_to and tariff_plan.effective_to <= datetime.utcnow():
+            raise HTTPException(status_code=400, detail="This version of tariff plan has closed")
+
+        self._add_expected_fare_and_snapshot(data, tariff_plan, data.get("distance_meters"))
         stmt = insert(self.model).values(data).returning(self.model)
         ride = await self.execute_get_one(session, stmt)
         if not ride:
-            return None
+            raise HTTPException(status_code=400, detail="Ride wasn't created")
         await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=ride.id, from_status=None, to_status='requested', changed_by=create_obj.client_id))
         return self.schema.model_validate(ride)
 
@@ -101,7 +106,7 @@ class CrudRide(CrudBase):
 
         if update_obj.status and existing.status != update_obj.status:
             if not self._is_status_transition_allowed(existing.status, update_obj.status):
-                return 'Incorrect ride status transition'
+                raise HTTPException(status_code=400, detail="Incorrect ride status transition")
             await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=existing.id, from_status=existing.status, to_status=update_obj.status, changed_by=int(user_id)))
 
         stmt = (
@@ -131,6 +136,13 @@ class CrudRide(CrudBase):
         )
         result = await self.execute_get_one(session, stmt)
         await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=result.id, from_status='requested', to_status=update_obj.status, changed_by=user_id))
+        await driver_profile_crud.ride_count_increment(session, update_obj.driver_profile_id)
+        return self.schema.model_validate(result) if result else None
+
+    async def delete(self, session: AsyncSession, id: int):
+        stmt = delete(self.model).where(self.model.id == id).returning(self.model)
+        result = await self.execute_get_one(session, stmt)
+        await driver_profile_crud.ride_count_decrement(session, result.driver_profile_id)
         return self.schema.model_validate(result) if result else None
 
 ride_crud = CrudRide(Ride, RideSchema)

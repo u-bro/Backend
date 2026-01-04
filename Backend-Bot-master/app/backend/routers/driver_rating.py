@@ -24,18 +24,18 @@ class DriverRatingRouter(BaseRouter):
         items = await super().get_paginated(request, page, page_size)
         return TypeAdapter(List[DriverRatingSchema]).validate_python(items)
 
-    async def get_by_id(self, request: Request, item_id: int) -> DriverRatingSchema:
-        return await super().get_by_id(request, item_id)
+    async def get_by_id(self, request: Request, id: int) -> DriverRatingSchema:
+        return await super().get_by_id(request, id)
 
     async def create(self, request: Request, body: DriverRatingCreateIn, user_id: int = Depends(get_current_user_id)) -> DriverRatingSchema:
         body = DriverRatingCreate(client_id=user_id, **body.model_dump())
         return await self.model_crud.create(request.state.session, body)
 
-    async def update(self, request: Request, item_id: int, body: DriverRatingUpdate) -> DriverRatingSchema:
-        return await self.model_crud.update(request.state.session, item_id, body)
+    async def update(self, request: Request, id: int, body: DriverRatingUpdate) -> DriverRatingSchema:
+        return await self.model_crud.update(request.state.session, id, body)
 
-    async def delete(self, request: Request, item_id: int):
-        return await self.model_crud.delete(request.state.session, item_id)
+    async def delete(self, request: Request, id: int):
+        return await self.model_crud.delete(request.state.session, id)
 
     async def get_avg_rating(self, request: Request, driver_id: int, count: int | None = None) -> DriverRatingAvgOut:
         return await self.model_crud.avg_rating(request.state.session, driver_id, count)

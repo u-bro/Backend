@@ -25,17 +25,17 @@ class CommissionRouter(BaseRouter):
         items = await super().get_paginated(request, page, page_size)
         return TypeAdapter(List[CommissionSchema]).validate_python(items)
 
-    async def get_by_id(self, request: Request, item_id: int) -> CommissionSchema:
-        return await super().get_by_id(request, item_id)
+    async def get_by_id(self, request: Request, id: int) -> CommissionSchema:
+        return await super().get_by_id(request, id)
 
-    async def create_item(self, request: Request, body: CommissionCreate) -> CommissionSchema:
+    async def create(self, request: Request, body: CommissionCreate) -> CommissionSchema:
         return await self.model_crud.create(request.state.session, body)
 
-    async def update_item(self, request: Request, item_id: int, body: CommissionUpdate) -> CommissionSchema:
-        return await self.model_crud.update(request.state.session, item_id, body)
+    async def update(self, request: Request, id: int, body: CommissionUpdate) -> CommissionSchema:
+        return await self.model_crud.update(request.state.session, id, body)
 
-    async def delete_item(self, request: Request, item_id: int):
-        item = await self.model_crud.delete(request.state.session, item_id)
+    async def delete(self, request: Request, id: int):
+        item = await self.model_crud.delete(request.state.session, id)
         if item is None:
             return JSONResponse(status_code=404, content={"detail": "Item not found"})
         return item
