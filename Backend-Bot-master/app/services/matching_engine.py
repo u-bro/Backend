@@ -1,9 +1,11 @@
 
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Set
 from dataclasses import dataclass
 import logging
 
+from app.services.websocket_manager import manager
+from app.schemas.driver_profile import DriverProfileSchema
 from app.services.driver_tracker import (
     driver_tracker, 
     DriverState, 
@@ -55,10 +57,31 @@ class MatchingEngine:
     WEIGHT_DISTANCE = 0.5  
     WEIGHT_RATING = 0.3    
     WEIGHT_FRESHNESS = 0.2  
+    MAX_DISTANCE_KM = 5.0
     DEFAULT_LIMIT = 20
     
     def __init__(self):
         self.tracker = driver_tracker
+        self.connected_driver_user_ids: Set[int] = set()
+
+    def register_connected_driver(self, profile: DriverProfileSchema) -> None:
+        if not getattr(profile, "approved", False):
+            return
+
+        self.connected_driver_user_ids.add(int(profile.user_id))
+        classes_allowed = getattr(profile, "classes_allowed", None) or ["economy"]
+        rating_avg = getattr(profile, "rating_avg", None)
+        rating = float(rating_avg) if rating_avg is not None else 5.0
+
+        self.tracker.register_driver(
+            driver_profile_id=int(profile.id),
+            user_id=int(profile.user_id),
+            classes_allowed=list(classes_allowed),
+            rating=rating,
+        )
+
+    def unregister_connected_driver(self, user_id: int) -> None:
+        self.connected_driver_user_ids.discard(int(user_id))
     
     def find_drivers(self, ride_request: RideRequest, limit: int = DEFAULT_LIMIT) -> List[DriverMatch]:
         available = self.tracker.get_available_drivers(
@@ -192,5 +215,30 @@ class MatchingEngine:
             }
         }
 
+    async def send_to_suitable_drivers(self, message: Any, exclude_user_id: Optional[int] = None) -> None:
+        payload: Any = message
+
+        pickup_lat = payload.get("pickup_lat")
+        pickup_lng = payload.get("pickup_lng")
+
+        max_distance_km = self.MAX_DISTANCE_KM
+        for user_id in list(self.connected_driver_user_ids):
+            if exclude_user_id and int(user_id) == int(exclude_user_id):
+                continue
+
+            state = self.tracker.get_driver_by_user(int(user_id))
+            if not state or not state.is_available() or state.latitude is None or state.longitude is None:
+                continue
+
+            distance_km = self.tracker._haversine_distance(
+                float(pickup_lat),
+                float(pickup_lng),
+                float(state.latitude),
+                float(state.longitude),
+            )
+            if distance_km > max_distance_km:
+                continue
+
+            await manager.send_personal_message(int(user_id), payload)
 
 matching_engine = MatchingEngine()
