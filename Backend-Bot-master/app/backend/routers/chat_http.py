@@ -71,20 +71,7 @@ class ChatHttpRouter(BaseRouter):
             is_moderated=True,
         )
 
-        await manager.send_to_ride(
-            ride_id,
-            {
-                "type": "new_message",
-                "message": {
-                    "id": message.id,
-                    "ride_id": ride_id,
-                    "sender_id": sender_id,
-                    "text": message.text,
-                    "message_type": message.message_type,
-                    "created_at": message.created_at.isoformat() if message.created_at else None,
-                },
-            },
-        )
+        await manager.send_to_ride(ride_id, {"type": "new_message", "message": {"id": message.id, "ride_id": ride_id, "sender_id": sender_id, "text": message.text, "message_type": message.message_type, "created_at": message.created_at.isoformat() if message.created_at else None}})
 
         return SendMessageResponse(
             id=message.id,
@@ -99,58 +86,19 @@ class ChatHttpRouter(BaseRouter):
 
     async def delete_message(self, request: Request, ride_id: int, message_id: int, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
         session = request.state.session
-
-        deleted = await chat_service.soft_delete_message(
-            session=session,
-            message_id=message_id,
-            user_id=user_id,
-        )
-        if not deleted:
-            raise HTTPException(status_code=404, detail="Message not found or you don't have permission")
-
-        await manager.send_to_ride(
-            ride_id,
-            {
-                "type": "message_deleted",
-                "message_id": message_id,
-                "deleted_by": user_id,
-            },
-        )
-
+        await chat_service.soft_delete_message(session=session, message_id=message_id, user_id=user_id)
+        await manager.send_to_ride(ride_id, {"type": "message_deleted", "message_id": message_id, "deleted_by": user_id})
         return {"status": "deleted", "message_id": message_id}
 
     async def edit_message(self, request: Request, ride_id: int, message_id: int, body: SendMessageRequest, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
         session = request.state.session
-
-        message = await chat_service.edit_message(
-            session=session,
-            message_id=message_id,
-            user_id=user_id,
-            new_text=body.text,
-        )
+        message = await chat_service.edit_message(session=session, message_id=message_id, user_id=user_id, new_text=body.text)
         if not message:
             raise HTTPException(status_code=404, detail="Message not found or you don't have permission")
 
-        await manager.send_to_ride(
-            ride_id,
-            {
-                "type": "message_edited",
-                "message": {
-                    "id": message.id,
-                    "text": message.text,
-                    "edited_at": message.edited_at.isoformat() if message.edited_at else None,
-                },
-            },
-        )
+        await manager.send_to_ride(ride_id, {"type": "message_edited", "message": {"id": message.id, "text": message.text, "edited_at": message.edited_at.isoformat() if message.edited_at else None}})
 
-        return {
-            "status": "edited",
-            "message": {
-                "id": message.id,
-                "text": message.text,
-                "edited_at": message.edited_at,
-            },
-        }
+        return {"status": "edited", "message": {"id": message.id, "text": message.text, "edited_at": message.edited_at}}
 
     async def get_chat_stats(self) -> Dict[str, Any]:
         return chat_service.get_stats()

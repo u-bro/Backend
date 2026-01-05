@@ -2,13 +2,18 @@ from app.crud.base import CrudBase
 from app.models.driver_profile import DriverProfile
 from app.schemas.driver_profile import DriverProfileSchema
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import update
+from sqlalchemy import update, select
 from fastapi import HTTPException
 
 
 class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
     def __init__(self) -> None:
         super().__init__(DriverProfile, DriverProfileSchema)
+
+    async def get_by_user_id(self, session: AsyncSession, user_id: int):
+        result = await session.execute(select(self.model).where(self.model.user_id == user_id))
+        item = result.scalar_one_or_none()
+        return self.schema.model_validate(item) if item else None
 
     async def ride_count_increment(self, session: AsyncSession, id: int):
         stmt = update(self.model).where(self.model.id == id).values(ride_count=self.model.ride_count + 1).returning(self.model)

@@ -112,7 +112,7 @@ class DriverTracker:
         
         return state
     
-    def update_location_by_user(
+    def update_location_by_user_id(
         self,
         user_id: int,
         latitude: float,

@@ -145,4 +145,10 @@ class CrudRide(CrudBase):
         await driver_profile_crud.ride_count_decrement(session, result.driver_profile_id)
         return self.schema.model_validate(result) if result else None
 
+    async def get_requested_rides(self, session: AsyncSession, limit: int = 1) -> list[RideSchema]:
+        stmt = select(self.model).where(and_(self.model.status == "requested", self.model.driver_profile_id.is_(None))).limit(limit)
+        result = await session.execute(stmt)
+        rides = result.scalars().all()
+        return [self.schema.model_validate(ride) for ride in rides]
+
 ride_crud = CrudRide(Ride, RideSchema)

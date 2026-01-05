@@ -13,7 +13,7 @@ class ConnectionManager:
         self.active_connections: Dict[int, List[WebSocket]] = {}
         self.ride_participants: Dict[int, set] = {}
     
-    async def connect(self, websocket: WebSocket, user_id: int) -> None:
+    async def connect(self, websocket: WebSocket, user_id: int, is_driver: bool = False) -> None:
         await websocket.accept()
         
         if user_id not in self.active_connections:
@@ -21,7 +21,7 @@ class ConnectionManager:
         
         self.active_connections[user_id].append(websocket)
         logger.info(f"WebSocket connected: user_id={user_id}, total connections: {len(self.active_connections[user_id])}")
-    
+
     def disconnect(self, websocket: WebSocket, user_id: int) -> None:
         if user_id in self.active_connections:
             if websocket in self.active_connections[user_id]:
@@ -31,7 +31,7 @@ class ConnectionManager:
                 del self.active_connections[user_id]
         
         logger.info(f"WebSocket disconnected: user_id={user_id}")
-    
+
     def is_connected(self, user_id: int) -> bool:
         return user_id in self.active_connections and len(self.active_connections[user_id]) > 0
     
@@ -97,7 +97,7 @@ class ConnectionManager:
             if exclude_user_id and user_id == exclude_user_id:
                 continue
             await self.send_personal_message(user_id, message)
-    
+
     def get_online_users(self) -> List[int]:
         return list(self.active_connections.keys())
     
