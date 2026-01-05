@@ -17,6 +17,7 @@ class RideSchemaIn(BaseSchema):
     duration_seconds: int | None = Field(None, ge=0)
     commission_id: int | None = Field(None)
     tariff_plan_id: int = Field(..., gt=0)
+    ride_class: Literal["light", "pro", "vip", "elite"] = Field(..., max_length=50)
 
 
 class RideSchemaCreate(RideSchemaIn):
