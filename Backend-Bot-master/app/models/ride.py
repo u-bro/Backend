@@ -37,6 +37,7 @@ class Ride(Base):
     created_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
     updated_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
     tariff_plan_id: Mapped[int] = mapped_column(Integer, ForeignKey('tariff_plans.id'))
+    ride_class: Mapped[str] = mapped_column(Text, nullable=False)
 
     client = relationship('User', foreign_keys=[client_id])
     driver_profile = relationship('DriverProfile', foreign_keys=[driver_profile_id])

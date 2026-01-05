@@ -76,7 +76,7 @@ class MatchingEngine:
             return
 
         self.connected_driver_user_ids.add(int(profile.user_id))
-        classes_allowed = getattr(profile, "classes_allowed", None) or ["economy"]
+        classes_allowed = getattr(profile, "classes_allowed", [])
         rating_avg = getattr(profile, "rating_avg", None)
         rating = float(rating_avg) if rating_avg is not None else 5.0
 
@@ -230,7 +230,7 @@ class MatchingEngine:
             if exclude_user_id and user_id == exclude_user_id:
                 continue
 
-            if not self._is_suitable_driver(user_id, pickup_lat, pickup_lng):
+            if not self._is_suitable_driver(user_id, pickup_lat, pickup_lng, message.get('ride_class')):
                 continue
 
             await manager.send_personal_message(user_id, {"type": "new_ride", "details": message})
@@ -241,7 +241,7 @@ class MatchingEngine:
             raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Driver profile not found")
 
         existing = await ride_crud.get_by_id(session, ride_id)
-        if not self._is_suitable_driver(user_id, existing.pickup_lat, existing.pickup_lng):
+        if not self._is_suitable_driver(user_id, existing.pickup_lat, existing.pickup_lng, existing.ride_class):
             raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Driver doesn't suit the ride")
 
         update_obj = RideSchemaAcceptByDriver(driver_profile_id=driver_profile.id, status='accepted')
@@ -267,7 +267,7 @@ class MatchingEngine:
         if existing is None:
             raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Ride not found")
 
-        if not self._is_suitable_driver(user_id, existing.pickup_lat, existing.pickup_lng):
+        if not self._is_suitable_driver(user_id, existing.pickup_lat, existing.pickup_lng, existing.ride_class):
             raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Driver doesn't suit the ride")
 
         if status_normalized not in ("started", "canceled"):
@@ -314,9 +314,11 @@ class MatchingEngine:
             raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Ride finish failed")
         return updated
 
-    def _is_suitable_driver(self, user_id: int, pickup_lat: float, pickup_lng: float):
+    def _is_suitable_driver(self, user_id: int, pickup_lat: float, pickup_lng: float, ride_class: str):
             state = self.tracker.get_driver_by_user(user_id)
-            if not state or not state.is_available() or state.latitude is None or state.longitude is None:
+            print(ride_class)
+            print(state.classes_allowed)
+            if not state or not state.is_available() or state.latitude is None or state.longitude is None or ride_class not in state.classes_allowed:
                 return False
 
             distance_km = self.tracker._haversine_distance(
