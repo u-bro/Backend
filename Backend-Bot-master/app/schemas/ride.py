@@ -74,3 +74,4 @@ class RideSchemaFinishByDriver(BaseSchema):
 class RideSchemaFinishWithAnomaly(RideSchemaFinishByDriver):
     is_anomaly: bool | None = Field(False)
     anomaly_reason: str | None = Field(None, max_length=255)
+    ride_metadata: dict | None = Field(None)
