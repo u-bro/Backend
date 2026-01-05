@@ -9,7 +9,7 @@ from app.services.websocket_manager import manager
 from app.schemas.matching import AcceptRideRequest, AcceptRideResponse, RideFeedItem, DriverRegistration, FindDriversRequest
 
 
-class MatchingRouter(BaseRouter):
+class MatchingHttpRouter(BaseRouter):
     def __init__(self) -> None:
         super().__init__(matching_engine, "/matching")
 
@@ -146,4 +146,4 @@ class MatchingRouter(BaseRouter):
         return matching_engine.get_stats()
 
 
-matching_router = MatchingRouter().router
+matching_http_router = MatchingHttpRouter().router

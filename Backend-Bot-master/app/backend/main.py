@@ -18,9 +18,9 @@ from app.backend.routers.phone_verification import phone_verification_router
 from app.backend.routers.commission import commission_router
 from app.backend.routers.driver_location import driver_location_router
 from app.backend.routers.transaction import transaction_router
-from app.backend.routers.websocket import websocket_router
+from app.backend.routers.matching_ws import matching_ws_router
 from app.backend.routers.documents import documents_router
-from app.backend.routers.matching import matching_router
+from app.backend.routers.matching_http import matching_http_router
 from app.backend.routers.chat_http import chat_http_router
 from app.backend.routers.chat_ws import chat_ws_router
 from app.backend.routers.driver_rating import driver_rating_router
@@ -52,9 +52,9 @@ app.include_router(commission_router, tags=['Commissions'], prefix=API_PREFIX)
 app.include_router(driver_location_router, tags=['DriverLocations'], prefix=API_PREFIX)
 app.include_router(transaction_router, tags=['Transactions'], prefix=API_PREFIX)
 app.include_router(tariff_plan_router, tags=['TariffPlan'], prefix=API_PREFIX)
-app.include_router(websocket_router, tags=['WebSocket'], prefix=API_PREFIX)
+app.include_router(matching_ws_router, tags=['Matching(WebSocket)'], prefix=API_PREFIX)
 app.include_router(documents_router, tags=['Documents'], prefix=API_PREFIX)
-app.include_router(matching_router, tags=['Matching'], prefix=API_PREFIX)
+app.include_router(matching_http_router, tags=['Matching(HTTP)'], prefix=API_PREFIX)
 app.include_router(chat_http_router, tags=['Chat(HTTP)'], prefix=API_PREFIX)
 app.include_router(chat_ws_router, tags=['Chat(WebSocket)'], prefix=API_PREFIX)
 app.include_router(driver_rating_router, tags=['DriverRatings'], prefix=API_PREFIX)

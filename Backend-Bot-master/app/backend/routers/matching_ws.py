@@ -18,7 +18,7 @@ class DriverStatusUpdate(BaseModel):
     status: str 
 
 
-class DriverWebsocketRouter(BaseWebsocketRouter):
+class MatchingWebsocketRouter(BaseWebsocketRouter):
     def setup_routes(self) -> None:
         self.router.add_api_websocket_route("/ws/{user_id}", self.websocket_endpoint)
 
@@ -260,4 +260,4 @@ class DriverWebsocketRouter(BaseWebsocketRouter):
         return {**driver_tracker.get_stats(), "ws_connections": manager.get_connection_count()}
 
 
-websocket_router = DriverWebsocketRouter().router
+matching_ws_router = MatchingWebsocketRouter().router
