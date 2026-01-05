@@ -67,7 +67,6 @@ class ChatHttpRouter(BaseRouter):
             sender_id=sender_id,
             text=moderation.filtered,
             message_type=body.message_type,
-            receiver_id=body.receiver_id,
             attachments=body.attachments,
             is_moderated=True,
         )
