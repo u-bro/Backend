@@ -3,9 +3,16 @@ from datetime import datetime
 from typing import Any, List, Optional, Set
 from dataclasses import dataclass
 import logging
-
+from app.schemas.ride import RideSchemaAcceptByDriver
+from app.schemas.ride import RideSchemaFinishWithAnomaly
+from app.schemas.ride import RideSchemaUpdateByDriver
+from app.crud.ride import ride_crud
+from app.crud.driver_profile import driver_profile_crud
 from app.services.websocket_manager import manager
 from app.schemas.driver_profile import DriverProfileSchema
+from starlette.status import WS_1008_POLICY_VIOLATION
+from fastapi import WebSocketException
+from fastapi import HTTPException
 from app.services.driver_tracker import (
     driver_tracker, 
     DriverState, 
@@ -216,19 +223,101 @@ class MatchingEngine:
         }
 
     async def send_to_suitable_drivers(self, message: Any, exclude_user_id: Optional[int] = None) -> None:
-        payload: Any = message
+        pickup_lat = message.get("pickup_lat")
+        pickup_lng = message.get("pickup_lng")
 
-        pickup_lat = payload.get("pickup_lat")
-        pickup_lng = payload.get("pickup_lng")
-
-        max_distance_km = self.MAX_DISTANCE_KM
         for user_id in list(self.connected_driver_user_ids):
-            if exclude_user_id and int(user_id) == int(exclude_user_id):
+            if exclude_user_id and user_id == exclude_user_id:
                 continue
 
-            state = self.tracker.get_driver_by_user(int(user_id))
-            if not state or not state.is_available() or state.latitude is None or state.longitude is None:
+            if not self._is_suitable_driver(user_id, pickup_lat, pickup_lng):
                 continue
+
+            await manager.send_personal_message(user_id, {"type": "new_ride", "details": message})
+
+    async def accept_ride(self, session, ride_id: int, user_id: int) -> None:
+        driver_profile = await driver_profile_crud.get_by_user_id(session, user_id)
+        if not driver_profile:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Driver profile not found")
+
+        existing = await ride_crud.get_by_id(session, ride_id)
+        if not self._is_suitable_driver(user_id, existing.pickup_lat, existing.pickup_lng):
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Driver doesn't suit the ride")
+
+        update_obj = RideSchemaAcceptByDriver(driver_profile_id=driver_profile.id, status='accepted')
+        accepted = await ride_crud.accept(session, ride_id, update_obj, user_id)
+        if accepted is not None:
+            return accepted
+
+        existing = await ride_crud.get_by_id(session, ride_id)
+        if existing is None:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Ride not found")
+        raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Ride already accepted")
+
+    async def update_ride_status(self, session, ride_id: int, user_id: int, status: str) -> None:
+        status_normalized = (status or "").strip().lower()
+        if status_normalized == "accepted":
+            return await self.accept_ride(session, ride_id, user_id)
+
+        driver_profile = await driver_profile_crud.get_by_user_id(session, user_id)
+        if not driver_profile:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Driver profile not found")
+
+        existing = await ride_crud.get_by_id(session, ride_id)
+        if existing is None:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Ride not found")
+
+        if not self._is_suitable_driver(user_id, existing.pickup_lat, existing.pickup_lng):
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Driver doesn't suit the ride")
+
+        if status_normalized not in ("started", "canceled"):
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Unsupported status")
+
+        if existing.driver_profile_id != driver_profile.id:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Ride is not assigned to this driver")
+
+        update_obj = RideSchemaUpdateByDriver(status=status_normalized)
+        try:
+            updated = await ride_crud.update(session, ride_id, update_obj, user_id)
+        except HTTPException as exc:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason=str(exc.detail))
+
+        if updated is None:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Ride status update failed")
+        return updated
+
+    async def finish_ride(self, session, ride_id: int, user_id: int, actual_fare: Any) -> None:
+        driver_profile = await driver_profile_crud.get_by_user_id(session, user_id)
+        if not driver_profile:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Driver profile not found")
+
+        existing = await ride_crud.get_by_id(session, ride_id)
+        if existing is None:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Ride not found")
+
+        if existing.driver_profile_id != driver_profile.id:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Ride is not assigned to this driver")
+
+        is_anomaly = str(getattr(existing, "expected_fare", None)) != str(actual_fare)
+        update_obj = RideSchemaFinishWithAnomaly(
+            status="completed",
+            completed_at=datetime.utcnow(),
+            actual_fare=actual_fare,
+            is_anomaly=is_anomaly,
+        )
+        try:
+            updated = await ride_crud.update(session, ride_id, update_obj, user_id)
+        except HTTPException as exc:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason=str(exc.detail))
+
+        if updated is None:
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Ride finish failed")
+        return updated
+
+    def _is_suitable_driver(self, user_id: int, pickup_lat: float, pickup_lng: float):
+            state = self.tracker.get_driver_by_user(user_id)
+            if not state or not state.is_available() or state.latitude is None or state.longitude is None:
+                return False
 
             distance_km = self.tracker._haversine_distance(
                 float(pickup_lat),
@@ -236,9 +325,9 @@ class MatchingEngine:
                 float(state.latitude),
                 float(state.longitude),
             )
-            if distance_km > max_distance_km:
-                continue
-
-            await manager.send_personal_message(int(user_id), payload)
+            if distance_km > self.MAX_DISTANCE_KM:
+                return False
+            
+            return True
 
 matching_engine = MatchingEngine()
