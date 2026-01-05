@@ -60,11 +60,7 @@ class MatchingEngine:
     def __init__(self):
         self.tracker = driver_tracker
     
-    def find_drivers(
-        self,
-        ride_request: RideRequest,
-        limit: int = DEFAULT_LIMIT
-    ) -> List[DriverMatch]:
+    def find_drivers(self, ride_request: RideRequest, limit: int = DEFAULT_LIMIT) -> List[DriverMatch]:
         available = self.tracker.get_available_drivers(
             ride_class=ride_request.ride_class,
             center_lat=ride_request.pickup_lat,
@@ -116,12 +112,7 @@ class MatchingEngine:
         matches = self.find_drivers(ride_request, limit=1)
         return matches[0] if matches else None
     
-    def expand_search(
-        self,
-        ride_request: RideRequest,
-        max_radius_km: float = 15.0,
-        step_km: float = 2.5
-    ) -> List[DriverMatch]:
+    def expand_search(self, ride_request: RideRequest, max_radius_km: float = 15.0, step_km: float = 2.5) -> List[DriverMatch]:
         original_radius = ride_request.search_radius_km
         current_radius = original_radius
         
@@ -139,12 +130,7 @@ class MatchingEngine:
         ride_request.search_radius_km = original_radius
         return []
     
-    def get_driver_feed(
-        self,
-        driver_profile_id: int,
-        rides: List[dict],
-        limit: int = 20
-    ) -> List[dict]:
+    def get_driver_feed(self, driver_profile_id: int, rides: List[dict], limit: int = 20) -> List[dict]:
         driver = self.tracker.get_driver(driver_profile_id)
         if not driver or driver.latitude is None:
             return []
@@ -177,12 +163,7 @@ class MatchingEngine:
         
         return [r[1] for r in relevant_rides[:limit]]
     
-    def _calculate_score(
-        self,
-        driver: DriverState,
-        distance_km: float,
-        now: datetime
-    ) -> float:
+    def _calculate_score(self, driver: DriverState, distance_km: float, now: datetime) -> float:
         distance_score = 1 / (1 + distance_km)
         
         rating_score = driver.rating / 5.0
