@@ -91,9 +91,6 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         ride_details = data.get("details", {})
         create_obj = RideSchemaCreate(client_id=user_id, **ride_details)
         ride_schema = await ride_crud.create(session, create_obj)
-        if ride_schema is None:
-            await websocket.send_json({"type": "error", "code": "ride_create_failed", "message": "Ride wasn't created"})
-            return
         await session.commit()
 
         ride_dict = self._ride_schema_to_dict(ride_schema)

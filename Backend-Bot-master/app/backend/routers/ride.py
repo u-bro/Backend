@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any
 from fastapi import Request, Depends, HTTPException
 from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
@@ -9,6 +9,8 @@ from app.backend.deps import require_role, get_current_user_id, get_current_driv
 from app.models import Ride
 from app.services import pdf_generator
 from app.crud import document_crud
+from app.services.matching_engine import matching_engine
+from datetime import datetime
 
 
 class RideRouter(BaseRouter):
@@ -36,7 +38,9 @@ class RideRouter(BaseRouter):
 
     async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
-        return await super().create(request, create_obj)
+        ride = await super().create(request, create_obj)
+        await matching_engine.send_to_suitable_drivers(self._ride_schema_to_dict(ride))
+        return ride
 
     async def update(self, request: Request, id: int, update_obj: RideSchema, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         return await self.model_crud.update(request.state.session, id, update_obj, user_id)
@@ -72,5 +76,19 @@ class RideRouter(BaseRouter):
         update_obj = RideSchemaFinishWithAnomaly(is_anomaly=str(ride.expected_fare) != str(update_obj.actual_fare), ride_metadata={"receipt_s3_key": key}, **update_obj.model_dump())
         return await super().update(request, id, update_obj)
 
+    def _ride_schema_to_dict(self, ride_schema):
+        ride_dict = ride_schema.model_dump()
+        def convert_datetimes(value: Any) -> Any:
+            if isinstance(value, datetime):
+                return value.isoformat()
+            if isinstance(value, dict):
+                return {k: convert_datetimes(v) for k, v in value.items()}
+            if isinstance(value, list):
+                return [convert_datetimes(v) for v in value]
+            if isinstance(value, tuple):
+                return tuple(convert_datetimes(v) for v in value)
+            return value
+
+        return convert_datetimes(ride_dict)
 
 ride_router = RideRouter().router
