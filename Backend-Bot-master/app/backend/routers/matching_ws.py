@@ -16,7 +16,7 @@ from app.schemas.matching import LocationUpdate, DriverStatusUpdate
 
 class MatchingWebsocketRouter(BaseWebsocketRouter):
     def setup_routes(self) -> None:
-        self.router.add_api_websocket_route("/matching", self.websocket_endpoint)
+        self.router.add_api_websocket_route("/ws-matching", self.websocket_endpoint)
 
         self.router.add_api_route("/ws/stats", self.get_websocket_stats, methods=["GET"])
         self.router.add_api_route("/ws/notify/{user_id}", self.send_notification, methods=["POST"])
