@@ -13,18 +13,7 @@ class DriverStatus(str, Enum):
     OFFLINE = "offline"     
     ONLINE = "online"       
     BUSY = "busy"         
-    PAUSED = "paused"        
-
-
-class RideClass(str, Enum):
-    ECONOMY = "economy"        
-    COMFORT = "comfort"          
-    COMFORT_PLUS = "comfort_plus"  
-    BUSINESS = "business"        
-    PREMIUM = "premium"        
-    CARGO = "cargo"             
-    DELIVERY = "delivery"        
-    MINIVAN = "minivan"        
+    NOT_CONNECTED = "not_connected"            
 
 
 @dataclass

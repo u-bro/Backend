@@ -1,5 +1,5 @@
 from typing import Any, Dict
-from fastapi import HTTPException, WebSocket, Depends
+from fastapi import WebSocket, Depends
 from app.backend.routers.websocket_base import BaseWebsocketRouter
 from app.services.websocket_manager import manager
 from app.services.driver_tracker import driver_tracker, DriverStatus
@@ -8,22 +8,11 @@ from app.backend.deps import get_current_user_id_ws
 from app.db import async_session_maker
 from app.crud.driver_profile import driver_profile_crud
 from app.services.matching_engine import matching_engine
-from datetime import datetime
-from app.schemas.matching import LocationUpdate, DriverStatusUpdate
 
-PREFIX = '/ws-matching'
 
 class MatchingWebsocketRouter(BaseWebsocketRouter):
     def setup_routes(self) -> None:
-        self.router.add_api_websocket_route(f"{PREFIX}", self.websocket_endpoint)
-
-        self.router.add_api_route(f"{PREFIX}/stats", self.get_websocket_stats, methods=["GET"])
-        self.router.add_api_route(f"{PREFIX}/notify/{{user_id}}", self.send_notification, methods=["POST"])
-        self.router.add_api_route(f"{PREFIX}/broadcast", self.broadcast_message, methods=["POST"])
-        self.router.add_api_route(f"{PREFIX}/driver/{{user_id}}/location", self.update_driver_location, methods=["POST"])
-        self.router.add_api_route(f"{PREFIX}/driver/{{user_id}}/status", self.update_driver_status, methods=["POST"])
-        self.router.add_api_route(f"{PREFIX}/driver/{{user_id}}/state", self.get_driver_state, methods=["GET"])
-        self.router.add_api_route(f"{PREFIX}/drivers/stats", self.get_drivers_stats, methods=["GET"])
+        self.router.add_api_websocket_route("/ws", self.websocket_endpoint)
 
     def __init__(self) -> None:
         super().__init__()
@@ -84,100 +73,5 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         state = driver_tracker.set_status_by_user(user_id, DriverStatus.OFFLINE)
         if state:
             await websocket.send_json({"type": "status_changed", "status": "offline"})
-
-    async def get_websocket_stats(self) -> Dict[str, Any]:
-        return {"online_users": manager.get_online_users(), "total_connections": manager.get_connection_count(), "active_rides": list(manager.ride_participants.keys())}
-
-    async def send_notification(self, user_id: int, message: Dict[str, Any]) -> Dict[str, Any]:
-        if not manager.is_connected(user_id):
-            raise HTTPException(status_code=404, detail="User not connected")
-
-        await manager.send_personal_message(
-            user_id,
-            {
-                "type": "notification",
-                **message,
-            },
-        )
-
-        return {"status": "sent", "user_id": user_id}
-
-    async def broadcast_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
-        await manager.broadcast({"type": "broadcast", **message})
-        return {"status": "broadcasted", "recipients": manager.get_connection_count()}
-
-    async def update_driver_location(self, user_id: int, location: LocationUpdate) -> Dict[str, Any]:
-        state = driver_tracker.update_location_by_user_id(
-            user_id=user_id,
-            latitude=location.latitude,
-            longitude=location.longitude,
-            heading=location.heading,
-            speed=location.speed,
-            accuracy_m=location.accuracy_m,
-        )
-
-        if not state:
-            raise HTTPException(status_code=404, detail="Driver not registered in tracker")
-
-        return {"status": "updated", "driver_status": state.status.value, "location": {"lat": state.latitude, "lng": state.longitude}}
-
-    async def update_driver_status(self, user_id: int, status_update: DriverStatusUpdate) -> Dict[str, Any]:
-        try:
-            status = DriverStatus(status_update.status.lower())
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid status. Allowed: {[s.value for s in DriverStatus]}",
-            )
-
-        state = driver_tracker.set_status_by_user(user_id, status)
-
-        if not state:
-            raise HTTPException(status_code=404, detail="Driver not registered in tracker")
-
-        return {"status": "updated", "driver_status": state.status.value}
-
-    async def get_driver_state(self, user_id: int) -> Dict[str, Any]:
-        state = driver_tracker.get_driver_by_user(user_id)
-
-        if not state:
-            raise HTTPException(status_code=404, detail="Driver not found in tracker")
-
-        return {
-            "driver_profile_id": state.driver_profile_id,
-            "user_id": state.user_id,
-            "status": state.status.value,
-            "is_available": state.is_available(),
-            "location": {
-                "lat": state.latitude,
-                "lng": state.longitude,
-                "heading": state.heading,
-                "speed": state.speed,
-            }
-            if state.latitude
-            else None,
-            "current_ride_id": state.current_ride_id,
-            "classes_allowed": list(state.classes_allowed),
-            "rating": state.rating,
-            "updated_at": state.updated_at.isoformat(),
-        }
-
-    async def get_drivers_stats(self) -> Dict[str, Any]:
-        return {**driver_tracker.get_stats(), "ws_connections": manager.get_connection_count()}
-
-    def _ride_schema_to_dict(self, ride_schema):
-        ride_dict = ride_schema.model_dump()
-        def convert_datetimes(value: Any) -> Any:
-            if isinstance(value, datetime):
-                return value.isoformat()
-            if isinstance(value, dict):
-                return {k: convert_datetimes(v) for k, v in value.items()}
-            if isinstance(value, list):
-                return [convert_datetimes(v) for v in value]
-            if isinstance(value, tuple):
-                return tuple(convert_datetimes(v) for v in value)
-            return value
-
-        return convert_datetimes(ride_dict)
 
 matching_ws_router = MatchingWebsocketRouter().router

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 from .base import BaseSchema
 
 
@@ -48,4 +48,5 @@ class LocationUpdate(BaseSchema):
 
 
 class DriverStatusUpdate(BaseSchema):
-    status: str 
+    status: Literal["online", "offline", "busy", "not_connected"]
+
