@@ -3,7 +3,7 @@ from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_profile import driver_profile_crud
 from app.crud.ride import ride_crud
-from app.services.driver_tracker import driver_tracker, DriverStatus
+from app.services.driver_tracker import DriverState, driver_tracker, DriverStatus
 from app.services.matching_engine import matching_engine
 from app.services.websocket_manager import manager
 from app.backend.deps import get_current_driver_profile_id, get_current_user_id
@@ -70,28 +70,12 @@ class MatchingHttpRouter(BaseRouter):
             raise HTTPException(status_code=404, detail="Driver not registered in tracker")
         return {"status": "updated", "driver_status": state.status.value}
 
-    async def get_driver_state(self, user_id: int) -> Dict[str, Any]:
+    async def get_driver_state(self, user_id: int) -> DriverState:
         state = driver_tracker.get_driver_by_user(user_id)
-
         if not state:
             raise HTTPException(status_code=404, detail="Driver not found in tracker")
 
-        return {
-            "driver_profile_id": state.driver_profile_id,
-            "user_id": state.user_id,
-            "status": state.status.value,
-            "is_available": state.is_available(),
-            "location": {
-                "lat": state.latitude,
-                "lng": state.longitude,
-                "heading": state.heading,
-                "speed": state.speed,
-            },
-            "current_ride_id": state.current_ride_id,
-            "classes_allowed": list(state.classes_allowed),
-            "rating": state.rating,
-            "updated_at": state.updated_at.isoformat(),
-        }
+        return state
 
     async def get_drivers_stats(self) -> Dict[str, Any]:
         return {**driver_tracker.get_stats(), "ws_connections": manager.get_connection_count()}

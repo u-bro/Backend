@@ -23,9 +23,6 @@ class DriverState:
     status: DriverStatus = DriverStatus.OFFLINE
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    heading: Optional[float] = None  
-    speed: Optional[float] = None   
-    accuracy_m: Optional[int] = None
     classes_allowed: Set[str] = field(default_factory=set)
     current_ride_id: Optional[int] = None
     rating: float = 5.0
@@ -82,10 +79,7 @@ class DriverTracker:
         self,
         driver_profile_id: int,
         latitude: float,
-        longitude: float,
-        heading: Optional[float] = None,
-        speed: Optional[float] = None,
-        accuracy_m: Optional[int] = None
+        longitude: float
     ) -> Optional[DriverState]:
         if driver_profile_id not in self._drivers:
             logger.warning(f"Driver {driver_profile_id} not registered")
@@ -94,9 +88,6 @@ class DriverTracker:
         state = self._drivers[driver_profile_id]
         state.latitude = latitude
         state.longitude = longitude
-        state.heading = heading
-        state.speed = speed
-        state.accuracy_m = accuracy_m
         state.updated_at = datetime.utcnow()
         
         return state

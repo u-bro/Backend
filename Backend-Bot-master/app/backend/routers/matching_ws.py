@@ -54,11 +54,9 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         user_id = context["user_id"]
         lat = data.get("lat") or data.get("latitude")
         lng = data.get("lng") or data.get("longitude")
-        heading = data.get("heading")
-        speed = data.get("speed")
 
         if lat and lng:
-            state = driver_tracker.update_location_by_user_id(user_id=user_id, latitude=float(lat), longitude=float(lng), heading=heading, speed=speed)
+            state = driver_tracker.update_location_by_user_id(user_id=user_id, latitude=float(lat), longitude=float(lng))
             if state:
                 await websocket.send_json({"type": "location_ack", "status": state.status.value})
 
