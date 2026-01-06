@@ -29,13 +29,6 @@ class RideFeedItem(BaseSchema):
     eta_minutes: Optional[float]
 
 
-class DriverRegistration(BaseSchema):
-    driver_profile_id: int
-    user_id: int
-    classes_allowed: List[str]
-    rating: float = 5.0
-
-
 class FindDriversRequest(BaseSchema):
     ride_id: int
     ride_class: str = "economy"

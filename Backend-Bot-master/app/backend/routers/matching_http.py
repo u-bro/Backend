@@ -5,8 +5,7 @@ from app.crud.driver_profile import driver_profile_crud
 from app.crud.ride import ride_crud
 from app.services.driver_tracker import driver_tracker
 from app.services.matching_engine import matching_engine
-from app.schemas.matching import DriverRegistration
-from app.backend.deps import get_current_driver_profile_id
+from app.backend.deps import get_current_driver_profile_id, get_current_user_id
 
 
 class MatchingHttpRouter(BaseRouter):
@@ -18,16 +17,16 @@ class MatchingHttpRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/feed", self.get_ride_feed, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/stats", self.get_matching_stats, methods=["GET"], status_code=200)
 
-    async def register_driver(self, request: Request, data: DriverRegistration) -> Dict[str, Any]:
-        profile = await driver_profile_crud.get_by_id(request.state.session, data.driver_profile_id)
+    async def register_driver(self, request: Request, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
+        profile = await driver_profile_crud.get_by_user_id(request.state.session, user_id)
         if not profile:
             raise HTTPException(status_code=404, detail="Driver profile not found")
 
         state = driver_tracker.register_driver(
-            driver_profile_id=data.driver_profile_id,
-            user_id=data.user_id,
-            classes_allowed=data.classes_allowed,
-            rating=data.rating,
+            driver_profile_id=profile.id,
+            user_id=user_id,
+            classes_allowed=profile.classes_allowed,
+            rating=profile.rating_avg,
         )
 
         return {"status": "registered", "driver_profile_id": state.driver_profile_id, "classes_allowed": list(state.classes_allowed)}
@@ -35,7 +34,7 @@ class MatchingHttpRouter(BaseRouter):
     async def get_ride_feed(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id), limit: int = Query(20, ge=1, le=100)) -> Dict[str, Any]:
         driver = driver_tracker.get_driver(driver_profile_id)
         if not driver:
-            return {"driver_profile_id": driver_profile_id, "driver_status": "offline", "count": 0, "rides": []}
+            return {"driver_profile_id": driver_profile_id, "driver_status": "not_connected", "count": 0, "rides": []}
         
         pending_rides = await ride_crud.get_requested_rides(request.state.session, limit=limit * 2)
         rides_dict = [r.model_dump() for r in pending_rides]
