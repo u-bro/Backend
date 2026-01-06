@@ -47,13 +47,7 @@ class DriverTracker:
         self._user_to_driver: Dict[int, int] = {}
         self._class_index: Dict[str, Set[int]] = {}
     
-    def register_driver(
-        self,
-        driver_profile_id: int,
-        user_id: int,
-        classes_allowed: List[str],
-        rating: float = 5.0
-    ) -> DriverState:
+    def register_driver(self, driver_profile_id: int, user_id: int, classes_allowed: List[str], rating: float = 5.0) -> DriverState:
         classes_set = {c.lower() for c in classes_allowed}
         
         if driver_profile_id in self._drivers:
@@ -75,12 +69,7 @@ class DriverTracker:
         logger.info(f"Driver {driver_profile_id} registered with classes: {classes_set}")
         return state
     
-    def update_location(
-        self,
-        driver_profile_id: int,
-        latitude: float,
-        longitude: float
-    ) -> Optional[DriverState]:
+    def update_location(self, driver_profile_id: int, latitude: float, longitude: float) -> Optional[DriverState]:
         if driver_profile_id not in self._drivers:
             logger.warning(f"Driver {driver_profile_id} not registered")
             return None
@@ -92,23 +81,13 @@ class DriverTracker:
         
         return state
     
-    def update_location_by_user_id(
-        self,
-        user_id: int,
-        latitude: float,
-        longitude: float,
-        **kwargs
-    ) -> Optional[DriverState]:
+    def update_location_by_user_id(self, user_id: int, latitude: float, longitude: float, **kwargs) -> Optional[DriverState]:
         driver_id = self._user_to_driver.get(user_id)
         if driver_id:
             return self.update_location(driver_id, latitude, longitude, **kwargs)
         return None
     
-    def set_status(
-        self,
-        driver_profile_id: int,
-        status: DriverStatus
-    ) -> Optional[DriverState]:
+    def set_status(self, driver_profile_id: int, status: DriverStatus) -> Optional[DriverState]:
         if driver_profile_id not in self._drivers:
             return None
         
@@ -160,14 +139,7 @@ class DriverTracker:
             return self._drivers.get(driver_id)
         return None
     
-    def get_available_drivers(
-        self,
-        ride_class: Optional[str] = None,
-        center_lat: Optional[float] = None,
-        center_lng: Optional[float] = None,
-        radius_km: float = 10.0,
-        limit: int = 50
-    ) -> List[DriverState]:
+    def get_available_drivers(self, ride_class: Optional[str] = None, center_lat: Optional[float] = None, center_lng: Optional[float] = None, radius_km: float = 10.0, limit: int = 50) -> List[DriverState]:
         candidates = []
         
         if ride_class:
