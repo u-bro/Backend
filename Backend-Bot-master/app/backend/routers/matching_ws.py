@@ -6,34 +6,29 @@ from app.services.driver_tracker import driver_tracker, DriverStatus
 from app.logger import logger
 from app.backend.deps import get_current_user_id_ws
 from app.db import async_session_maker
-from app.crud.ride import ride_crud
-from app.schemas.ride import RideSchemaCreate
 from app.crud.driver_profile import driver_profile_crud
 from app.services.matching_engine import matching_engine
 from datetime import datetime
 from app.schemas.matching import LocationUpdate, DriverStatusUpdate
 
+PREFIX = '/ws-matching'
 
 class MatchingWebsocketRouter(BaseWebsocketRouter):
     def setup_routes(self) -> None:
-        self.router.add_api_websocket_route("/ws-matching", self.websocket_endpoint)
+        self.router.add_api_websocket_route(f"{PREFIX}", self.websocket_endpoint)
 
-        self.router.add_api_route("/ws/stats", self.get_websocket_stats, methods=["GET"])
-        self.router.add_api_route("/ws/notify/{user_id}", self.send_notification, methods=["POST"])
-        self.router.add_api_route("/ws/broadcast", self.broadcast_message, methods=["POST"])
-        self.router.add_api_route("/ws/driver/{user_id}/location", self.update_driver_location, methods=["POST"])
-        self.router.add_api_route("/ws/driver/{user_id}/status", self.update_driver_status, methods=["POST"])
-        self.router.add_api_route("/ws/driver/{user_id}/state", self.get_driver_state, methods=["GET"])
-        self.router.add_api_route("/ws/drivers/stats", self.get_drivers_stats, methods=["GET"])
+        self.router.add_api_route(f"{PREFIX}/stats", self.get_websocket_stats, methods=["GET"])
+        self.router.add_api_route(f"{PREFIX}/notify/{{user_id}}", self.send_notification, methods=["POST"])
+        self.router.add_api_route(f"{PREFIX}/broadcast", self.broadcast_message, methods=["POST"])
+        self.router.add_api_route(f"{PREFIX}/driver/{{user_id}}/location", self.update_driver_location, methods=["POST"])
+        self.router.add_api_route(f"{PREFIX}/driver/{{user_id}}/status", self.update_driver_status, methods=["POST"])
+        self.router.add_api_route(f"{PREFIX}/driver/{{user_id}}/state", self.get_driver_state, methods=["GET"])
+        self.router.add_api_route(f"{PREFIX}/drivers/stats", self.get_drivers_stats, methods=["GET"])
 
     def __init__(self) -> None:
         super().__init__()
 
         self.register_handler("ping", self.handle_ping)
-        self.register_handler("create_ride", self.handle_create_ride)
-        self.register_handler("accept_ride", self.handle_accept_ride)
-        self.register_handler("update_ride_status", self.handle_update_ride_status)
-        self.register_handler("finish_ride", self.handle_finish_ride)
         self.register_handler("location_update", self.handle_location_update)
         self.register_handler("go_online", self.handle_go_online)
         self.register_handler("go_offline", self.handle_go_offline)
@@ -66,53 +61,6 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
     async def handle_ping(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         await websocket.send_json({"type": "pong"})
 
-    async def handle_create_ride(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
-        session = context["session"]
-        user_id = context["user_id"]
-        ride_details = data.get("details", {})
-        create_obj = RideSchemaCreate(client_id=user_id, **ride_details)
-        ride_schema = await ride_crud.create(session, create_obj)
-        await session.commit()
-
-        ride_dict = self._ride_schema_to_dict(ride_schema)
-        await matching_engine.send_to_suitable_drivers(ride_dict)
-
-        await websocket.send_json({"type": "ride_created", "message": ride_dict})
-
-    async def handle_accept_ride(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
-        session = context["session"]
-        user_id = context["user_id"]
-        ride_id = data.get("ride_id", 0)
-
-        ride_schema = await matching_engine.accept_ride(session, ride_id, user_id)
-        ride_dict = self._ride_schema_to_dict(ride_schema)
-
-        await websocket.send_json({"type": "ride_accepted", "details": ride_dict})
-        await manager.send_personal_message(ride_dict.get("client_id"), {"type": "ride_accepted", "details": ride_dict})
-
-    async def handle_update_ride_status(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
-        session = context["session"]
-        user_id = context["user_id"]
-        ride_id = data.get("ride_id", 0)
-        status = data.get("status")
-
-        ride_schema = await matching_engine.update_ride_status(session, ride_id, user_id, status)
-        ride_dict = self._ride_schema_to_dict(ride_schema)
-
-        await websocket.send_json({"type": "ride_status_changed", "details": ride_dict})
-        await manager.send_personal_message(ride_dict.get("client_id"), {"type": "ride_status_changed", "details": ride_dict})
-
-    async def handle_finish_ride(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
-        session = context["session"]
-        user_id = context["user_id"]
-        ride_id = data.get("ride_id", 0)
-        actual_fare = data.get("actual_fare")
-        ride_schema = await matching_engine.finish_ride(session, ride_id, user_id, actual_fare)
-        ride_dict = self._ride_schema_to_dict(ride_schema)
-        await websocket.send_json({"type": "ride_status_changed", "details": ride_dict})
-        await manager.send_personal_message(ride_dict.get("client_id"), {"type": "ride_status_changed", "details": ride_dict})
-
-
     async def handle_location_update(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         user_id = context["user_id"]
         lat = data.get("lat") or data.get("latitude")
@@ -124,7 +72,6 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
             state = driver_tracker.update_location_by_user_id(user_id=user_id, latitude=float(lat), longitude=float(lng), heading=heading, speed=speed)
             if state:
                 await websocket.send_json({"type": "location_ack", "status": state.status.value})
-
 
     async def handle_go_online(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         user_id = int(context["user_id"])
