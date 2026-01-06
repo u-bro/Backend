@@ -50,7 +50,11 @@ class RideRouter(BaseRouter):
         return await super().delete(request, id)
 
     async def update_by_client(self, request: Request, id: int, update_obj: RideSchemaUpdateByClient, user_id: int = Depends(get_current_user_id)) -> RideSchema:
-        return await self.model_crud.update(request.state.session, id, update_obj, user_id)
+        ride = await self.model_crud.update(request.state.session, id, update_obj, user_id)
+        if update_obj.status == 'canceled':
+            ride = await ride_crud.get_by_id(request.state.session, id)
+            driver_tracker.release_ride(ride.driver_profile_id)
+        return ride
 
     async def accept_ride(self, request: Request, id: int, update_obj: RideSchemaAcceptByDriver, driver_profile_id: int = Depends(get_current_driver_profile_id), user_id: int = Depends(get_current_user_id)) -> RideSchema:
         update_obj = RideSchemaAcceptByDriver(driver_profile_id=driver_profile_id, **update_obj.model_dump(exclude={"driver_profile_id"}),)
@@ -65,7 +69,11 @@ class RideRouter(BaseRouter):
         raise HTTPException(status_code=409, detail="Ride already accepted")
 
     async def update_by_driver(self, request: Request, id: int, update_obj: RideSchemaUpdateByDriver, user_id: int = Depends(get_current_user_id)) -> RideSchema:
-        return await self.model_crud.update(request.state.session, id, update_obj, user_id)
+        ride = await self.model_crud.update(request.state.session, id, update_obj, user_id)
+        if update_obj.status == 'canceled':
+            ride = await ride_crud.get_by_id(request.state.session, id)
+            driver_tracker.release_ride(ride.driver_profile_id)
+        return ride
 
     async def finish_ride_by_driver(self, request: Request, id: int, update_obj: RideSchemaFinishByDriver, ride: Ride = Depends(require_driver_profile(Ride)), user_id: int = Depends(get_current_user_id)) -> RideSchema:
         # key = f"receipts/rides/{id}/receipt.pdf"
