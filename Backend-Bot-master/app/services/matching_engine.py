@@ -1,14 +1,11 @@
 from typing import Any, List, Optional, Set
-from app.logger import logger
 from app.services.websocket_manager import manager
 from app.schemas.driver_profile import DriverProfileSchema
 from app.services.driver_tracker import driver_tracker
-
+from app.config import MAX_DISTANCE_KM
 
 class MatchingEngine:
-
     AVG_CITY_SPEED_KMH = 30
-    MAX_DISTANCE_KM = 5.0
     
     def __init__(self):
         self.tracker = driver_tracker
@@ -52,7 +49,7 @@ class MatchingEngine:
                 driver.latitude, driver.longitude,
                 float(pickup_lat), float(pickup_lng)
             )
-            if distance > self.MAX_DISTANCE_KM:
+            if distance > MAX_DISTANCE_KM:
                 continue
 
             ride_with_distance = {
@@ -92,7 +89,7 @@ class MatchingEngine:
                 float(state.latitude),
                 float(state.longitude),
             )
-            if distance_km > self.MAX_DISTANCE_KM:
+            if distance_km > MAX_DISTANCE_KM:
                 return False
             
             return True

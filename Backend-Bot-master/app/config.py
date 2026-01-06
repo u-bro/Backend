@@ -25,6 +25,8 @@ DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{D
 TELEGRAM_OTP_BASE_URL = 'https://gatewayapi.telegram.org/'
 TELEGRAM_OTP_TOKEN = 'AAEDMAAATZrglNKgaX0kPyOE5krqBpx-M09H3bJM7Q-AdA'
 
+MAX_DISTANCE_KM = float(os.environ.get('MAX_DISTANCE_KM', 5.0))
+
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'test-secret-key'
 JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM') or 'HS256'
 JWT_EXPIRATION_MINTUES = int(os.environ.get('JWT_EXPIRATION_MINTUES', 15))
