@@ -16,5 +16,5 @@ class DriverRating(models.Model):
     comment = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(null=True, blank=True)
 
-    def __str__(self) -> str:  # type: ignore[override]
+    def __str__(self) -> str:  
         return f"Rating {self.rate} for driver {self.driver_profile_id}"

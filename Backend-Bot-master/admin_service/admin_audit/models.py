@@ -11,7 +11,7 @@ class AdminAuditLog(models.Model):
     id = models.AutoField(primary_key=True)
     admin_user_id = models.IntegerField()
     action = models.CharField(max_length=100)
-    target_type = models.CharField(max_length=50)  # user, driver, tariff, etc.
+    target_type = models.CharField(max_length=50)  
     target_id = models.IntegerField()
     old_values = models.JSONField(null=True, blank=True)
     new_values = models.JSONField(null=True, blank=True)
@@ -19,5 +19,5 @@ class AdminAuditLog(models.Model):
     user_agent = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self) -> str:  # type: ignore[override]
+    def __str__(self) -> str:  
         return f"{self.action} on {self.target_type} {self.target_id} by admin {self.admin_user_id}"

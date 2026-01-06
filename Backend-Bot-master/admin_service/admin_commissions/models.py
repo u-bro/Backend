@@ -17,5 +17,5 @@ class Commission(models.Model):
     valid_to = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(null=True, blank=True)
 
-    def __str__(self) -> str:  # type: ignore[override]
+    def __str__(self) -> str: 
         return self.name or f"Commission {self.id}"

@@ -10,11 +10,11 @@ class TransactionAdmin(admin.ModelAdmin):
     list_filter = ("is_withdraw", "created_at")
     search_fields = ("user_id",)
 
-    def has_add_permission(self, request):  # type: ignore[override]
+    def has_add_permission(self, request):  
         return False
 
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
+    def has_change_permission(self, request, obj=None):  
         return False
 
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
+    def has_delete_permission(self, request, obj=None):  
         return False

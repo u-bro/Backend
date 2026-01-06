@@ -17,5 +17,5 @@ class DriverDocument(models.Model):
     reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(null=True, blank=True)
 
-    def __str__(self) -> str:  # type: ignore[override]
+    def __str__(self) -> str:  
         return f"{self.doc_type} for driver {self.driver_profile_id}"

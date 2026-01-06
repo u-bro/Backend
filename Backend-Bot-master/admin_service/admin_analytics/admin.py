@@ -33,16 +33,15 @@ class RideAnomalyAdmin(admin.ModelAdmin):
             readonly.extend(['expected_fare', 'actual_fare', 'difference', 'difference_percentage', 'anomaly_type', 'severity', 'notes'])
         return readonly
 
-    def has_add_permission(self, request):  # type: ignore[override]
+    def has_add_permission(self, request): 
         return True
 
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
-        return True  # Allow review actions
-
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
+    def has_change_permission(self, request, obj=None):  
+        return True 
+    def has_delete_permission(self, request, obj=None):  
         return True
 
-    def mark_as_reviewed(self, request, queryset):  # type: ignore[override]
+    def mark_as_reviewed(self, request, queryset):  
         """Mark anomalies as reviewed"""
         count = 0
         for anomaly in queryset:
@@ -51,12 +50,10 @@ class RideAnomalyAdmin(admin.ModelAdmin):
                 AuditLogger.log_anomaly_review(request.user.id, anomaly.id)
         self.message_user(request, f"Marked {count} anomalies as reviewed", messages.SUCCESS)
 
-    def assign_to_me(self, request, queryset):  # type: ignore[override]
+    def assign_to_me(self, request, queryset):  
         """Assign anomalies to current admin"""
         count = 0
         for anomaly in queryset:
-            # This would be implemented in FastAPI
-            # For now, just mark as reviewed
             if api_client.review_anomaly(anomaly.id, request.user.id):
                 count += 1
                 AuditLogger.log_anomaly_review(request.user.id, anomaly.id)

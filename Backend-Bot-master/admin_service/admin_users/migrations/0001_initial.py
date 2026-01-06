@@ -4,7 +4,6 @@ from django.utils import timezone
 
 
 def create_admin(apps, schema_editor):
-    # Create or update a superuser and ensure 'Admin' group exists
     from django.contrib.auth import get_user_model
     from django.contrib.auth.models import Group
 
@@ -33,7 +32,6 @@ def create_admin(apps, schema_editor):
                 user.save()
                 print(f'Created admin user: {first_name} (no password set). Run `manage.py changepassword {first_name}` to set a password.')
         else:
-            # If user exists and ADMIN_PASSWORD provided, reset it
             if password:
                 user.set_password(password)
                 user.last_login = timezone.now()
@@ -44,7 +42,6 @@ def create_admin(apps, schema_editor):
                 user.save()
                 print(f'Admin user {first_name} already exists')
 
-        # Ensure Admin group exists and assign
         admin_group, _ = Group.objects.get_or_create(name='Admin')
         user.groups.add(admin_group)
         print(f'User {first_name} added to Admin group')
@@ -52,7 +49,6 @@ def create_admin(apps, schema_editor):
 
 
 def noop_reverse(apps, schema_editor):
-    # Do not remove admin on reverse
     return
 
 

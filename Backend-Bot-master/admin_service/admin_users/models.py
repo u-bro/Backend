@@ -17,7 +17,7 @@ class User(models.Model):
     is_active = models.BooleanField(default=True)
     role_id = models.IntegerField(null=True, blank=True)
 
-    def __str__(self) -> str:  # type: ignore[override]
+    def __str__(self) -> str: 
         if self.phone:
             return f"{self.phone}"
         return str(self.id)

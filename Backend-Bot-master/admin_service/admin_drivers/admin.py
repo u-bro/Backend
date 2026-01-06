@@ -24,8 +24,6 @@ class DriverProfileAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    # Only include real model fields in list_editable (exclude admin methods like `user_is_active`)
-    # Compute membership directly to avoid referencing an intermediate name that could be undefined
     list_editable = tuple(
         [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'qualification_level', 'classes_allowed']]
     )
@@ -41,17 +39,16 @@ class DriverProfileAdmin(admin.ModelAdmin):
             readonly.extend(['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'qualification_level', 'classes_allowed'])
         return readonly
 
-    def has_add_permission(self, request):  # type: ignore[override]
+    def has_add_permission(self, request): 
         return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
 
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
+    def has_change_permission(self, request, obj=None):  
         return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
 
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
+    def has_delete_permission(self, request, obj=None):  
         return request.user.groups.filter(name='Admin').exists()
 
-    def user_is_active(self, obj):  # type: ignore[override]
-        """Show user active status"""
+    def user_is_active(self, obj):  
         try:
             from admin_users.models import User
             user = User.objects.filter(id=obj.user_id).first()
@@ -60,8 +57,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
             return "Unknown"
     user_is_active.short_description = "User Status"
 
-    def approve_drivers(self, request, queryset):  # type: ignore[override]
-        """Mass approve drivers"""
+    def approve_drivers(self, request, queryset):  
         if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
             self.message_user(request, "No permission", messages.ERROR)
             return
@@ -75,8 +71,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f"Approved {count} drivers", messages.SUCCESS)
 
-    def reject_drivers(self, request, queryset):  # type: ignore[override]
-        """Mass reject drivers"""
+    def reject_drivers(self, request, queryset):  
         if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
             self.message_user(request, "No permission", messages.ERROR)
             return
@@ -90,8 +85,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f"Rejected {count} drivers", messages.SUCCESS)
 
-    def block_drivers(self, request, queryset):  # type: ignore[override]
-        """Block drivers"""
+    def block_drivers(self, request, queryset):  
         if not request.user.groups.filter(name='Admin').exists():
             self.message_user(request, "Only Admin can block drivers", messages.ERROR)
             return
@@ -106,8 +100,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
                 count += 1
         self.message_user(request, f"Blocked {count} drivers", messages.SUCCESS)
 
-    def unblock_drivers(self, request, queryset):  # type: ignore[override]
-        """Unblock drivers"""
+    def unblock_drivers(self, request, queryset): 
         if not request.user.groups.filter(name='Admin').exists():
             self.message_user(request, "Only Admin can unblock drivers", messages.ERROR)
             return

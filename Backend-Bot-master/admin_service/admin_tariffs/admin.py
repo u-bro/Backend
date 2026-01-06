@@ -32,5 +32,5 @@ class TariffPlanAdmin(admin.ModelAdmin):
 
     readonly_fields = ('id', 'created_at', 'updated_at')
 
-    def has_add_permission(self, request):  # type: ignore[override]
+    def has_add_permission(self, request):  
         return False

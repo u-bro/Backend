@@ -6,14 +6,12 @@ logger = logging.getLogger(__name__)
 
 
 class FastAPIClient:
-    """Client for FastAPI backend communication"""
     
     def __init__(self, base_url: str = "http://fastapi_app:5000"):
         self.base_url = base_url
         self.timeout = 10
 
     def _make_request(self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None) -> requests.Response:
-        """Make HTTP request to FastAPI"""
         url = f"{self.base_url}{endpoint}"
         try:
             response = requests.request(method, url, json=data, timeout=self.timeout)
@@ -26,7 +24,6 @@ class FastAPIClient:
             raise
 
     def approve_driver(self, driver_id: int, approved: bool, admin_user_id: int) -> bool:
-        """Approve or reject driver"""
         try:
             response = self._make_request(
                 "PUT",
@@ -38,7 +35,6 @@ class FastAPIClient:
             return False
 
     def update_user(self, user_id: int, data: Dict[str, Any]) -> bool:
-        """Update user directly via DB (temporary solution)"""
         try:
             from admin_users.models import User
             
@@ -55,7 +51,6 @@ class FastAPIClient:
             return False
 
     def update_ride(self, ride_id: int, data: Dict[str, Any]) -> bool:
-        """Update ride directly via DB (temporary solution)"""
         try:
             from admin_rides.models import Ride
             
@@ -72,21 +67,18 @@ class FastAPIClient:
             return False
 
     def cancel_ride(self, ride_id: int, reason: str) -> bool:
-        """Cancel ride"""
         return self.update_ride(ride_id, {
             "status": "canceled",
             "cancellation_reason": reason
         })
 
     def assign_driver(self, ride_id: int, driver_id: int) -> bool:
-        """Assign driver to ride"""
         return self.update_ride(ride_id, {
             "driver_profile_id": driver_id,
             "status": "assigned"
         })
 
     def get_available_drivers(self, filters: Dict[str, Any] = None) -> Optional[Dict[str, Any]]:
-        """Get available drivers for assignment"""
         try:
             from admin_drivers.models import DriverProfile
             
@@ -113,7 +105,6 @@ class FastAPIClient:
             return None
 
     def review_anomaly(self, anomaly_id: int, admin_user_id: int) -> bool:
-        """Mark anomaly as reviewed via FastAPI backend."""
         try:
             response = self._make_request(
                 "POST",
@@ -126,5 +117,4 @@ class FastAPIClient:
             return False
 
 
-# Global instance
 api_client = FastAPIClient()

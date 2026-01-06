@@ -7,11 +7,9 @@ class Command(BaseCommand):
     help = 'Create admin roles and permissions'
 
     def handle(self, *args, **options):
-        # Создаем группы
         admin_group, created = Group.objects.get_or_create(name='Admin')
         operator_group, created = Group.objects.get_or_create(name='Operator')
 
-        # Получаем все permissions для наших моделей
         content_types = ContentType.objects.filter(
             app_label__in=[
                 'admin_users', 'admin_drivers', 'admin_tariffs', 'admin_rides',
@@ -22,10 +20,8 @@ class Command(BaseCommand):
         
         all_permissions = Permission.objects.filter(content_type__in=content_types)
 
-        # Admin получает все права
         admin_group.permissions.set(all_permissions)
 
-        # Operator получает только view права + некоторые change
         view_permissions = all_permissions.filter(codename__startswith='view_')
         change_permissions = all_permissions.filter(
             codename__in=[

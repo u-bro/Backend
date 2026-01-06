@@ -39,5 +39,5 @@ class Ride(models.Model):
     updated_at = models.DateTimeField(null=True, blank=True)
     tariff_plan_id = models.IntegerField()
 
-    def __str__(self) -> str:  # type: ignore[override]
+    def __str__(self) -> str:  
         return f"Ride {self.id}"

@@ -16,13 +16,12 @@ class AdminAuditLogAdmin(admin.ModelAdmin):
     list_editable = tuple([f for f in list_display if f != 'id'])
     list_filter = ("action", "target_type", "created_at")
     search_fields = ("action", "target_type")
-    # Allow editing of audit records via admin (if needed)
 
-    def has_add_permission(self, request):  # type: ignore[override]
+    def has_add_permission(self, request): 
         return False
 
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
+    def has_change_permission(self, request, obj=None):  
         return False
 
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
+    def has_delete_permission(self, request, obj=None): 
         return False
