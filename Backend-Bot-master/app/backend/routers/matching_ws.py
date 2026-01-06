@@ -1,6 +1,5 @@
-from typing import Any, Dict, Optional
-from fastapi import HTTPException, Query, WebSocket, Depends
-from pydantic import BaseModel
+from typing import Any, Dict
+from fastapi import HTTPException, WebSocket, Depends
 from app.backend.routers.websocket_base import BaseWebsocketRouter
 from app.services.websocket_manager import manager
 from app.services.driver_tracker import driver_tracker, DriverStatus
@@ -12,23 +11,12 @@ from app.schemas.ride import RideSchemaCreate
 from app.crud.driver_profile import driver_profile_crud
 from app.services.matching_engine import matching_engine
 from datetime import datetime
-
-
-class LocationUpdate(BaseModel):
-    latitude: float
-    longitude: float
-    heading: Optional[float] = None
-    speed: Optional[float] = None
-    accuracy_m: Optional[int] = None
-
-
-class DriverStatusUpdate(BaseModel):
-    status: str 
+from app.schemas.matching import LocationUpdate, DriverStatusUpdate
 
 
 class MatchingWebsocketRouter(BaseWebsocketRouter):
     def setup_routes(self) -> None:
-        self.router.add_api_websocket_route("/ws", self.websocket_endpoint)
+        self.router.add_api_websocket_route("/matching", self.websocket_endpoint)
 
         self.router.add_api_route("/ws/stats", self.get_websocket_stats, methods=["GET"])
         self.router.add_api_route("/ws/notify/{user_id}", self.send_notification, methods=["POST"])
@@ -49,7 +37,6 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         self.register_handler("location_update", self.handle_location_update)
         self.register_handler("go_online", self.handle_go_online)
         self.register_handler("go_offline", self.handle_go_offline)
-        self.register_handler("pause", self.handle_pause)
 
     async def websocket_endpoint(self, websocket: WebSocket, user_id: int = Depends(get_current_user_id_ws)) -> None:
         async with async_session_maker() as session:
@@ -64,13 +51,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
 
         await manager.connect(websocket, int(user_id))
 
-        await websocket.send_json(
-            {
-                "type": "connected",
-                "user_id": user_id,
-                "message": "WebSocket connection established",
-            }
-        )
+        await websocket.send_json({"type": "connected", "user_id": user_id})
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = context["user_id"]
@@ -102,8 +83,10 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         session = context["session"]
         user_id = context["user_id"]
         ride_id = data.get("ride_id", 0)
+
         ride_schema = await matching_engine.accept_ride(session, ride_id, user_id)
         ride_dict = self._ride_schema_to_dict(ride_schema)
+
         await websocket.send_json({"type": "ride_accepted", "details": ride_dict})
         await manager.send_personal_message(ride_dict.get("client_id"), {"type": "ride_accepted", "details": ride_dict})
 
@@ -112,8 +95,10 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         user_id = context["user_id"]
         ride_id = data.get("ride_id", 0)
         status = data.get("status")
+
         ride_schema = await matching_engine.update_ride_status(session, ride_id, user_id, status)
         ride_dict = self._ride_schema_to_dict(ride_schema)
+
         await websocket.send_json({"type": "ride_status_changed", "details": ride_dict})
         await manager.send_personal_message(ride_dict.get("client_id"), {"type": "ride_status_changed", "details": ride_dict})
 
@@ -153,18 +138,8 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         if state:
             await websocket.send_json({"type": "status_changed", "status": "offline"})
 
-    async def handle_pause(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
-        user_id = int(context["user_id"])
-        state = driver_tracker.set_status_by_user(user_id, DriverStatus.PAUSED)
-        if state:
-            await websocket.send_json({"type": "status_changed", "status": "paused"})
-
     async def get_websocket_stats(self) -> Dict[str, Any]:
-        return {
-            "online_users": manager.get_online_users(),
-            "total_connections": manager.get_connection_count(),
-            "active_rides": list(manager.ride_participants.keys()),
-        }
+        return {"online_users": manager.get_online_users(), "total_connections": manager.get_connection_count(), "active_rides": list(manager.ride_participants.keys())}
 
     async def send_notification(self, user_id: int, message: Dict[str, Any]) -> Dict[str, Any]:
         if not manager.is_connected(user_id):
@@ -197,11 +172,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         if not state:
             raise HTTPException(status_code=404, detail="Driver not registered in tracker")
 
-        return {
-            "status": "updated",
-            "driver_status": state.status.value,
-            "location": {"lat": state.latitude, "lng": state.longitude},
-        }
+        return {"status": "updated", "driver_status": state.status.value, "location": {"lat": state.latitude, "lng": state.longitude}}
 
     async def update_driver_status(self, user_id: int, status_update: DriverStatusUpdate) -> Dict[str, Any]:
         try:
