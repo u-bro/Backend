@@ -18,11 +18,4 @@ class RideStatusHistoryAdmin(admin.ModelAdmin):
     list_filter = ("from_status", "to_status", "actor_role", "created_at")
     search_fields = ("reason",)
 
-    def has_add_permission(self, request):  # type: ignore[override]
-        return False
-
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
-        return False
-
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+    readonly_fields = ('id', 'created_at')

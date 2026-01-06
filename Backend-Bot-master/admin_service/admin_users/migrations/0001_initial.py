@@ -1,5 +1,6 @@
 from django.db import migrations, transaction
 import os
+from django.utils import timezone
 
 
 def create_admin(apps, schema_editor):
@@ -9,17 +10,17 @@ def create_admin(apps, schema_editor):
 
     User = get_user_model()
 
-    username = os.environ.get('ADMIN_USERNAME', 'admin')
-    email = os.environ.get('ADMIN_EMAIL', 'admin@example.com')
+    first_name = os.environ.get('ADMIN_USERNAME', 'admin')
     password = os.getenv('ADMIN_PASSWORD', 'NewStrongPass123')
 
     with transaction.atomic():
         user, created = User.objects.get_or_create(
-            username=username,
+            username=first_name,
             defaults={
-                'email': email,
+                'first_name': first_name,
                 'is_staff': True,
                 'is_superuser': True,
+                'last_login': timezone.now(),
             }
         )
 
@@ -27,23 +28,26 @@ def create_admin(apps, schema_editor):
             if password:
                 user.set_password(password)
                 user.save()
-                print(f'Created admin user: {username} (password set from ADMIN_PASSWORD env var)')
+                print(f'Created admin user: {first_name} (password set from ADMIN_PASSWORD env var)')
             else:
                 user.save()
-                print(f'Created admin user: {username} (no password set). Run `manage.py changepassword {username}` to set a password.')
+                print(f'Created admin user: {first_name} (no password set). Run `manage.py changepassword {first_name}` to set a password.')
         else:
             # If user exists and ADMIN_PASSWORD provided, reset it
             if password:
                 user.set_password(password)
+                user.last_login = timezone.now()
                 user.save()
-                print(f'Updated password for existing admin user: {username}')
+                print(f'Updated password for existing admin user: {first_name}')
             else:
-                print(f'Admin user {username} already exists')
+                user.last_login = timezone.now()
+                user.save()
+                print(f'Admin user {first_name} already exists')
 
         # Ensure Admin group exists and assign
         admin_group, _ = Group.objects.get_or_create(name='Admin')
         user.groups.add(admin_group)
-        print(f'User {username} added to Admin group')
+        print(f'User {first_name} added to Admin group')
         print('Login: http://localhost:8001/admin/')
 
 

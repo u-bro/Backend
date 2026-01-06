@@ -20,10 +20,18 @@ class RideAnomalyAdmin(admin.ModelAdmin):
         "is_reviewed",
         "created_at",
     )
-    list_editable = tuple([f for f in list_display if f != 'id'])
+    list_editable = tuple([f for f in list_display if f != 'id' and f not in ['expected_fare', 'actual_fare', 'difference', 'difference_percentage', 'anomaly_type', 'severity', 'notes']])
     list_filter = ("anomaly_type", "severity", "is_reviewed", "created_at")
     search_fields = ("notes",)
     actions = ["mark_as_reviewed", "assign_to_me"]
+
+    readonly_fields = ('id', 'created_at')
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(self.readonly_fields)
+        if obj and obj.is_reviewed:
+            readonly.extend(['expected_fare', 'actual_fare', 'difference', 'difference_percentage', 'anomaly_type', 'severity', 'notes'])
+        return readonly
 
     def has_add_permission(self, request):  # type: ignore[override]
         return True

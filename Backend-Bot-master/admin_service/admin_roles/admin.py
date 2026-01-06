@@ -10,11 +10,13 @@ class RoleAdmin(admin.ModelAdmin):
     list_filter = ("created_at", "updated_at")
     search_fields = ("code", "name", "description")
 
+    readonly_fields = ('id', 'created_at', 'updated_at')
+
     def has_add_permission(self, request):  # type: ignore[override]
         return False
 
     def has_change_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+        return request.user.groups.filter(name='Admin').exists()
 
     def has_delete_permission(self, request, obj=None):  # type: ignore[override]
         return False

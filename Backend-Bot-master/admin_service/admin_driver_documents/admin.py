@@ -18,11 +18,10 @@ class DriverDocumentAdmin(admin.ModelAdmin):
     list_filter = ("doc_type", "status", "created_at")
     search_fields = ("doc_type", "file_url")
 
-    def has_add_permission(self, request):  # type: ignore[override]
-        return False
+    readonly_fields = ('id', 'created_at')
 
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
-        return False
-
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(self.readonly_fields)
+        if obj and obj.status == 'approved':
+            readonly.extend(['doc_type', 'file_url'])
+        return readonly

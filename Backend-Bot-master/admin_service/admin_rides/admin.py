@@ -34,11 +34,19 @@ class RideAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_editable = tuple([f for f in list_display if f != 'id'])
+    list_editable = tuple([f for f in list_display if f != 'id' and f not in ['pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'distance_meters', 'duration_seconds', 'status', 'cancellation_reason']])
     list_filter = ("status", "is_anomaly", "created_at")
     search_fields = ("pickup_address", "dropoff_address")
     actions = ["cancel_rides", "mark_anomaly_resolved"]
     # Allow editing from admin — keep timestamps editable if necessary
+
+    readonly_fields = ('id', 'created_at', 'updated_at', 'started_at', 'completed_at', 'canceled_at')
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(self.readonly_fields)
+        if obj and obj.status in ['completed', 'canceled']:
+            readonly.extend(['pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'distance_meters', 'duration_seconds', 'status', 'cancellation_reason'])
+        return readonly
 
     def has_add_permission(self, request):  # type: ignore[override]
         return False

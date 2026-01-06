@@ -19,11 +19,4 @@ class CommissionAdmin(admin.ModelAdmin):
     list_filter = ("valid_from", "valid_to", "created_at")
     search_fields = ("name", "currency")
 
-    def has_add_permission(self, request):  # type: ignore[override]
-        return False
-
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
-        return False
-
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+    readonly_fields = ('id', 'created_at')

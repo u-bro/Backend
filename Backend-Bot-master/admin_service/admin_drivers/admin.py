@@ -27,11 +27,19 @@ class DriverProfileAdmin(admin.ModelAdmin):
     # Only include real model fields in list_editable (exclude admin methods like `user_is_active`)
     # Compute membership directly to avoid referencing an intermediate name that could be undefined
     list_editable = tuple(
-        [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields)]
+        [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'qualification_level', 'classes_allowed']]
     )
     list_filter = ("approved", "documents_status")
     search_fields = ("display_name", "first_name", "last_name")
     actions = ["approve_drivers", "reject_drivers", "block_drivers", "unblock_drivers"]
+
+    readonly_fields = ('id', 'created_at', 'updated_at', 'approved_at')
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(self.readonly_fields)
+        if obj and obj.approved:
+            readonly.extend(['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'qualification_level', 'classes_allowed'])
+        return readonly
 
     def has_add_permission(self, request):  # type: ignore[override]
         return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()

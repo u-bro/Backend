@@ -21,8 +21,16 @@ class UserAdmin(admin.ModelAdmin):
     )
     # Only include real model fields in list_editable to avoid selecting missing DB columns
     list_editable = tuple([
-        f for f in list_display if f != 'id' and any(f == fld.name for fld in User._meta.fields)
+        f for f in list_display if f != 'id' and any(f == fld.name for fld in User._meta.fields) and f != 'phone'
     ])
+
+    readonly_fields = ('id', 'created_at', 'last_active_at')
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(self.readonly_fields)
+        if obj and obj.is_active:
+            readonly.append('phone')
+        return readonly
 
     def get_queryset(self, request):
         """Limit selected columns to real model fields to avoid DB errors when some columns are missing.
