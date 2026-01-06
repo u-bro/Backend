@@ -44,3 +44,15 @@ class FindDriversRequest(BaseSchema):
     dropoff_lat: Optional[float] = None
     dropoff_lng: Optional[float] = None
     search_radius_km: float = 5.0
+
+
+class LocationUpdate(BaseSchema):
+    latitude: float
+    longitude: float
+    heading: Optional[float] = None
+    speed: Optional[float] = None
+    accuracy_m: Optional[int] = None
+
+
+class DriverStatusUpdate(BaseSchema):
+    status: str 
