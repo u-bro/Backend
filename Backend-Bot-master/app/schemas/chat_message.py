@@ -54,6 +54,7 @@ class SendMessageResponse(BaseModel):
 class ChatHistoryResponse(BaseModel):
     ride_id: int
     messages: List[Dict[str, Any]]
+    user_ids: List[int]
     count: int
     has_more: bool
 
