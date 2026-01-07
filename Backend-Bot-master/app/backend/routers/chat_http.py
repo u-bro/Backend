@@ -32,10 +32,10 @@ class ChatHttpRouter(BaseRouter):
         ride = await ride_crud.get_by_id(session, ride_id)
         if not ride:
             raise HTTPException(status_code=404, detail="Ride not found")
-        
+        user_ids = [ride.client_id]
         driver = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
-        if not driver:
-            raise HTTPException(status_code=404, detail="Driver not found")
+        if driver:
+            user_ids.append(driver.user_id)
 
         has_more = len(messages) > limit
         if has_more:
@@ -56,7 +56,7 @@ class ChatHttpRouter(BaseRouter):
                 }
                 for m in messages
             ],
-            user_ids=[ride.client_id, driver.user_id],
+            user_ids=user_ids,
             count=len(messages),
             has_more=has_more,
         )
