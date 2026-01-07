@@ -43,19 +43,7 @@ class ChatHttpRouter(BaseRouter):
 
         return ChatHistoryResponse(
             ride_id=ride_id,
-            messages=[
-                {
-                    "id": m.id,
-                    "sender_id": m.sender_id,
-                    "text": m.text,
-                    "message_type": m.message_type,
-                    "is_moderated": m.is_moderated,
-                    "created_at": m.created_at.isoformat() if m.created_at else None,
-                    "edited_at": m.edited_at.isoformat() if m.edited_at else None,
-                    "deleted": m.deleted_at is not None,
-                }
-                for m in messages
-            ],
+            messages=[m.model_dump() for m in messages],
             user_ids=user_ids,
             count=len(messages),
             has_more=has_more,
