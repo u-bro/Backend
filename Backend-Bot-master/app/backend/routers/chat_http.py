@@ -3,6 +3,7 @@ from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
 from app.schemas.chat_message import ChatHistoryResponse, SendMessageRequest, SendMessageResponse
 from app.services.chat_service import chat_service
+from app.crud import ride_crud, driver_profile_crud
 from app.backend.deps import get_current_user_id
 from app.services.websocket_manager import manager
 
@@ -28,6 +29,14 @@ class ChatHttpRouter(BaseRouter):
             before_id=before_id,
         )
 
+        ride = await ride_crud.get_by_id(session, ride_id)
+        if not ride:
+            raise HTTPException(status_code=404, detail="Ride not found")
+        user_ids = [ride.client_id]
+        driver = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
+        if driver:
+            user_ids.append(driver.user_id)
+
         has_more = len(messages) > limit
         if has_more:
             messages = messages[1:]
@@ -47,6 +56,7 @@ class ChatHttpRouter(BaseRouter):
                 }
                 for m in messages
             ],
+            user_ids=user_ids,
             count=len(messages),
             has_more=has_more,
         )

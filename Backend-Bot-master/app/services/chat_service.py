@@ -155,14 +155,7 @@ class ChatService:
         
         return ChatMessageSchema.model_validate(message)
     
-    async def get_chat_history(
-        self,
-        session: AsyncSession,
-        ride_id: int,
-        limit: int = 50,
-        before_id: Optional[int] = None,
-        include_deleted: bool = False,
-    ) -> List[ChatMessageSchema]:
+    async def get_chat_history(self, session: AsyncSession, ride_id: int, limit: int = 50, before_id: Optional[int] = None, include_deleted: bool = False) -> List[ChatMessageSchema]:
         conditions = [ChatMessage.ride_id == ride_id]
         
         if before_id:
