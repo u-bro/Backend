@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from app.crud.base import CrudBase
 from app.models.driver_location import DriverLocation
-from app.schemas.driver_location import DriverLocationSchema
+from app.schemas.driver_location import DriverLocationSchema, DriverLocationUpdate, DriverLocationUpdateMe
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -14,7 +14,7 @@ class DriverLocationCrud(CrudBase[DriverLocation, DriverLocationSchema]):
         item = existing.scalar_one_or_none()
         return self.schema.model_validate(item) if item else None
 
-    async def update_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int, update_obj, **kwargs) -> DriverLocationSchema:
+    async def update_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int, update_obj: DriverLocationUpdate | DriverLocationUpdateMe, **kwargs) -> DriverLocationSchema:
         item = await self.get_by_driver_profile_id(session, driver_profile_id)
         if not item:
             raise HTTPException(status_code=404, detail="Driver profile not found")
