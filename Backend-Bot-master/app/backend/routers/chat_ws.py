@@ -114,6 +114,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
 
         text = (data.get("text") or "").strip()
         message_type = data.get("message_type", MessageType.TEXT)
+        temp_id = data.get("temp_id")
 
         if not text:
             await websocket.send_json({"type": "error", "code": "empty_message", "message": "Message text is required"})
@@ -147,6 +148,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
                 "type": "new_message",
                 "message": {
                     "id": message.id,
+                    "temp_id": temp_id,
                     "ride_id": ride_id,
                     "sender_id": user_id,
                     "text": message.text,
