@@ -62,7 +62,6 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
             state = await driver_tracker.update_location_by_user_id(session, user_id=user_id, latitude=float(lat), longitude=float(lng))
             if state:
                 await websocket.send_json({"type": "location_ack", "status": state.status.value})
-                await session.commit()
 
     async def handle_go_online(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         session = context["session"]
@@ -70,7 +69,6 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         state = await driver_tracker.set_status_by_user(session, user_id, DriverStatus.ONLINE)
         if state:
             await websocket.send_json({"type": "status_changed", "status": "online"})
-            await session.commit()
 
     async def handle_go_offline(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         session = context["session"]
@@ -78,6 +76,5 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         state = await driver_tracker.set_status_by_user(session, user_id, DriverStatus.OFFLINE)
         if state:
             await websocket.send_json({"type": "status_changed", "status": "offline"})
-            await session.commit()
 
 matching_ws_router = MatchingWebsocketRouter().router

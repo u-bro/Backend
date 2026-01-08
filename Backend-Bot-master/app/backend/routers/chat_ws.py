@@ -140,7 +140,6 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             attachments=data.get("attachments"),
             is_moderated=True,
         )
-        await session.commit()
 
         await manager.send_to_ride(
             ride_id,
