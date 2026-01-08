@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import math, logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud import driver_location_crud
-from app.schemas.driver_location import DriverLocationUpdate
+from app.schemas.driver_location import DriverLocationUpdateMe
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ class DriverTracker:
     async def update_location_by_user_id(self, session: AsyncSession, user_id: int, latitude: float, longitude: float, **kwargs) -> Optional[DriverState]:
         driver_id = self._user_to_driver.get(user_id)
         if driver_id:
-            await driver_location_crud.update_by_driver_profile_id(session, driver_id, DriverLocationUpdate(latitude=latitude, longitude=longitude))
+            await driver_location_crud.update_by_driver_profile_id(session, driver_id, DriverLocationUpdateMe(latitude=latitude, longitude=longitude))
             return self.update_location(driver_id, latitude, longitude, **kwargs)
         return None
     
@@ -102,9 +102,10 @@ class DriverTracker:
         logger.info(f"Driver {driver_profile_id} status: {old_status} -> {status}")
         return state
     
-    def set_status_by_user(self, user_id: int, status: DriverStatus) -> Optional[DriverState]:
+    async def set_status_by_user(self, session: AsyncSession, user_id: int, status: DriverStatus) -> Optional[DriverState]:
         driver_id = self._user_to_driver.get(user_id)
         if driver_id:
+            await driver_location_crud.update_by_driver_profile_id(session, driver_id, DriverLocationUpdateMe(status=status))
             return self.set_status(driver_id, status)
         return None
     
