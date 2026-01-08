@@ -1,6 +1,6 @@
 import re
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
@@ -103,7 +103,7 @@ class ChatService:
         return ModerationResult(True, text, text, None)
     
     def check_rate_limit(self, user_id: int) -> tuple[bool, Optional[str]]:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         cutoff = now - timedelta(seconds=self.rate_limit_period)
         
         self._message_timestamps[user_id] = [
@@ -146,7 +146,7 @@ class ChatService:
             message_type=message_type,
             attachments=attachments,
             is_moderated=is_moderated,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         
         session.add(message)
@@ -191,7 +191,7 @@ class ChatService:
         if not message:
             return False
         
-        message.deleted_at = datetime.utcnow()
+        message.deleted_at = datetime.now(timezone.utc)
         await session.flush()
         return True
     
@@ -213,7 +213,7 @@ class ChatService:
         moderation = self.moderate_message(new_text)
         
         message.text = moderation.filtered
-        message.edited_at = datetime.utcnow()
+        message.edited_at = datetime.now(timezone.utc)
         message.is_moderated = moderation.passed
         
         await session.flush()

@@ -15,6 +15,6 @@ class RideStatusHistory(Base):
     actor_role: Mapped[str | None] = mapped_column(String(50), nullable=True)
     reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     meta = mapped_column(JSONB, nullable=True)
-    created_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
+    created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     ride = relationship('Ride')

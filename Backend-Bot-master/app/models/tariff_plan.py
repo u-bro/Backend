@@ -9,10 +9,10 @@ class TariffPlan(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=True)
-    updated_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP, nullable=True, default=func.now())
-    created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP, nullable=True, default=func.now())
-    effective_from: Mapped[TIMESTAMP] = mapped_column(TIMESTAMP, default=func.now())
-    effective_to: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP, nullable=True)
+    updated_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
+    created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
+    effective_from: Mapped[TIMESTAMP] = mapped_column(TIMESTAMP(timezone=True), default=func.now())
+    effective_to: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
 
     base_fare: Mapped[float] = mapped_column(Float, nullable=False)
     rate_per_meter: Mapped[float] = mapped_column(Float, nullable=False)

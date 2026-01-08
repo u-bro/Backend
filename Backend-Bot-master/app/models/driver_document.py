@@ -12,7 +12,7 @@ class DriverDocument(Base):
     file_url: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     reviewed_by: Mapped[int | None] = mapped_column(Integer, ForeignKey('users.id'), nullable=True)
-    reviewed_at = mapped_column(TIMESTAMP, nullable=True)
-    created_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
+    reviewed_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     driver_profile = relationship('DriverProfile')

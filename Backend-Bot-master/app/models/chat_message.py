@@ -15,9 +15,9 @@ class ChatMessage(Base):
     message_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     attachments = mapped_column(JSONB, nullable=True)
     is_moderated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
-    edited_at = mapped_column(TIMESTAMP, nullable=True)
-    deleted_at = mapped_column(TIMESTAMP, nullable=True)
+    created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
+    edited_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    deleted_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)
 
     ride = relationship('Ride')
     sender = relationship('User', foreign_keys=[sender_id])

@@ -1,8 +1,7 @@
 from typing import Dict, List, Optional, Any
 from fastapi import WebSocket, WebSocketDisconnect
-import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +41,7 @@ class ConnectionManager:
         
         message_with_timestamp = {
             **message,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
         disconnected = []
@@ -61,7 +60,7 @@ class ConnectionManager:
     async def broadcast(self, message: dict, exclude_user_id: Optional[int] = None) -> None:
         message_with_timestamp = {
             **message,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
         for user_id, connections in self.active_connections.items():

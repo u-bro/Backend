@@ -13,7 +13,7 @@ class DriverLocation(Base):
     accuracy_m: Mapped[int | None] = mapped_column(Integer, nullable=True)
     provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default='offline')
-    last_seen_at = mapped_column(TIMESTAMP, nullable=True)
-    created_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
+    last_seen_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     driver_profile = relationship('DriverProfile')

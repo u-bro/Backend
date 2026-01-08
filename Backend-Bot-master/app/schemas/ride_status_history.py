@@ -1,6 +1,6 @@
 from typing import Optional, Literal
 from pydantic import Field
-from datetime import datetime
+from datetime import datetime, timezone
 from .base import BaseSchema
 
 
@@ -12,7 +12,7 @@ class RideStatusHistoryCreate(BaseSchema):
     actor_role: Literal["client", "driver"] | None = Field(None, max_length=50)
     reason: str | None = Field(None, max_length=255)
     meta: dict | None = Field(None)
-    created_at: Optional[datetime] = datetime.utcnow()
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideStatusHistorySchema(RideStatusHistoryCreate):

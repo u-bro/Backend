@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -10,7 +10,7 @@ from app.schemas.tariff_plan import TariffPlanSchema, TariffPlanUpdate
 
 class CrudTariffPlan(CrudBase):
     async def update(self, session: AsyncSession, id: int, update_obj: TariffPlanUpdate) -> TariffPlanSchema | None:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         existing_result = await session.execute(select(self.model).where(self.model.id == id))
         existing = existing_result.scalar_one_or_none()
 

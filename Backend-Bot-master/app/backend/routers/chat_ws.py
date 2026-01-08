@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 from fastapi import WebSocket, Depends, WebSocketException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +48,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
                 "type": "user_joined",
                 "ride_id": ride_id,
                 "user_id": user_id,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
             exclude_user_id=user_id,
         )
@@ -75,7 +75,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
                 "type": "user_left",
                 "ride_id": ride_id,
                 "user_id": user_id,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
             exclude_user_id=user_id,
         )

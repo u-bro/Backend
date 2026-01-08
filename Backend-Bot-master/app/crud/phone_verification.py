@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import update, desc
 from app.schemas.phone_verification import PhoneVerificationVerifyRequest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.config import JWT_EXPIRATION_MINTUES
 from .auth import auth_crud
 from .refresh_token import refresh_token_crud
@@ -43,7 +43,7 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
     async def verify_by_user_id(self, session: AsyncSession, verify_obj: PhoneVerificationVerifyRequest) -> TokenResponseRegister:
         item = await self.get_by_phone(session, verify_obj.phone)
 
-        if item.expires_at <= datetime.utcnow():
+        if item.expires_at <= datetime.now(timezone.utc):
             raise HTTPException(status_code=401, detail='Code expired')
 
         if item is None or verify_obj.code != item.code or item.status == 'confirmed':

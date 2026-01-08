@@ -1,5 +1,4 @@
-
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
@@ -28,7 +27,7 @@ class DriverState:
     classes_allowed: Set[str] = field(default_factory=set)
     current_ride_id: Optional[int] = None
     rating: float = 5.0
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     
     def is_available(self) -> bool:
         return (
@@ -79,7 +78,7 @@ class DriverTracker:
         state = self._drivers[driver_profile_id]
         state.latitude = latitude
         state.longitude = longitude
-        state.updated_at = datetime.utcnow()
+        state.updated_at = datetime.now(timezone.utc)
         
         return state
     
@@ -97,7 +96,7 @@ class DriverTracker:
         state = self._drivers[driver_profile_id]
         old_status = state.status
         state.status = status
-        state.updated_at = datetime.utcnow()
+        state.updated_at = datetime.now(timezone.utc)
         
         logger.info(f"Driver {driver_profile_id} status: {old_status} -> {status}")
         return state
@@ -116,7 +115,7 @@ class DriverTracker:
         state = self._drivers[driver_profile_id]
         state.current_ride_id = ride_id
         state.status = DriverStatus.BUSY
-        state.updated_at = datetime.utcnow()
+        state.updated_at = datetime.now(timezone.utc)
         
         logger.info(f"Driver {driver_profile_id} assigned to ride {ride_id}")
         return state
@@ -129,7 +128,7 @@ class DriverTracker:
         old_ride = state.current_ride_id
         state.current_ride_id = None
         state.status = DriverStatus.ONLINE
-        state.updated_at = datetime.utcnow()
+        state.updated_at = datetime.now(timezone.utc)
         
         logger.info(f"Driver {driver_profile_id} released from ride {old_ride}")
         return state
@@ -193,7 +192,7 @@ class DriverTracker:
         }
     
     def cleanup_stale(self) -> int:
-        threshold = datetime.utcnow() - timedelta(seconds=self.OFFLINE_TIMEOUT_SECONDS)
+        threshold = datetime.now(timezone.utc) - timedelta(seconds=self.OFFLINE_TIMEOUT_SECONDS)
         count = 0
         
         for driver in self._drivers.values():
