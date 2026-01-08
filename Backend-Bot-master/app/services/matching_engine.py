@@ -1,4 +1,5 @@
 from typing import Any, List, Optional, Set
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.websocket_manager import manager
 from app.schemas.driver_profile import DriverProfileSchema
 from app.services.driver_tracker import driver_tracker
@@ -11,7 +12,7 @@ class MatchingEngine:
         self.tracker = driver_tracker
         self.connected_driver_user_ids: Set[int] = set()
 
-    def register_connected_driver(self, profile: DriverProfileSchema) -> None:
+    async def register_connected_driver(self, session: AsyncSession, profile: DriverProfileSchema) -> None:
         if not getattr(profile, "approved", False):
             return
 
@@ -20,12 +21,7 @@ class MatchingEngine:
         rating_avg = getattr(profile, "rating_avg", None)
         rating = float(rating_avg) if rating_avg is not None else 5.0
 
-        self.tracker.register_driver(
-            driver_profile_id=int(profile.id),
-            user_id=int(profile.user_id),
-            classes_allowed=list(classes_allowed),
-            rating=rating,
-        )
+        await self.tracker.register_driver(session, int(profile.id), int(profile.user_id), list(classes_allowed), rating)
 
     def unregister_connected_driver(self, user_id: int) -> None:
         self.connected_driver_user_ids.discard(int(user_id))

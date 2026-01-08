@@ -34,7 +34,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         if driver_profile is None or not getattr(driver_profile, "approved", False):
             raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Not a driver")
 
-        matching_engine.register_connected_driver(driver_profile)
+        await matching_engine.register_connected_driver(session, driver_profile)
         await manager.connect(websocket, int(user_id))
 
         await websocket.send_json({"type": "connected", "user_id": user_id})

@@ -12,7 +12,7 @@ class ConnectionManager:
         self.active_connections: Dict[int, List[WebSocket]] = {}
         self.ride_participants: Dict[int, set] = {}
     
-    async def connect(self, websocket: WebSocket, user_id: int, is_driver: bool = False) -> None:
+    async def connect(self, websocket: WebSocket, user_id: int) -> None:
         await websocket.accept()
         
         if user_id not in self.active_connections:
