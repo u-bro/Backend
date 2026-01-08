@@ -16,7 +16,6 @@ from app.backend.routers.driver_profile import driver_profile_router
 from app.backend.routers.driver_document import driver_document_router
 from app.backend.routers.phone_verification import phone_verification_router
 from app.backend.routers.commission import commission_router
-from app.backend.routers.driver_location import driver_location_router
 from app.backend.routers.transaction import transaction_router
 from app.backend.routers.matching_ws import matching_ws_router
 from app.backend.routers.documents import documents_router
@@ -49,7 +48,6 @@ app.include_router(driver_profile_router, tags=['DriverProfiles'], prefix=API_PR
 app.include_router(driver_document_router, tags=['DriverDocuments'], prefix=API_PREFIX)
 app.include_router(phone_verification_router, tags=['PhoneVerifications'], prefix=API_PREFIX)
 app.include_router(commission_router, tags=['Commissions'], prefix=API_PREFIX)
-app.include_router(driver_location_router, tags=['DriverLocations'], prefix=API_PREFIX)
 app.include_router(transaction_router, tags=['Transactions'], prefix=API_PREFIX)
 app.include_router(tariff_plan_router, tags=['TariffPlan'], prefix=API_PREFIX)
 app.include_router(matching_ws_router, tags=['Matching(WebSocket)'], prefix=API_PREFIX)

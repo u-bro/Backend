@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -35,6 +35,14 @@ class CrudRide(CrudBase):
 
     @staticmethod
     def _build_snapshot(tariff_plan: TariffPlan, distance_meters: int | None, expected_fare: float | None) -> dict:
+        def _iso_utc_z(value: datetime | None) -> str | None:
+            if value is None:
+                return None
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            value = value.astimezone(timezone.utc)
+            return value.isoformat().replace("+00:00", "Z")
+
         effective_from = getattr(tariff_plan, "effective_from", None)
         effective_to = getattr(tariff_plan, "effective_to", None)
         return {
@@ -44,8 +52,8 @@ class CrudRide(CrudBase):
             "tariff_plan": {
                 "id": tariff_plan.id,
                 "name": tariff_plan.name,
-                "effective_from": effective_from.isoformat() + "Z" if effective_from else None,
-                "effective_to": effective_to.isoformat() + "Z" if effective_to else None,
+                "effective_from": _iso_utc_z(effective_from),
+                "effective_to": _iso_utc_z(effective_to),
                 "rules": getattr(tariff_plan, "rules", None),
             },
             "totals": {
@@ -58,7 +66,7 @@ class CrudRide(CrudBase):
                 "expected_fare": expected_fare,
             },
             "meta": {
-                "calculated_at": datetime.utcnow().isoformat() + "Z",
+                "calculated_at": _iso_utc_z(datetime.now(timezone.utc)),
             },
         }
 
@@ -75,7 +83,7 @@ class CrudRide(CrudBase):
 
         if not tariff_plan:
             raise HTTPException(status_code=404, detail="Tariff plan not found")
-        if tariff_plan.effective_to and tariff_plan.effective_to <= datetime.utcnow():
+        if tariff_plan.effective_to and tariff_plan.effective_to <= datetime.now(timezone.utc):
             raise HTTPException(status_code=400, detail="This version of tariff plan has closed")
 
         self._add_expected_fare_and_snapshot(data, tariff_plan, data.get("distance_meters"))
@@ -83,7 +91,7 @@ class CrudRide(CrudBase):
         ride = await self.execute_get_one(session, stmt)
         if not ride:
             raise HTTPException(status_code=400, detail="Ride wasn't created")
-        await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=ride.id, from_status=None, to_status='requested', changed_by=create_obj.client_id))
+        await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=ride.id, from_status=None, to_status='requested', changed_by=create_obj.client_id, created_at=datetime.now(timezone.utc)))
         return self.schema.model_validate(ride)
 
     async def update(self, session: AsyncSession, id: int, update_obj, user_id: int) -> RideSchema | None:
@@ -107,7 +115,7 @@ class CrudRide(CrudBase):
         if update_obj.status and existing.status != update_obj.status:
             if not self._is_status_transition_allowed(existing.status, update_obj.status):
                 raise HTTPException(status_code=400, detail="Incorrect ride status transition")
-            await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=existing.id, from_status=existing.status, to_status=update_obj.status, changed_by=int(user_id)))
+            await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=existing.id, from_status=existing.status, to_status=update_obj.status, changed_by=int(user_id), created_at=datetime.now(timezone.utc)))
 
         stmt = (
             update(self.model)
@@ -137,7 +145,7 @@ class CrudRide(CrudBase):
         result = await self.execute_get_one(session, stmt)
         if not result:
             return None
-        await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=result.id, from_status='requested', to_status=update_obj.status, changed_by=user_id))
+        await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=result.id, from_status='requested', to_status=update_obj.status, changed_by=user_id, created_at=datetime.now(timezone.utc)))
         await driver_profile_crud.ride_count_increment(session, update_obj.driver_profile_id)
         return self.schema.model_validate(result)
 

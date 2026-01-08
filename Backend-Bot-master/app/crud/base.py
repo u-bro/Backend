@@ -28,8 +28,8 @@ class CrudBase(Generic[M, S]):
     async def get_paginated(self, session: AsyncSession, page: int = 1, page_size: int = 2) -> list[S]:
         offset = (page - 1) * page_size
         result = await session.execute(select(self.model).offset(offset).limit(page_size))
-        gpus = result.scalars().all()
-        return [self.schema.model_validate(gpu) for gpu in gpus]
+        items = result.scalars().all()
+        return [self.schema.model_validate(item) for item in items]
 
     async def get_count(self, session: AsyncSession) -> int:
         result = await session.execute(select(func.count()).select_from(self.model))

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 from fastapi import WebSocket, Depends, WebSocketException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +48,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
                 "type": "user_joined",
                 "ride_id": ride_id,
                 "user_id": user_id,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
             exclude_user_id=user_id,
         )
@@ -75,7 +75,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
                 "type": "user_left",
                 "ride_id": ride_id,
                 "user_id": user_id,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
             exclude_user_id=user_id,
         )
@@ -114,6 +114,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
 
         text = (data.get("text") or "").strip()
         message_type = data.get("message_type", MessageType.TEXT)
+        temp_id = data.get("temp_id")
 
         if not text:
             await websocket.send_json({"type": "error", "code": "empty_message", "message": "Message text is required"})
@@ -140,7 +141,6 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             attachments=data.get("attachments"),
             is_moderated=True,
         )
-        await session.commit()
 
         await manager.send_to_ride(
             ride_id,
@@ -148,6 +148,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
                 "type": "new_message",
                 "message": {
                     "id": message.id,
+                    "temp_id": temp_id,
                     "ride_id": ride_id,
                     "sender_id": user_id,
                     "text": message.text,

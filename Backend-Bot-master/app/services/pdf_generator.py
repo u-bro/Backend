@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO
 import logging
 
@@ -111,7 +111,7 @@ class PDFGenerator:
     ) -> bytes:
         
         if created_at is None:
-            created_at = datetime.utcnow()
+            created_at = datetime.now(timezone.utc)
         
         html = f"""
         <!DOCTYPE html>
@@ -230,7 +230,7 @@ class PDFGenerator:
             </div>
             
             <div class="footer">
-                <p>Документ сформирован: {datetime.utcnow().strftime('%d.%m.%Y %H:%M')}</p>
+                <p>Документ сформирован: {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')}</p>
             </div>
         </body>
         </html>
@@ -290,7 +290,7 @@ class PDFGenerator:
             </table>
             
             <div class="footer">
-                <p>Документ сформирован: {datetime.utcnow().strftime('%d.%m.%Y %H:%M')}</p>
+                <p>Документ сформирован: {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')}</p>
             </div>
         </body>
         </html>
@@ -320,7 +320,7 @@ class PDFGenerator:
         c.drawString(50, height - 50, "U-BRO TAXI")
         c.setFont("Helvetica", 12)
         c.drawString(50, height - 80, "PDF документ")
-        c.drawString(50, height - 110, f"Сгенерирован: {datetime.utcnow().strftime('%d.%m.%Y %H:%M')}")
+        c.drawString(50, height - 110, f"Сгенерирован: {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')}")
         c.drawString(50, height - 150, "Для полноценной генерации установите WeasyPrint")
         
         c.save()

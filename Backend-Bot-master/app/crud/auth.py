@@ -1,5 +1,5 @@
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
 from app.crud.base import CrudBase
@@ -21,11 +21,11 @@ class CrudAuth(CrudBase):
         self.algorithm = algorithm
 
     def create_access_token(self, user_id: int, expires_delta: timedelta = timedelta(minutes=JWT_EXPIRATION_MINTUES)) -> str:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
         payload = {
             "user_id": user_id,
             "exp": expire,
-            "iat": datetime.utcnow()
+            "iat": datetime.now(timezone.utc)
         }
         
         encoded_jwt = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
@@ -81,7 +81,7 @@ class CrudAuth(CrudBase):
         
         await refresh_token_crud.revoke(session, token_hash)
 
-        access_token = self.create_access_token(found_token.user_id, timedelta(hours=JWT_EXPIRATION_MINTUES))
+        access_token = self.create_access_token(found_token.user_id, timedelta(minutes=JWT_EXPIRATION_MINTUES))
         refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=found_token.user_id))
         return TokenResponse(
             access_token=access_token,

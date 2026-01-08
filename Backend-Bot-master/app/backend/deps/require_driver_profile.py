@@ -15,7 +15,7 @@ def require_driver_profile(model: Type[T]):
         item = result.scalar_one_or_none()
         driver_profile = getattr(item, "driver_profile", None)
 
-        if item is None or driver_profile is None or getattr(driver_profile, "user_id", None) != user_id:
+        if item is None or driver_profile is None or getattr(driver_profile, "user_id", None) != user_id or not getattr(driver_profile, "approved", False):
             raise HTTPException(status_code=403, detail="Forbidden")
 
         return item

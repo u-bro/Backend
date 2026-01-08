@@ -1,5 +1,5 @@
 from typing import Any, Dict
-from fastapi import WebSocket, Depends
+from fastapi import WebSocket, Depends, WebSocketException
 from app.backend.routers.websocket_base import BaseWebsocketRouter
 from app.services.websocket_manager import manager
 from app.services.driver_tracker import driver_tracker, DriverStatus
@@ -8,6 +8,7 @@ from app.backend.deps import get_current_user_id_ws
 from app.db import async_session_maker
 from app.crud.driver_profile import driver_profile_crud
 from app.services.matching_engine import matching_engine
+from starlette.status import WS_1008_POLICY_VIOLATION
 
 
 class MatchingWebsocketRouter(BaseWebsocketRouter):
@@ -30,9 +31,10 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         user_id = context["user_id"]
         session = context["session"]
         driver_profile = await driver_profile_crud.get_by_user_id(session, int(user_id))
-        if driver_profile is not None and getattr(driver_profile, "approved", False):
-            matching_engine.register_connected_driver(driver_profile)
+        if driver_profile is None or not getattr(driver_profile, "approved", False):
+            raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Not a driver")
 
+        matching_engine.register_connected_driver(driver_profile)
         await manager.connect(websocket, int(user_id))
 
         await websocket.send_json({"type": "connected", "user_id": user_id})
@@ -51,24 +53,27 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         await websocket.send_json({"type": "pong"})
 
     async def handle_location_update(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
+        session = context["session"]
         user_id = context["user_id"]
         lat = data.get("lat") or data.get("latitude")
         lng = data.get("lng") or data.get("longitude")
 
         if lat and lng:
-            state = driver_tracker.update_location_by_user_id(user_id=user_id, latitude=float(lat), longitude=float(lng))
+            state = await driver_tracker.update_location_by_user_id(session, user_id=user_id, latitude=float(lat), longitude=float(lng))
             if state:
                 await websocket.send_json({"type": "location_ack", "status": state.status.value})
 
     async def handle_go_online(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
+        session = context["session"]
         user_id = int(context["user_id"])
-        state = driver_tracker.set_status_by_user(user_id, DriverStatus.ONLINE)
+        state = await driver_tracker.set_status_by_user(session, user_id, DriverStatus.ONLINE)
         if state:
             await websocket.send_json({"type": "status_changed", "status": "online"})
 
     async def handle_go_offline(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
+        session = context["session"]
         user_id = int(context["user_id"])
-        state = driver_tracker.set_status_by_user(user_id, DriverStatus.OFFLINE)
+        state = await driver_tracker.set_status_by_user(session, user_id, DriverStatus.OFFLINE)
         if state:
             await websocket.send_json({"type": "status_changed", "status": "offline"})
 

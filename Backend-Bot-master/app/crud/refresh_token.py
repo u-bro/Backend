@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import hashlib, secrets
 from app.config import REFRESH_TOKEN_SALT
 from sqlalchemy import select, update
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.config import REFRESH_TOKEN_EXPIRATION_DAYS
 
 
@@ -26,9 +26,9 @@ class RefreshTokenCrud(CrudBase[RefreshToken, RefreshTokenSchema]):
         create_obj = RefreshTokenCreate(
             user_id=create_obj.user_id,
             token=self.hash_token(token),
-            expires_at=datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRATION_DAYS),
             revoked_at=None,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         result = await super().create(session, create_obj)
         result.token = token
@@ -40,6 +40,6 @@ class RefreshTokenCrud(CrudBase[RefreshToken, RefreshTokenSchema]):
         return self.schema.model_validate(token) if token else None
 
     async def revoke(self, session: AsyncSession, token: str) -> None:
-        await session.execute(update(self.model).where(self.model.token == token).values(revoked_at=datetime.utcnow()))
+        await session.execute(update(self.model).where(self.model.token == token).values(revoked_at=datetime.now(timezone.utc)))
 
 refresh_token_crud = RefreshTokenCrud()

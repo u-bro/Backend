@@ -21,17 +21,23 @@ class BaseWebsocketRouter:
 
     async def run(self, websocket: WebSocket, **context: Any) -> None:
         await self.on_connect(websocket, **context)
-
+        session = context.get('session')
         try:
             while True:
                 data = await websocket.receive_json()
                 await self.dispatch_message(websocket, data, **context)
+                if session: 
+                    await session.commit()
         except WebSocketDisconnect:
             await self.on_disconnect(websocket, **context)
+            if session: 
+                await session.rollback()
         except Exception as exc:
             logger.error(f"WebSocket error: {exc}")
             await self.on_error(websocket, exc, **context)
             await self.on_disconnect(websocket, **context)
+            if session: 
+                await session.rollback()
 
     async def dispatch_message(self, websocket: WebSocket, data: Dict[str, Any], **context: Any) -> None:
         message_type = data.get("type")

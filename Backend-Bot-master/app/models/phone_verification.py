@@ -10,10 +10,10 @@ class PhoneVerification(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
     phone: Mapped[str] = mapped_column(String(20), nullable=False)
     code: Mapped[str] = mapped_column(String(10), nullable=False)
-    expires_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP, nullable=True)
+    expires_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_registred: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP, nullable=True, default=func.now())
+    created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     user = relationship('User')

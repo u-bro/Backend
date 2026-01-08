@@ -1,26 +1,29 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.crud.driver_profile import driver_profile_crud
-from app.crud.ride import ride_crud
-from app.services.driver_tracker import DriverState, driver_tracker, DriverStatus
+from app.crud import driver_profile_crud, ride_crud, driver_location_crud
+from app.services.driver_tracker import driver_tracker
 from app.services.matching_engine import matching_engine
 from app.services.websocket_manager import manager
-from app.backend.deps import get_current_driver_profile_id, get_current_user_id, require_role
-from app.schemas.matching import LocationUpdate, DriverStatusUpdate
+from app.backend.deps import get_current_driver_profile_id, require_role
+from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate, DriverLocationUpdateMe
 
 class MatchingHttpRouter(BaseRouter):
     def __init__(self) -> None:
-        super().__init__(matching_engine, "/matching")
+        super().__init__(driver_location_crud, "/matching")
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/driver/register", self.register_driver, methods=["POST"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/feed", self.get_ride_feed, methods=["GET"], status_code=200)
+
         self.router.add_api_route(f"{self.prefix}/notify/{{user_id}}", self.send_notification, methods=["POST"], dependencies=[Depends(require_role('admin'))])
         self.router.add_api_route(f"{self.prefix}/broadcast", self.broadcast_message, methods=["POST"], dependencies=[Depends(require_role('admin'))])
-        self.router.add_api_route(f"{self.prefix}/driver/location", self.update_driver_location, methods=["POST"])
-        self.router.add_api_route(f"{self.prefix}/driver/status", self.update_driver_status, methods=["POST"])
-        self.router.add_api_route(f"{self.prefix}/driver/{{user_id}}/state", self.get_driver_state, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
+
+        self.router.add_api_route(f"{self.prefix}/driver-location", self.create, methods=["POST"], dependencies=[Depends(require_role('admin'))])
+        self.router.add_api_route(f"{self.prefix}/driver-location/{{id}}", self.update, methods=["PUT"], dependencies=[Depends(require_role('admin'))])
+        self.router.add_api_route(f"{self.prefix}/driver-location", self.update_by_driver_profile_id, methods=["PUT"])
+        self.router.add_api_route(f"{self.prefix}/driver-location", self.get_paginated, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
+        self.router.add_api_route(f"{self.prefix}/driver-location/{{id}}", self.get_by_id, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
         self.router.add_api_route(f"{self.prefix}/drivers/stats", self.get_drivers_stats, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
 
     async def register_driver(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> Dict[str, Any]:
@@ -57,25 +60,23 @@ class MatchingHttpRouter(BaseRouter):
         await manager.broadcast({"type": "broadcast", **message})
         return {"status": "broadcasted", "recipients": manager.get_connection_count()}
 
-    async def update_driver_location(self, location: LocationUpdate, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
-        state = driver_tracker.update_location_by_user_id(user_id=user_id, latitude=location.latitude, longitude=location.longitude)
-        if not state:
-            raise HTTPException(status_code=404, detail="Driver not registered in tracker")
-        return {"status": "updated", "driver_status": state.status.value, "location": {"lat": state.latitude, "lng": state.longitude}}
+    async def create(self, request: Request, create_obj: DriverLocationCreate) -> DriverLocationSchema:
+        return await self.model_crud.create(request.state.session, create_obj)
 
-    async def update_driver_status(self, status_update: DriverStatusUpdate, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
-        status = DriverStatus(status_update.status)
-        state = driver_tracker.set_status_by_user(user_id, status)
-        if not state:
-            raise HTTPException(status_code=404, detail="Driver not registered in tracker")
-        return {"status": "updated", "driver_status": state.status.value}
+    async def update(self, request: Request, update_obj: DriverLocationUpdate, id: int) -> DriverLocationSchema:
+        return await self.model_crud.update(request.state.session, id, update_obj)
 
-    async def get_driver_state(self, user_id: int) -> DriverState:
-        state = driver_tracker.get_driver_by_user(user_id)
-        if not state:
-            raise HTTPException(status_code=404, detail="Driver not found in tracker")
+    async def update_by_driver_profile_id(self, request: Request, update_obj: DriverLocationUpdateMe, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> DriverLocationSchema:
+        return await self.model_crud.update_by_driver_profile_id(request.state.session, driver_profile_id, update_obj)
 
-        return state
+    async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> List[DriverLocationSchema]:
+        return await self.model_crud.get_paginated(request.state.session, page, page_size)
+
+    async def get_by_id(self, request: Request, id: int) -> DriverLocationSchema:
+        driver_location = await self.model_crud.get_by_id(request.state.session, id)
+        if not driver_location:
+            raise HTTPException(status_code=404, detail="Driver location not found")
+        return driver_location
 
     async def get_drivers_stats(self) -> Dict[str, Any]:
         return {**driver_tracker.get_stats(), "ws_connections": manager.get_connection_count()}

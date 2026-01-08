@@ -6,7 +6,7 @@ from app.schemas.phone_verification import PhoneVerificationSchemaCreate, PhoneV
 from app.backend.routers.base import BaseRouter
 from app.models import User
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 class AuthRouter(BaseRouter):
     def __init__(self, model_crud: CrudAuth, prefix: str) -> None:
@@ -24,7 +24,7 @@ class AuthRouter(BaseRouter):
     async def send_otp(self, request: Request, user: User, is_registred: bool) -> PhoneVerificationSchema:
         code = self.generate_otp()
         ttl = 120
-        expires_at = datetime.utcnow() + timedelta(seconds=ttl)
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
         create_obj = PhoneVerificationSchemaCreate(
             user_id=user.id,
             phone=user.phone,

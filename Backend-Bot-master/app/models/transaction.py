@@ -11,6 +11,6 @@ class Transaction(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     is_withdraw: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
 
     user = relationship("User", back_populates="transactions")

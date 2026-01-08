@@ -12,7 +12,7 @@ class DriverRating(Base):
     ride_id: Mapped[int] = mapped_column(Integer, ForeignKey('rides.id'), nullable=False)
     rate: Mapped[int] = mapped_column(Integer, nullable=False)
     comment: Mapped[str | None] = mapped_column(String, nullable=True)
-    created_at = mapped_column(TIMESTAMP, nullable=True, default=func.now())
+    created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     driver_profile = relationship('DriverProfile')
     ride = relationship('Ride')
