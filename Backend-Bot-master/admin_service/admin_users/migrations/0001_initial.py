@@ -10,18 +10,24 @@ def create_admin(apps, schema_editor):
     User = get_user_model()
 
     first_name = os.environ.get('ADMIN_USERNAME', 'admin')
+    if not first_name:
+        first_name = 'admin'
     password = os.getenv('ADMIN_PASSWORD', 'NewStrongPass123')
 
     with transaction.atomic():
-        user, created = User.objects.get_or_create(
-            username=first_name,
-            defaults={
-                'first_name': first_name,
-                'is_staff': True,
-                'is_superuser': True,
-                'last_login': timezone.now(),
-            }
-        )
+        try:
+            user = User.objects.get(username=first_name)
+            created = False
+        except User.DoesNotExist:
+            user = User(
+                username=first_name,
+                first_name=first_name,
+                is_staff=True,
+                is_superuser=True,
+                last_login=timezone.now(),
+            )
+            user.save()
+            created = True
 
         if created:
             if password:
@@ -29,7 +35,6 @@ def create_admin(apps, schema_editor):
                 user.save()
                 print(f'Created admin user: {first_name} (password set from ADMIN_PASSWORD env var)')
             else:
-                user.save()
                 print(f'Created admin user: {first_name} (no password set). Run `manage.py changepassword {first_name}` to set a password.')
         else:
             if password:

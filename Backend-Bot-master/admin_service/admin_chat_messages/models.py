@@ -20,4 +20,5 @@ class ChatMessage(models.Model):
     edited_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
-    def __str__(self) -> str:  
+    def __str__(self) -> str:
+        return f"Message {self.id}"  
