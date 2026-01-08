@@ -81,7 +81,7 @@ class CrudAuth(CrudBase):
         
         await refresh_token_crud.revoke(session, token_hash)
 
-        access_token = self.create_access_token(found_token.user_id, timedelta(hours=JWT_EXPIRATION_MINTUES))
+        access_token = self.create_access_token(found_token.user_id, timedelta(minutes=JWT_EXPIRATION_MINTUES))
         refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=found_token.user_id))
         return TokenResponse(
             access_token=access_token,
