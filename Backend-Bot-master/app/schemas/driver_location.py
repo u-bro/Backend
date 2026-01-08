@@ -22,6 +22,9 @@ class DriverLocationUpdate(BaseSchema):
     last_seen_at: Optional[datetime] = None
 
 
+class DriverLocationUpdateMe(DriverLocationUpdate):
+    status: Optional[Literal["offline", "online"]] = None
+
 
 class DriverLocationSchema(BaseSchema):
     id: int
@@ -33,6 +36,3 @@ class DriverLocationSchema(BaseSchema):
     status: Literal["offline", "online", "busy"] = "offline"
     last_seen_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True

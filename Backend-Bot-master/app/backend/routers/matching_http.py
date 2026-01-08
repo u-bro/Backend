@@ -6,7 +6,7 @@ from app.services.driver_tracker import driver_tracker
 from app.services.matching_engine import matching_engine
 from app.services.websocket_manager import manager
 from app.backend.deps import get_current_driver_profile_id, require_role
-from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate
+from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate, DriverLocationUpdateMe
 
 class MatchingHttpRouter(BaseRouter):
     def __init__(self) -> None:
@@ -20,6 +20,7 @@ class MatchingHttpRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/broadcast", self.broadcast_message, methods=["POST"], dependencies=[Depends(require_role('admin'))])
 
         self.router.add_api_route(f"{self.prefix}/driver-location", self.create, methods=["POST"], dependencies=[Depends(require_role('admin'))])
+        self.router.add_api_route(f"{self.prefix}/driver-location/{{id}}", self.update, methods=["PUT"], dependencies=[Depends(require_role('admin'))])
         self.router.add_api_route(f"{self.prefix}/driver-location", self.update_by_driver_profile_id, methods=["PUT"])
         self.router.add_api_route(f"{self.prefix}/driver-location", self.get_paginated, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
         self.router.add_api_route(f"{self.prefix}/driver-location/{{id}}", self.get_by_id, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
@@ -62,7 +63,10 @@ class MatchingHttpRouter(BaseRouter):
     async def create(self, request: Request, create_obj: DriverLocationCreate) -> DriverLocationSchema:
         return await self.model_crud.create(request.state.session, create_obj)
 
-    async def update_by_driver_profile_id(self, request: Request, update_obj: DriverLocationUpdate, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> DriverLocationSchema:
+    async def update(self, request: Request, update_obj: DriverLocationUpdate, id: int) -> DriverLocationSchema:
+        return await self.model_crud.update(request.state.session, id, update_obj)
+
+    async def update_by_driver_profile_id(self, request: Request, update_obj: DriverLocationUpdateMe, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> DriverLocationSchema:
         return await self.model_crud.update_by_driver_profile_id(request.state.session, driver_profile_id, update_obj)
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> List[DriverLocationSchema]:
