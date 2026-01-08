@@ -37,7 +37,7 @@ class DriverProfileRouter(BaseRouter):
         return await self.model_crud.delete(request.state.session, id)
 
     async def approve_profile(self, request: Request, id: int, body: DriverProfileApproveIn, user_id: int = Depends(get_current_user_id)) -> DriverProfileSchema:
-        return await self.model_crud.update(request.state.session, id, DriverProfileApprove(approved_by=user_id, **body.model_dump()))
+        return await self.model_crud.approve(request.state.session, id, DriverProfileApprove(approved_by=user_id, **body.model_dump()))
 
     async def update_me(self, request: Request, body: DriverProfileUpdateMe, id = Depends(get_current_driver_profile_id)) -> DriverProfileSchema:
         return await self.model_crud.update(request.state.session, id, body)

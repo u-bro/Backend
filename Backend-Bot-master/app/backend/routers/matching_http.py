@@ -2,12 +2,12 @@ from typing import Any, Dict, List
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
 from app.crud import driver_profile_crud, ride_crud, driver_location_crud
-from app.services.driver_tracker import driver_tracker, DriverStatus
+from app.services.driver_tracker import driver_tracker
 from app.services.matching_engine import matching_engine
 from app.services.websocket_manager import manager
-from app.backend.deps import get_current_driver_profile_id, get_current_user_id, require_role
-from app.schemas.matching import LocationUpdate, DriverStatusUpdate
-from app.schemas.driver_location import DriverLocationSchema
+from app.backend.deps import get_current_driver_profile_id, require_role
+from app.schemas.matching import LocationUpdate
+from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate
 
 class MatchingHttpRouter(BaseRouter):
     def __init__(self) -> None:
@@ -20,6 +20,7 @@ class MatchingHttpRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/notify/{{user_id}}", self.send_notification, methods=["POST"], dependencies=[Depends(require_role('admin'))])
         self.router.add_api_route(f"{self.prefix}/broadcast", self.broadcast_message, methods=["POST"], dependencies=[Depends(require_role('admin'))])
 
+        self.router.add_api_route(f"{self.prefix}/driver-location", self.create, methods=["POST"], dependencies=[Depends(require_role('admin'))])
         self.router.add_api_route(f"{self.prefix}/driver-location", self.update_by_driver_profile_id, methods=["PUT"])
         self.router.add_api_route(f"{self.prefix}/driver-location", self.get_paginated, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
         self.router.add_api_route(f"{self.prefix}/driver-location/{{id}}", self.get_by_id, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
@@ -58,6 +59,9 @@ class MatchingHttpRouter(BaseRouter):
     async def broadcast_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
         await manager.broadcast({"type": "broadcast", **message})
         return {"status": "broadcasted", "recipients": manager.get_connection_count()}
+
+    async def create(self, request: Request, create_obj: DriverLocationCreate) -> DriverLocationSchema:
+        return await self.model_crud.create(request.state.session, create_obj)
 
     async def update_by_driver_profile_id(self, request: Request, update_obj: LocationUpdate, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> DriverLocationSchema:
         return await self.model_crud.update_by_driver_profile_id(request.state.session, driver_profile_id, update_obj)

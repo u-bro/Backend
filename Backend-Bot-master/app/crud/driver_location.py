@@ -9,9 +9,13 @@ class DriverLocationCrud(CrudBase[DriverLocation, DriverLocationSchema]):
     def __init__(self) -> None:
         super().__init__(DriverLocation, DriverLocationSchema)
 
-    async def update_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int, update_obj, **kwargs) -> DriverLocationSchema:
+    async def get_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int, **kwargs) -> DriverLocationSchema:
         existing = await session.execute(select(self.model).where(self.model.driver_profile_id == driver_profile_id))
         item = existing.scalar_one_or_none()
+        return self.schema.model_validate(item) if item else None
+
+    async def update_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int, update_obj, **kwargs) -> DriverLocationSchema:
+        item = self.get_by_driver_profile_id(session, driver_profile_id)
         if not item:
             raise HTTPException(status_code=404, detail="Driver profile not found")
 
