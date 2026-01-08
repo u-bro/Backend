@@ -13,14 +13,11 @@ class User(models.Model):
     last_active_at = models.DateTimeField(null=True, blank=True)
     first_name = models.CharField(max_length=100, null=True, blank=True)
     last_name = models.CharField(max_length=100, null=True, blank=True)
-    username = models.CharField(max_length=100, null=True, blank=True)
-    email = models.CharField(max_length=255, null=True, blank=True)
-    password_hash = models.CharField(max_length=255, null=True, blank=True)
     phone = models.CharField(max_length=20, unique=True, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     role_id = models.IntegerField(null=True, blank=True)
 
-    def __str__(self) -> str:  # type: ignore[override]
+    def __str__(self) -> str: 
         if self.phone:
             return f"{self.phone}"
         return str(self.id)

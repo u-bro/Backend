@@ -21,5 +21,5 @@ class TariffPlan(models.Model):
     rules = models.JSONField(null=True, blank=True)
     commission_percentage = models.FloatField()
 
-    def __str__(self) -> str:  # type: ignore[override]
+    def __str__(self) -> str:  
         return self.name or f"Tariff {self.id}"

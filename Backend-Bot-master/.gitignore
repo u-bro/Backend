@@ -73,3 +73,4 @@ logs/
 testfield/
 ztest/
 models_data/
+0002_create_test_data.py

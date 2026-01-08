@@ -14,5 +14,5 @@ class Transaction(models.Model):
     amount = models.FloatField()
     created_at = models.DateTimeField()
 
-    def __str__(self) -> str:  # type: ignore[override]
+    def __str__(self) -> str:  
         return f"Transaction {self.id}"

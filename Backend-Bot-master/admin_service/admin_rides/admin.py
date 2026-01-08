@@ -34,23 +34,30 @@ class RideAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_editable = tuple([f for f in list_display if f != 'id'])
+    list_editable = tuple([f for f in list_display if f != 'id' and f not in ['pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'distance_meters', 'duration_seconds', 'status', 'cancellation_reason']])
     list_filter = ("status", "is_anomaly", "created_at")
     search_fields = ("pickup_address", "dropoff_address")
     actions = ["cancel_rides", "mark_anomaly_resolved"]
-    # Allow editing from admin — keep timestamps editable if necessary
 
-    def has_add_permission(self, request):  # type: ignore[override]
+
+    readonly_fields = ('id', 'created_at', 'updated_at', 'started_at', 'completed_at', 'canceled_at')
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(self.readonly_fields)
+        if obj and obj.status in ['completed', 'canceled']:
+            readonly.extend(['pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'distance_meters', 'duration_seconds', 'status', 'cancellation_reason'])
+        return readonly
+
+    def has_add_permission(self, request): 
         return False
 
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
+    def has_change_permission(self, request, obj=None):  
         return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
 
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
+    def has_delete_permission(self, request, obj=None):  
         return request.user.groups.filter(name='Admin').exists()
 
     def ride_actions(self, obj=None):
-        """Custom action buttons for ride management"""
         if not obj:
             return ""
         
@@ -65,8 +72,7 @@ class RideAdmin(admin.ModelAdmin):
         return mark_safe(' | '.join(actions)) if actions else "No actions available"
     ride_actions.short_description = "Actions"
 
-    def cancel_rides(self, request, queryset):  # type: ignore[override]
-        """Mass cancel rides"""
+    def cancel_rides(self, request, queryset):  
         if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
             self.message_user(request, "No permission", messages.ERROR)
             return
@@ -80,8 +86,7 @@ class RideAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f"Cancelled {count} rides", messages.SUCCESS)
 
-    def mark_anomaly_resolved(self, request, queryset):  # type: ignore[override]
-        """Mark ride anomalies as resolved"""
+    def mark_anomaly_resolved(self, request, queryset):  
         if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
             self.message_user(request, "No permission", messages.ERROR)
             return

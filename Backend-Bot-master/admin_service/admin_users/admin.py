@@ -19,22 +19,23 @@ class UserAdmin(admin.ModelAdmin):
         "created_at",
         "last_active_at",
     )
-    # Only include real model fields in list_editable to avoid selecting missing DB columns
     list_editable = tuple([
-        f for f in list_display if f != 'id' and any(f == fld.name for fld in User._meta.fields)
+        f for f in list_display if f != 'id' and any(f == fld.name for fld in User._meta.fields) and f != 'phone'
     ])
 
-    def get_queryset(self, request):
-        """Limit selected columns to real model fields to avoid DB errors when some columns are missing.
+    readonly_fields = ('id', 'created_at', 'last_active_at')
 
-        Use `self.list_display` to reference the admin's configured display columns.
-        """
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(self.readonly_fields)
+        if obj and obj.is_active:
+            readonly.append('phone')
+        return readonly
+
+    def get_queryset(self, request):
         qs = super().get_queryset(request)
-        # prepare list of actual model field names used in list_display
         actual_fields = [
             f for f in self.list_display if any(f == fld.name for fld in User._meta.fields)
         ]
-        # always include primary key
         if 'id' not in actual_fields:
             actual_fields = ['id'] + actual_fields
         try:
@@ -45,17 +46,17 @@ class UserAdmin(admin.ModelAdmin):
     search_fields = ("phone", "first_name", "last_name")
     actions = ["block_users", "unblock_users"]
 
-    def has_add_permission(self, request):  # type: ignore[override]
+    def has_add_permission(self, request):  
         return request.user.groups.filter(name='Admin').exists()
 
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
+    def has_change_permission(self, request, obj=None): 
         return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
 
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
+    def has_delete_permission(self, request, obj=None): 
         return request.user.groups.filter(name='Admin').exists()
 
-    def block_users(self, request, queryset):  # type: ignore[override]
-        """Block selected users"""
+    def block_users(self, request, queryset):  
+
         if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
             self.message_user(request, "No permission", messages.ERROR)
             return
@@ -69,8 +70,7 @@ class UserAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f"Blocked {count} users", messages.SUCCESS)
 
-    def unblock_users(self, request, queryset):  # type: ignore[override]
-        """Unblock selected users"""
+    def unblock_users(self, request, queryset):  
         if not request.user.groups.filter(name='Admin').exists():
             self.message_user(request, "Only Admin can unblock users", messages.ERROR)
             return

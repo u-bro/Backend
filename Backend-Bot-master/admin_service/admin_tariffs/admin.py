@@ -30,11 +30,7 @@ class TariffPlanAdmin(admin.ModelAdmin):
     list_filter = ("effective_from", "effective_to")
     search_fields = ("name",)
 
-    def has_add_permission(self, request):  # type: ignore[override]
-        return False
+    readonly_fields = ('id', 'created_at', 'updated_at')
 
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
-        return False
-
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
+    def has_add_permission(self, request):  
         return False

@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class AuditLogger:
-    """Audit logging for admin actions"""
     
     @staticmethod
     def log_action(
@@ -20,10 +19,7 @@ class AuditLogger:
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None
     ):
-        """Log admin action"""
         try:
-            # Here you would log to database or external service
-            # For now, just log to file
             log_data = {
                 "admin_user_id": admin_user_id,
                 "action": action,
@@ -35,16 +31,13 @@ class AuditLogger:
                 "user_agent": user_agent
             }
             logger.info(f"Admin action: {log_data}")
-            
-            # TODO: Save to admin_audit_logs table via API
-            # api_client.log_admin_action(log_data)
+
             
         except Exception as e:
             logger.error(f"Failed to log admin action: {e}")
 
     @staticmethod
     def log_driver_approval(admin_user_id: int, driver_id: int, approved: bool):
-        """Log driver approval/rejection"""
         AuditLogger.log_action(
             admin_user_id=admin_user_id,
             action="approve_driver" if approved else "reject_driver",
@@ -55,7 +48,6 @@ class AuditLogger:
 
     @staticmethod
     def log_user_update(admin_user_id: int, user_id: int, changes: Dict[str, Any]):
-        """Log user update"""
         AuditLogger.log_action(
             admin_user_id=admin_user_id,
             action="update_user",
@@ -66,7 +58,6 @@ class AuditLogger:
 
     @staticmethod
     def log_tariff_action(admin_user_id: int, tariff_id: int, action: str, data: Dict[str, Any]):
-        """Log tariff CRUD action"""
         AuditLogger.log_action(
             admin_user_id=admin_user_id,
             action=f"{action}_tariff",
@@ -77,7 +68,6 @@ class AuditLogger:
 
     @staticmethod
     def log_anomaly_review(admin_user_id: int, anomaly_id: int):
-        """Log anomaly review"""
         AuditLogger.log_action(
             admin_user_id=admin_user_id,
             action="review_anomaly",

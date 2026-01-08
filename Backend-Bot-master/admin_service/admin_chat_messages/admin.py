@@ -19,11 +19,10 @@ class ChatMessageAdmin(admin.ModelAdmin):
     list_filter = ("message_type", "is_moderated", "created_at")
     search_fields = ("text",)
 
-    def has_add_permission(self, request):  # type: ignore[override]
-        return False
+    readonly_fields = ('id', 'created_at', 'edited_at', 'deleted_at')
 
-    def has_change_permission(self, request, obj=None):  # type: ignore[override]
-        return False
-
-    def has_delete_permission(self, request, obj=None):  # type: ignore[override]
-        return False
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(self.readonly_fields)
+        if obj and obj.is_moderated:
+            readonly.extend(['text', 'attachments'])
+        return readonly
