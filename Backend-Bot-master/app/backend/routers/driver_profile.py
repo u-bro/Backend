@@ -4,8 +4,7 @@ from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_profile import driver_profile_crud
 from app.schemas.driver_profile import DriverProfileSchema, DriverProfileCreate, DriverProfileUpdate, DriverProfileApprove, DriverProfileApproveIn, DriverProfileUpdateMe
-from app.backend.deps import require_role, require_owner, get_current_user_id, require_driver_verification, get_current_driver_profile_id
-from app.models import DriverProfile
+from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id
 
 
 class DriverProfileRouter(BaseRouter):
@@ -18,7 +17,7 @@ class DriverProfileRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["driver", "admin"])), Depends(require_driver_verification), Depends(require_owner(DriverProfile, 'user_id'))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}/approve", self.approve_profile, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[DriverProfileSchema]:
