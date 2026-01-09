@@ -18,4 +18,3 @@ class TariffPlan(Base):
     rate_per_meter: Mapped[float] = mapped_column(Float, nullable=False)
     multiplier: Mapped[float] = mapped_column(Float, nullable=False)
     rules: Mapped[JSONB | None] = mapped_column(JSONB, nullable=True)
-    commission_percentage: Mapped[float] = mapped_column(Float, nullable=False)

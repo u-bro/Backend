@@ -22,7 +22,6 @@ class TariffPlanAdmin(admin.ModelAdmin):
         "base_fare",
         "rate_per_meter",
         "multiplier",
-        "commission_percentage",
         "created_at",
         "updated_at",
     )

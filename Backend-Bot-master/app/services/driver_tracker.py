@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import math, logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud import driver_location_crud
-from app.schemas.driver_location import DriverLocationUpdateMe
+from app.schemas.driver_location import DriverLocationUpdateMe, DriverLocationUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,9 @@ class DriverTracker:
             return self.set_status(driver_id, status)
         return None
     
-    def assign_ride(self, driver_profile_id: int, ride_id: int) -> Optional[DriverState]:
+    async def assign_ride(self, session: AsyncSession, driver_profile_id: int, ride_id: int) -> Optional[DriverState]:
+        await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdate(status='busy'))
+        
         if driver_profile_id not in self._drivers:
             return None
         
@@ -125,11 +127,13 @@ class DriverTracker:
         state.current_ride_id = ride_id
         state.status = DriverStatus.BUSY
         state.updated_at = datetime.now(timezone.utc)
-        
+
         logger.info(f"Driver {driver_profile_id} assigned to ride {ride_id}")
         return state
     
-    def release_ride(self, driver_profile_id: int) -> Optional[DriverState]:
+    async def release_ride(self, session: AsyncSession, driver_profile_id: int) -> Optional[DriverState]:
+        await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdate(status='online'))
+        
         if driver_profile_id not in self._drivers:
             return None
         
@@ -138,7 +142,7 @@ class DriverTracker:
         state.current_ride_id = None
         state.status = DriverStatus.ONLINE
         state.updated_at = datetime.now(timezone.utc)
-        
+
         logger.info(f"Driver {driver_profile_id} released from ride {old_ride}")
         return state
     

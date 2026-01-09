@@ -35,7 +35,6 @@ class CrudTariffPlan(CrudBase):
             "base_fare": data.get("base_fare", existing.base_fare),
             "rate_per_meter": data.get("rate_per_meter", existing.rate_per_meter),
             "multiplier": data.get("multiplier", existing.multiplier),
-            "commission_percentage": data.get("commission_percentage", existing.commission_percentage),
             "rules": data.get("rules", existing.rules),
             "effective_from": new_effective_from,
             "effective_to": data.get("effective_to"),

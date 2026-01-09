@@ -19,7 +19,6 @@ class TariffPlan(models.Model):
     rate_per_meter = models.FloatField()
     multiplier = models.FloatField()
     rules = models.JSONField(null=True, blank=True)
-    commission_percentage = models.FloatField()
 
     def __str__(self) -> str:  
         return self.name or f"Tariff {self.id}"

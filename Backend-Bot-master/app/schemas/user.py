@@ -40,3 +40,6 @@ class UserSchema(UserSchemaCreate):
 
 class UserSchemaMe(UserSchema):
     role_name: str
+
+class UserSchemaMeDriver(UserSchemaMe):
+    is_active_ride: bool = False

@@ -5,9 +5,11 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import insert, update, delete
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
+from .commission import commission_crud
 from .ride_status_history import ride_status_history_crud
 from .driver_profile import driver_profile_crud
-from app.models import Ride, TariffPlan
+from .driver_location import driver_location_crud 
+from app.models import Ride, TariffPlan, Commission, DriverLocation
 from app.schemas.ride import RideSchema
 from app.schemas.ride_status_history import RideStatusHistoryCreate
 from fastapi import HTTPException
@@ -30,11 +32,11 @@ ALLOWED_TRANSITIONS = {
 
 class CrudRide(CrudBase):
     @staticmethod
-    def _calculate_expected_fare(tariff_plan: TariffPlan, distance_meters: int | None) -> float | None:
-        return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier))) * (1 + float(tariff_plan.commission_percentage) / 100)
+    def _calculate_expected_fare(tariff_plan: TariffPlan, distance_meters: int | None, commission: Commission) -> float | None:
+        return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier))) * (1 + commission.percentage / 100) + commission.fixed_amount
 
     @staticmethod
-    def _build_snapshot(tariff_plan: TariffPlan, distance_meters: int | None, expected_fare: float | None) -> dict:
+    def _build_snapshot(tariff_plan: TariffPlan, distance_meters: int | None, expected_fare: float | None, commission: Commission) -> dict:
         def _iso_utc_z(value: datetime | None) -> str | None:
             if value is None:
                 return None
@@ -56,13 +58,20 @@ class CrudRide(CrudBase):
                 "effective_to": _iso_utc_z(effective_to),
                 "rules": getattr(tariff_plan, "rules", None),
             },
+            "commission": {
+                "id": commission.id,
+                "name": commission.name,
+                "valid_from": _iso_utc_z(commission.valid_from),
+                "valid_to": _iso_utc_z(commission.valid_to)
+            },
             "totals": {
                 "base_fare": float(tariff_plan.base_fare),
                 "rate_per_meter": float(tariff_plan.rate_per_meter),
                 "multiplier": float(tariff_plan.multiplier),
+                "commission_fixed_amount": commission.fixed_amount,
+                "commission_percentage": commission.percentage,
                 "distance_meters": distance_meters,
-                "commission_percentage": float(tariff_plan.commission_percentage),
-                "formula": "base_fare + (distance_meters * rate_per_meter * multiplier)) * (1 + commission_percentage / 100)",
+                "formula": "(base_fare + (distance_meters * rate_per_meter * multiplier)) * (1 + commission_percentage) + commission_fixed_amount",
                 "expected_fare": expected_fare,
             },
             "meta": {
@@ -71,22 +80,24 @@ class CrudRide(CrudBase):
         }
 
     @staticmethod
-    def _add_expected_fare_and_snapshot(data: dict, tariff_plan: TariffPlan, distance_meters: int):
-        expected_fare = CrudRide._calculate_expected_fare(tariff_plan, distance_meters)
-        snapshot = CrudRide._build_snapshot(tariff_plan, distance_meters, expected_fare)
+    def _add_expected_fare_and_snapshot(data: dict, tariff_plan: TariffPlan, distance_meters: int, commission: Commission):
+        expected_fare = CrudRide._calculate_expected_fare(tariff_plan, distance_meters, commission)
+        snapshot = CrudRide._build_snapshot(tariff_plan, distance_meters, expected_fare, commission)
         data["expected_fare"] = expected_fare
         data["expected_fare_snapshot"] = snapshot
 
     async def create(self, session: AsyncSession, create_obj) -> RideSchema | None:
         data = create_obj.model_dump()
+        await self.cancel_rides_by_user_id(session, data.get('client_id'))
         tariff_plan = await tariff_plan_crud.get_by_id(session, data.get("tariff_plan_id"))
+        commission = await commission_crud.get_by_id(session,  data.get("commission_id"))
 
         if not tariff_plan:
             raise HTTPException(status_code=404, detail="Tariff plan not found")
         if tariff_plan.effective_to and tariff_plan.effective_to <= datetime.now(timezone.utc):
             raise HTTPException(status_code=400, detail="This version of tariff plan has closed")
 
-        self._add_expected_fare_and_snapshot(data, tariff_plan, data.get("distance_meters"))
+        self._add_expected_fare_and_snapshot(data, tariff_plan, data.get("distance_meters"), commission)
         stmt = insert(self.model).values(data).returning(self.model)
         ride = await self.execute_get_one(session, stmt)
         if not ride:
@@ -106,8 +117,10 @@ class CrudRide(CrudBase):
         if should_reprice:
             tariff_plan_id = data.get("tariff_plan_id", existing.tariff_plan_id)
             tariff_plan = await tariff_plan_crud.get_by_id(session, int(tariff_plan_id))
+            commission_id = data.get("commission_id", existing.commission_id)
+            commission = await commission_crud.get_by_id(session,  int(commission_id))
             distance_meters = data.get("distance_meters", existing.distance_meters)
-            self._add_expected_fare_and_snapshot(data, tariff_plan, distance_meters)
+            self._add_expected_fare_and_snapshot(data, tariff_plan, distance_meters, commission)
 
         if not data:
             return await self.get_by_id(session, id)
@@ -136,6 +149,11 @@ class CrudRide(CrudBase):
         return True
 
     async def accept(self, session: AsyncSession, id: int, update_obj, user_id: int) -> RideSchema | None:
+        driver_location = await driver_location_crud.get_by_driver_profile_id(session, update_obj.driver_profile_id)
+        if not driver_location:
+            raise HTTPException(status_code=404, detail="Driver location not found")
+        if driver_location.status == 'busy':
+            raise HTTPException(status_code=409, detail="You already have accepted ride")
         stmt = (
             update(self.model)
             .where(and_(self.model.id == id, self.model.driver_profile_id.is_(None)))
@@ -162,5 +180,20 @@ class CrudRide(CrudBase):
         result = await session.execute(stmt)
         rides = result.scalars().all()
         return [self.schema.model_validate(ride) for ride in rides]
+    
+    async def cancel_rides_by_user_id(self, session: AsyncSession, user_id: int):
+        stmt = select(self.model).where(and_(self.model.status.in_(["requested", "accepted", "started"]), self.model.client_id == user_id))
+        result = await session.execute(stmt)
+        existing_rides = result.scalars().all()
+        if not existing_rides or not len(existing_rides):
+            return
+        ids = [ride.id for ride in existing_rides]
+        driver_profile_ids = [ride.driver_profile_id for ride in existing_rides]
+
+        update_stmt_rides = update(self.model).where(self.model.id.in_(ids)).values(status="canceled")
+        await session.execute(update_stmt_rides)
+
+        update_stmt_profiles = update(DriverLocation).where(and_(DriverLocation.driver_profile_id.in_(driver_profile_ids), DriverLocation.status == 'busy')).values(status="online")
+        await session.execute(update_stmt_profiles)    
 
 ride_crud = CrudRide(Ride, RideSchema)
