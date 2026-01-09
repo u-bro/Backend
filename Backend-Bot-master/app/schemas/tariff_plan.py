@@ -11,7 +11,6 @@ class TariffPlanCreate(BaseSchema):
     effective_from: datetime = Field(None)
     effective_to: datetime | None = Field(None)
     rules: dict | None = Field(None)
-    commission_percentage: float = Field(..., gt=0) 
 
 
 class TariffPlanUpdate(BaseSchema):
@@ -22,7 +21,6 @@ class TariffPlanUpdate(BaseSchema):
     effective_from: datetime | None = Field(None)
     effective_to: datetime | None = Field(None)
     rules: dict | None = Field(None)
-    commission_percentage: float | None = Field(None, gt=0)
 
 
 class TariffPlanSchema(TariffPlanCreate):

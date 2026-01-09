@@ -31,7 +31,7 @@ ALLOWED_TRANSITIONS = {
 class CrudRide(CrudBase):
     @staticmethod
     def _calculate_expected_fare(tariff_plan: TariffPlan, distance_meters: int | None) -> float | None:
-        return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier))) * (1 + float(tariff_plan.commission_percentage) / 100)
+        return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier)))
 
     @staticmethod
     def _build_snapshot(tariff_plan: TariffPlan, distance_meters: int | None, expected_fare: float | None) -> dict:
@@ -61,8 +61,7 @@ class CrudRide(CrudBase):
                 "rate_per_meter": float(tariff_plan.rate_per_meter),
                 "multiplier": float(tariff_plan.multiplier),
                 "distance_meters": distance_meters,
-                "commission_percentage": float(tariff_plan.commission_percentage),
-                "formula": "base_fare + (distance_meters * rate_per_meter * multiplier)) * (1 + commission_percentage / 100)",
+                "formula": "base_fare + (distance_meters * rate_per_meter * multiplier))",
                 "expected_fare": expected_fare,
             },
             "meta": {
