@@ -41,7 +41,6 @@ class DriverState:
 
 
 class DriverTracker:
-    OFFLINE_TIMEOUT_SECONDS = 120 
     
     def __init__(self):
         self._drivers: Dict[int, DriverState] = {}
@@ -157,41 +156,6 @@ class DriverTracker:
             return self._drivers.get(driver_id)
         return None
     
-    def get_available_drivers(self, ride_class: Optional[str] = None, center_lat: Optional[float] = None, center_lng: Optional[float] = None, radius_km: float = 10.0, limit: int = 50) -> List[DriverState]:
-        candidates = []
-        
-        if ride_class:
-            driver_ids = self._class_index.get(ride_class.lower(), set())
-            drivers = [self._drivers[did] for did in driver_ids if did in self._drivers]
-        else:
-            drivers = list(self._drivers.values())
-        
-        for driver in drivers:
-            if not driver.is_available():
-                continue
-            
-            if ride_class and not driver.has_permit(ride_class):
-                continue
-            
-            distance = None
-            if center_lat is not None and center_lng is not None:
-                if driver.latitude is None or driver.longitude is None:
-                    continue
-                
-                distance = self._haversine_distance(
-                    center_lat, center_lng,
-                    driver.latitude, driver.longitude
-                )
-                
-                if distance > radius_km:
-                    continue
-            
-            candidates.append((driver, distance))
-        
-        candidates.sort(key=lambda x: (x[1] if x[1] else 0, -x[0].rating))
-        
-        return [c[0] for c in candidates[:limit]]
-    
     def get_online_count(self) -> int:
         return sum(1 for d in self._drivers.values() if d.status == DriverStatus.ONLINE)
     
@@ -205,18 +169,6 @@ class DriverTracker:
             "busy": self.get_busy_count(),
             "offline": sum(1 for d in self._drivers.values() if d.status == DriverStatus.OFFLINE),
         }
-    
-    def cleanup_stale(self) -> int:
-        threshold = datetime.now(timezone.utc) - timedelta(seconds=self.OFFLINE_TIMEOUT_SECONDS)
-        count = 0
-        
-        for driver in self._drivers.values():
-            if driver.status != DriverStatus.OFFLINE and driver.updated_at < threshold:
-                driver.status = DriverStatus.OFFLINE
-                count += 1
-                logger.info(f"Driver {driver.driver_profile_id} auto-offline (stale)")
-        
-        return count
     
     def _update_class_index(self, driver_id: int, classes: Set[str]):
         for class_drivers in self._class_index.values():
