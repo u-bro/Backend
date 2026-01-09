@@ -1,0 +1,24 @@
+from typing import Optional
+from . import BaseSchema
+from datetime import datetime
+from pydantic import Field
+
+class InAppNotificationCreate(BaseSchema):
+    user_id: int = Field(..., gt=0)
+    type: str = Field(..., max_length=255)
+    title: str = Field(..., max_length=255)
+    message: str = Field(..., max_length=255)
+    data: Optional[dict] = Field(None)
+    created_at: Optional[datetime] = Field(None)
+
+
+class InAppNotificationUpdate(BaseSchema):
+    type: Optional[str] = Field(None, max_length=255)
+    title: Optional[str] = Field(None, max_length=255)
+    message: Optional[str] = Field(None, max_length=255)
+    data: Optional[dict] = Field(None)
+    created_at: Optional[datetime] = Field(None)
+
+
+class InAppNotificationSchema(InAppNotificationCreate):
+    id: int = Field(..., gt=0)
