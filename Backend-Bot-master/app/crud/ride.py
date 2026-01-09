@@ -196,4 +196,10 @@ class CrudRide(CrudBase):
         update_stmt_profiles = update(DriverLocation).where(and_(DriverLocation.driver_profile_id.in_(driver_profile_ids), DriverLocation.status == 'busy')).values(status="online")
         await session.execute(update_stmt_profiles)    
 
+    async def get_by_client_id(self, session: AsyncSession, client_id: int) -> list[RideSchema]:
+        stmt = select(self.model).where(self.model.client_id == client_id)
+        result = await session.execute(stmt)
+        rides = result.scalars().all()
+        return [self.schema.model_validate(ride) for ride in rides]
+
 ride_crud = CrudRide(Ride, RideSchema)
