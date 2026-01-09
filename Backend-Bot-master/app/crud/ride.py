@@ -87,6 +87,7 @@ class CrudRide(CrudBase):
 
     async def create(self, session: AsyncSession, create_obj) -> RideSchema | None:
         data = create_obj.model_dump()
+        await self.cancel_rides_by_user_id(session, data.get('client_id'))
         tariff_plan = await tariff_plan_crud.get_by_id(session, data.get("tariff_plan_id"))
         commission = await commission_crud.get_by_id(session,  data.get("commission_id"))
 
@@ -173,5 +174,15 @@ class CrudRide(CrudBase):
         result = await session.execute(stmt)
         rides = result.scalars().all()
         return [self.schema.model_validate(ride) for ride in rides]
+    
+    async def cancel_rides_by_user_id(self, session: AsyncSession, user_id: int):
+        stmt = select(self.model).where(and_(self.model.status == "requested", self.model.client_id == user_id))
+        result = await session.execute(stmt)
+        existing_rides = result.scalars().all()
+        if not existing_rides or not len(existing_rides):
+            return
+        ids = [ride.id for ride in existing_rides]
+        update_stmt = update(self.model).where(self.model.id.in_(ids)).values(status="canceled")
+        await session.execute(update_stmt)
 
 ride_crud = CrudRide(Ride, RideSchema)
