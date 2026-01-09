@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
 import math, logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.crud import driver_location_crud
+from app.crud import driver_location_crud, driver_profile_crud
 from app.schemas.driver_location import DriverLocationUpdateMe, DriverLocationUpdate
 
 logger = logging.getLogger(__name__)
@@ -132,7 +132,9 @@ class DriverTracker:
         return state
     
     async def release_ride(self, session: AsyncSession, driver_profile_id: int) -> Optional[DriverState]:
-        await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdate(status='online'))
+        driver_profile = await driver_profile_crud.get_by_id(session, driver_profile_id)
+        if driver_profile:
+            await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdate(status='online'))
         
         if driver_profile_id not in self._drivers:
             return None
