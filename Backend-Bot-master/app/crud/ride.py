@@ -8,7 +8,8 @@ from .tariff_plan import tariff_plan_crud
 from .commission import commission_crud
 from .ride_status_history import ride_status_history_crud
 from .driver_profile import driver_profile_crud
-from app.models import Ride, TariffPlan, Commission
+from .driver_location import driver_location_crud 
+from app.models import Ride, TariffPlan, Commission, DriverLocation
 from app.schemas.ride import RideSchema
 from app.schemas.ride_status_history import RideStatusHistoryCreate
 from fastapi import HTTPException
@@ -148,6 +149,11 @@ class CrudRide(CrudBase):
         return True
 
     async def accept(self, session: AsyncSession, id: int, update_obj, user_id: int) -> RideSchema | None:
+        driver_location = await driver_location_crud.get_by_driver_profile_id(session, update_obj.driver_profile_id)
+        if not driver_location:
+            raise HTTPException(status_code=404, detail="Driver location not found")
+        if driver_location.status == 'busy':
+            raise HTTPException(status_code=409, detail="You already have accepted ride")
         stmt = (
             update(self.model)
             .where(and_(self.model.id == id, self.model.driver_profile_id.is_(None)))
@@ -176,13 +182,18 @@ class CrudRide(CrudBase):
         return [self.schema.model_validate(ride) for ride in rides]
     
     async def cancel_rides_by_user_id(self, session: AsyncSession, user_id: int):
-        stmt = select(self.model).where(and_(self.model.status == "requested", self.model.client_id == user_id))
+        stmt = select(self.model).where(and_(self.model.status.in_(["requested", "accepted", "started"]), self.model.client_id == user_id))
         result = await session.execute(stmt)
         existing_rides = result.scalars().all()
         if not existing_rides or not len(existing_rides):
             return
         ids = [ride.id for ride in existing_rides]
-        update_stmt = update(self.model).where(self.model.id.in_(ids)).values(status="canceled")
-        await session.execute(update_stmt)
+        driver_profile_ids = [ride.driver_profile_id for ride in existing_rides]
+
+        update_stmt_rides = update(self.model).where(self.model.id.in_(ids)).values(status="canceled")
+        await session.execute(update_stmt_rides)
+
+        update_stmt_profiles = update(DriverLocation).where(and_(DriverLocation.driver_profile_id.in_(driver_profile_ids), DriverLocation.status == 'busy')).values(status="online")
+        await session.execute(update_stmt_profiles)    
 
 ride_crud = CrudRide(Ride, RideSchema)
