@@ -53,14 +53,14 @@ class RideRouter(BaseRouter):
         ride = await self.model_crud.update(request.state.session, id, update_obj, user_id)
         if update_obj.status == 'canceled':
             ride = await ride_crud.get_by_id(request.state.session, id)
-            driver_tracker.release_ride(ride.driver_profile_id)
+            await driver_tracker.release_ride(request.state.session, ride.driver_profile_id)
         return ride
 
     async def accept_ride(self, request: Request, id: int, update_obj: RideSchemaAcceptByDriver, driver_profile_id: int = Depends(get_current_driver_profile_id), user_id: int = Depends(get_current_user_id)) -> RideSchema:
         update_obj = RideSchemaAcceptByDriver(driver_profile_id=driver_profile_id, **update_obj.model_dump(exclude={"driver_profile_id"}),)
         accepted = await self.model_crud.accept(request.state.session, id, update_obj, user_id)
         if accepted is not None:
-            driver_tracker.assign_ride(driver_profile_id, accepted.id)
+            await driver_tracker.assign_ride(request.state.session, driver_profile_id, accepted.id)
             return accepted
 
         existing = await self.model_crud.get_by_id(request.state.session, id)
@@ -72,7 +72,7 @@ class RideRouter(BaseRouter):
         ride = await self.model_crud.update(request.state.session, id, update_obj, user_id)
         if update_obj.status == 'canceled':
             ride = await ride_crud.get_by_id(request.state.session, id)
-            driver_tracker.release_ride(ride.driver_profile_id)
+            await driver_tracker.release_ride(request.state.session, ride.driver_profile_id)
         return ride
 
     async def finish_ride_by_driver(self, request: Request, id: int, update_obj: RideSchemaFinishByDriver, ride: Ride = Depends(require_driver_profile(Ride)), user_id: int = Depends(get_current_user_id)) -> RideSchema:
@@ -82,7 +82,7 @@ class RideRouter(BaseRouter):
 
         update_obj = RideSchemaFinishWithAnomaly(is_anomaly=str(ride.expected_fare) != str(update_obj.actual_fare), **update_obj.model_dump())
         ride = await self.model_crud.update(request.state.session, id, update_obj, user_id)
-        driver_tracker.release_ride(ride.driver_profile_id)
+        await driver_tracker.release_ride(request.state.session, ride.driver_profile_id)
         return ride
 
     def _ride_schema_to_dict(self, ride_schema):

@@ -1,6 +1,6 @@
 from fastapi import Request, Depends
-from app.crud import user_crud
-from app.schemas.user import UserSchemaCreate, UserSchema, UserSchemaMe, UserSchemaUpdate, UserSchemaUpdateMe
+from app.crud import user_crud, driver_location_crud
+from app.schemas.user import UserSchemaCreate, UserSchema, UserSchemaMe, UserSchemaMeDriver, UserSchemaUpdate, UserSchemaUpdateMe
 from app.backend.routers.base import BaseRouter
 from app.backend.deps import require_role, get_current_user, get_current_user_id
 from app.models import User
@@ -36,9 +36,12 @@ class UserRouter(BaseRouter):
     async def update(self, request: Request, id: int, update_obj: UserSchemaUpdate) -> UserSchema:
         return await super().update(request, id, update_obj)
 
-    async def get_me(self, request: Request, user: User = Depends(get_current_user)) -> UserSchemaMe:
+    async def get_me(self, request: Request, user: User = Depends(get_current_user)) -> UserSchemaMe | UserSchemaMeDriver:
         role_name = user.role.code
         role_name = "user" if role_name == "driver" and (not user.driver_profile or not user.driver_profile.approved) else role_name
+        if role_name == "driver":
+            driver_location = await driver_location_crud.get_by_driver_profile_id(request.state.session, user.driver_profile.id)
+            return UserSchemaMeDriver(**user.__dict__, role_name=role_name, is_active_ride=driver_location.status=='busy')
         return UserSchemaMe(**user.__dict__, role_name=role_name)
 
     async def update_me(self, request: Request, update_obj: UserSchemaUpdateMe, user_id: int = Depends(get_current_user_id)) -> UserSchema:
