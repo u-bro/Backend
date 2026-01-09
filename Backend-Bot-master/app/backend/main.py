@@ -24,6 +24,7 @@ from app.backend.routers.chat_http import chat_http_router
 from app.backend.routers.chat_ws import chat_ws_router
 from app.backend.routers.driver_rating import driver_rating_router
 from app.backend.routers.ride_status_history import ride_status_history_router
+from app.backend.routers.in_app_notification import in_app_notification_router
 
 
 app = FastAPI()
@@ -57,6 +58,7 @@ app.include_router(chat_http_router, tags=['Chat(HTTP)'], prefix=API_PREFIX)
 app.include_router(chat_ws_router, tags=['Chat(WebSocket)'], prefix=API_PREFIX)
 app.include_router(driver_rating_router, tags=['DriverRatings'], prefix=API_PREFIX)
 app.include_router(ride_status_history_router, tags=['RideStatusHistory'], prefix=API_PREFIX)
+app.include_router(in_app_notification_router, tags=['InAppNotifications'], prefix=API_PREFIX)
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request: Request, exc: ResponseValidationError):
