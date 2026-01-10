@@ -1,6 +1,6 @@
-from fastapi import Request, Depends
+from fastapi import Request, Depends, HTTPException
 from app.crud import user_crud, driver_location_crud, ride_crud
-from app.schemas.user import UserSchemaCreate, UserSchema, UserSchemaMe, UserSchemaMeDriver, UserSchemaUpdate, UserSchemaUpdateMe
+from app.schemas.user import UserSchemaCreate, UserSchema, UserSchemaMe, UserSchemaUpdate, UserSchemaUpdateMe
 from app.backend.routers.base import BaseRouter
 from app.backend.deps import require_role, get_current_user, get_current_user_id
 from app.models import User
@@ -36,16 +36,18 @@ class UserRouter(BaseRouter):
     async def update(self, request: Request, id: int, update_obj: UserSchemaUpdate) -> UserSchema:
         return await super().update(request, id, update_obj)
 
-    async def get_me(self, request: Request, user: User = Depends(get_current_user)) ->  UserSchemaMeDriver:
+    async def get_me(self, request: Request, user: User = Depends(get_current_user)) ->  UserSchemaMe:
         role_name = user.role.code
         role_name = "user" if role_name == "driver" and (not user.driver_profile or not user.driver_profile.approved) else role_name
         if role_name == "driver":
             driver_location = await driver_location_crud.get_by_driver_profile_id(request.state.session, user.driver_profile.id)
-            return UserSchemaMeDriver(**user.__dict__, role_name=role_name, is_active_ride=driver_location.status=='busy')
+            if not driver_location:
+                raise HTTPException(status_code=404, detail="Driver location not found")
+            return UserSchemaMe(**user.__dict__, role_name=role_name, is_active_ride=driver_location.status=='busy')
 
         rides = await ride_crud.get_by_client_id(request.state.session, user.id)
         statuses = [ride.status for ride in rides if ride.status in ['requested', 'accepted', 'started']]
-        return UserSchemaMeDriver(**user.__dict__, role_name=role_name, is_active_ride=len(statuses) > 0)
+        return UserSchemaMe(**user.__dict__, role_name=role_name, is_active_ride=len(statuses) > 0)
 
     async def update_me(self, request: Request, update_obj: UserSchemaUpdateMe, user_id: int = Depends(get_current_user_id)) -> UserSchema:
         return await self.model_crud.update(request.state.session, user_id, update_obj)
