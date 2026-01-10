@@ -1,10 +1,12 @@
 from app.crud.base import CrudBase
 from app.models.driver_rating import DriverRating
-from app.schemas.driver_rating import DriverRatingSchema, DriverRatingAvgOut
+from app.schemas.driver_rating import DriverRatingSchema, DriverRatingAvgOut, DriverRatingCreate, DriverRatingUpdate
+from app.schemas.driver_profile import DriverProfileUpdate
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.sql.expression import desc
 from .ride import ride_crud
+from .driver_profile import driver_profile_crud
 from fastapi import HTTPException
 
 
@@ -12,7 +14,7 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
     def __init__(self) -> None:
         super().__init__(DriverRating, DriverRatingSchema)
 
-    async def create(self, session: AsyncSession, create_obj, **kwargs) -> DriverRatingSchema:
+    async def create(self, session: AsyncSession, create_obj: DriverRatingCreate, **kwargs) -> DriverRatingSchema:
         ride = await ride_crud.get_by_id(session, create_obj.ride_id)
 
         if ride is None or create_obj.client_id != ride.client_id:
@@ -30,7 +32,37 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
         if existing_rating.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="Rating already exists for this ride")
         
+        driver_profile = await driver_profile_crud.get_by_id(session, create_obj.driver_profile_id)
+        if driver_profile is None:
+            raise HTTPException(status_code=404, detail="Driver profile not found")
+        await driver_profile_crud.update(session, driver_profile.id, DriverProfileUpdate(rating_count=driver_profile.rating_count + 1, rating_avg=(driver_profile.rating_avg * driver_profile.rating_count + create_obj.rate) / (driver_profile.rating_count + 1)))
+        
         return await super().create(session, create_obj, **kwargs)
+
+    async def update(self, session: AsyncSession, id: int, update_obj: DriverRatingUpdate) -> DriverRatingSchema | None:
+        update_data = update_obj.model_dump(exclude_none=True)
+        if not update_data:
+            return await self.get_by_id(session, id)
+        
+        existing_rating = await self.get_by_id(session, id)
+        if existing_rating is None:
+            return None
+        
+        stmt = (
+            update(self.model)
+            .where(self.model.id == id)
+            .values(update_data)
+            .returning(self.model)
+        )
+        result = await self.execute_get_one(session, stmt)
+        if not result:
+            return None
+
+        driver_profile = await driver_profile_crud.get_by_id(session, result.driver_profile_id)
+        if driver_profile is None:
+            raise HTTPException(status_code=404, detail="Driver profile not found")
+        await driver_profile_crud.update(session, driver_profile.id, DriverProfileUpdate(rating_avg=(driver_profile.rating_avg * driver_profile.rating_count + result.rate - existing_rating.rate) / (driver_profile.rating_count)))
+        return self.schema.model_validate(result)
 
     async def avg_rating(self, session: AsyncSession, driver_id: int, count: int = 5):
         subq = (
