@@ -5,10 +5,11 @@ from app.backend.routers.base import BaseRouter
 from app.crud.ride import ride_crud
 from app.models import Ride
 from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver
+from app.schemas.in_app_notification import InAppNotificationCreate
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile
 from app.models import Ride
 from app.services import pdf_generator
-from app.crud import document_crud
+from app.crud import document_crud, in_app_notification_crud
 from app.services.matching_engine import matching_engine
 from app.services.driver_tracker import driver_tracker
 from datetime import datetime
@@ -40,7 +41,7 @@ class RideRouter(BaseRouter):
     async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
         ride = await super().create(request, create_obj)
-        await matching_engine.send_to_suitable_drivers(self._ride_schema_to_dict(ride))
+        await matching_engine.send_to_suitable_drivers(ride.model_dump())
         return ride
 
     async def update(self, request: Request, id: int, update_obj: RideSchema, user_id: int = Depends(get_current_user_id)) -> RideSchema:
@@ -61,6 +62,7 @@ class RideRouter(BaseRouter):
         accepted = await self.model_crud.accept(request.state.session, id, update_obj, user_id)
         if accepted is not None:
             await driver_tracker.assign_ride(request.state.session, driver_profile_id, accepted.id)
+            await in_app_notification_crud.create(request.state.session, InAppNotificationCreate(user_id=accepted.client_id, type="ride_accepted", title="Your ride is accepted by driver", message="Wait for a driver, idk"))
             return accepted
 
         existing = await self.model_crud.get_by_id(request.state.session, id)
@@ -84,20 +86,5 @@ class RideRouter(BaseRouter):
         ride = await self.model_crud.update(request.state.session, id, update_obj, user_id)
         await driver_tracker.release_ride(request.state.session, ride.driver_profile_id)
         return ride
-
-    def _ride_schema_to_dict(self, ride_schema):
-        ride_dict = ride_schema.model_dump()
-        def convert_datetimes(value: Any) -> Any:
-            if isinstance(value, datetime):
-                return value.isoformat()
-            if isinstance(value, dict):
-                return {k: convert_datetimes(v) for k, v in value.items()}
-            if isinstance(value, list):
-                return [convert_datetimes(v) for v in value]
-            if isinstance(value, tuple):
-                return tuple(convert_datetimes(v) for v in value)
-            return value
-
-        return convert_datetimes(ride_dict)
 
 ride_router = RideRouter().router

@@ -61,7 +61,7 @@ class MatchingEngine:
     def get_stats(self) -> dict:
         return {"tracker_stats": self.tracker.get_stats()}
 
-    async def send_to_suitable_drivers(self, message: Any, exclude_user_id: Optional[int] = None) -> None:
+    async def send_to_suitable_drivers(self, message: dict, exclude_user_id: Optional[int] = None) -> None:
         pickup_lat = message.get("pickup_lat")
         pickup_lng = message.get("pickup_lng")
 

@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from . import BaseSchema
 from pydantic import Field
 
@@ -22,6 +22,7 @@ class PhoneVerificationSchemaCreate(BaseSchema):
     status: Optional[str] = None
     attempts: Optional[int] = 0
     is_registred: Optional[bool] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class PhoneVerificationVerifyRequest(BaseSchema):
@@ -31,4 +32,3 @@ class PhoneVerificationVerifyRequest(BaseSchema):
 
 class PhoneVerificationSchema(PhoneVerificationSchemaCreate):
     id: int
-    created_at: Optional[datetime] = None

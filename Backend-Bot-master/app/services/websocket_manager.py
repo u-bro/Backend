@@ -40,26 +40,17 @@ class ConnectionManager:
             return False
         
         message_with_timestamp = {
-            **message,
+            **self._convert_datetime_to_str_in_dict(message),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
-        
-        disconnected = []
         for connection in self.active_connections[user_id]:
-            try:
-                await connection.send_json(message_with_timestamp)
-            except Exception as e:
-                logger.error(f"Failed to send message to user {user_id}: {e}")
-                disconnected.append(connection)
-        
-        for ws in disconnected:
-            self.active_connections[user_id].remove(ws)
+            await connection.send_json(message_with_timestamp)
         
         return True
     
     async def broadcast(self, message: dict, exclude_user_id: Optional[int] = None) -> None:
         message_with_timestamp = {
-            **message,
+            **self._convert_datetime_to_str_in_dict(message),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
@@ -68,11 +59,7 @@ class ConnectionManager:
                 continue
             
             for websocket in connections:
-                try:
-                    await websocket.send_json(message_with_timestamp)
-                except Exception as e:
-                    logger.error(f"Broadcast failed for user {user_id}: {e}")
-    
+                await websocket.send_json(message_with_timestamp)
     
     def join_ride(self, ride_id: int, user_id: int) -> None:
         if ride_id not in self.ride_participants:
@@ -103,5 +90,18 @@ class ConnectionManager:
     def get_connection_count(self) -> int:
         return sum(len(conns) for conns in self.active_connections.values())
 
+    def _convert_datetime_to_str_in_dict(self, dictionary):
+        def convert_datetimes(value: Any) -> Any:
+            if isinstance(value, datetime):
+                return value.isoformat()
+            if isinstance(value, dict):
+                return {k: convert_datetimes(v) for k, v in value.items()}
+            if isinstance(value, list):
+                return [convert_datetimes(v) for v in value]
+            if isinstance(value, tuple):
+                return tuple(convert_datetimes(v) for v in value)
+            return value
+
+        return convert_datetimes(dictionary)
 
 manager = ConnectionManager()

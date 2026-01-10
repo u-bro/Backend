@@ -1,4 +1,4 @@
-from typing import Optional, Literal
+from typing import Literal
 from pydantic import Field
 from datetime import datetime, timezone
 from .base import BaseSchema

@@ -1,5 +1,5 @@
 from pydantic import Field
-from datetime import datetime
+from datetime import datetime, timezone
 from .base import BaseSchema
 
 
@@ -12,13 +12,13 @@ class UserSchemaCreate(BaseSchema):
     city: str | None = Field(None, max_length=100)
     photo_url: str | None = Field(None)
     role_id: int = Field(..., gt=0)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class UserSchemaUpdate(UserSchemaCreate):
-    created_at: datetime | None = Field(None)
     last_active: datetime | None = Field(None)
     is_active: bool | None = Field(None) 
-    role_id: int | None = Field(None, gt=0)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class UserSchemaUpdateMe(BaseSchema):
@@ -29,17 +29,13 @@ class UserSchemaUpdateMe(BaseSchema):
     email: str | None = Field(None, max_length=255)
     city: str | None = Field(None, max_length=100)
     photo_url: str | None = Field(None)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-class UserSchema(UserSchemaCreate):
+class UserSchema(UserSchemaUpdate):
     id: int = Field(..., gt=0)
-    created_at: datetime | None = Field(None)
-    last_active: datetime | None = Field(None)
-    is_active: bool | None = Field(None) 
 
 
 class UserSchemaMe(UserSchema):
     role_name: str
-
-class UserSchemaMeDriver(UserSchemaMe):
     is_active_ride: bool = False

@@ -40,7 +40,7 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
             if update_data["current_class"] not in update_data.get("classes_allowed", existing_result.classes_allowed):
                 raise HTTPException(status_code=400, detail="Current class is not allowed")
         
-        return await super().update(session, id, update_data)
+        return await super().update(session, id, update_obj)
 
     async def approve(self, session: AsyncSession, id: int, update_obj: DriverProfileApprove):
         existing = await session.execute(select(self.model).where(self.model.id == id))
