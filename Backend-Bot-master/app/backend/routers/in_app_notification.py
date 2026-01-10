@@ -13,13 +13,16 @@ class InAppNotificationRouter(BaseRouter):
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/me", self.get_my_notifications, methods=["GET"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/me/unread", self.get_my_unread_notifications, methods=["GET"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/me/read-all", self.mark_all_as_read, methods=["PUT"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/me/read/{{id}}", self.mark_one_as_read, methods=["PUT"], status_code=200)
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
         self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
 
-    async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[InAppNotificationSchema]:
+    async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> List[InAppNotificationSchema]:
         items = await super().get_paginated(request, page, page_size)
         return TypeAdapter(List[InAppNotificationSchema]).validate_python(items)
 
@@ -35,8 +38,16 @@ class InAppNotificationRouter(BaseRouter):
     async def delete(self, request: Request, id: int):
         return await self.model_crud.delete(request.state.session, id)
 
-    async def get_my_notifications(self, request: Request, page: int = 1, page_size: int = 10, user_id = Depends(get_current_user_id)) -> list[InAppNotificationSchema]:
+    async def get_my_notifications(self, request: Request, page: int = 1, page_size: int = 10, user_id = Depends(get_current_user_id)) -> List[InAppNotificationSchema]:
         return await self.model_crud.get_by_user_id(request.state.session, user_id, page, page_size)
 
+    async def get_my_unread_notifications(self, request: Request, page: int = 1, page_size: int = 10, user_id = Depends(get_current_user_id)) -> List[InAppNotificationSchema]:
+        return await self.model_crud.get_unread_by_user_id(request.state.session, user_id, page, page_size)
+
+    async def mark_all_as_read(self, request: Request, user_id = Depends(get_current_user_id)) -> List[InAppNotificationSchema]:
+        return await self.model_crud.mark_all_as_read(request.state.session, user_id)
+
+    async def mark_one_as_read(self, request: Request, id: int, user_id = Depends(get_current_user_id)) -> InAppNotificationSchema:
+        return await self.model_crud.mark_one_as_read(request.state.session, id, user_id)
 
 in_app_notification_router = InAppNotificationRouter().router

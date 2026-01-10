@@ -13,6 +13,7 @@ class InAppNotification(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     message: Mapped[str] = mapped_column(String, nullable=False)
     data = mapped_column(JSONB, nullable=True)
+    read_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     user = relationship('User')
