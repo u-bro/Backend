@@ -6,7 +6,7 @@ from .driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverD
 from .phone_verification import PhoneVerificationSchema, PhoneVerificationUpdate
 from .commission import CommissionSchema, CommissionCreate, CommissionUpdate
 from .driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate
-from .chat_message import ChatMessageSchema, ChatMessageCreate, ChatMessageUpdate
+from .chat_message import ChatMessageSchema
 from .transaction import TransactionSchema, TransactionCreate, TransactionUpdate
 from .ride import RideSchema, RideSchemaCreate, RideSchemaIn
 from .auth import AuthSchemaLogin, AuthSchemaRegister, TokenResponse, RefreshTokenVerifyRequest, TokenResponseRegister

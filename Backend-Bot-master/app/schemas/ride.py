@@ -1,6 +1,6 @@
 from typing import Literal
 from pydantic import Field
-from datetime import datetime
+from datetime import datetime, timezone
 from .base import BaseSchema
 
 class RideSchemaIn(BaseSchema):
@@ -22,6 +22,7 @@ class RideSchemaIn(BaseSchema):
 
 class RideSchemaCreate(RideSchemaIn):
     client_id: int = Field(..., gt=0)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class RideSchema(RideSchemaCreate):
     id: int = Field(..., gt=0)
@@ -34,7 +35,6 @@ class RideSchema(RideSchemaCreate):
     expected_fare_snapshot: dict | None = Field(None)
     actual_fare: float | None = Field(None, ge=0)
     ride_metadata: dict | None = Field(None)
-    created_at: datetime | None = Field(None)
     updated_at: datetime | None = Field(None)
     is_anomaly: bool | None = Field(False)
     anomaly_reason: str | None = Field(None, max_length=255)
@@ -51,12 +51,14 @@ class RideSchemaUpdateByClient(BaseSchema):
     dropoff_lng: float | None = Field(None)
     distance_meters: int | None = Field(None, ge=0)
     canceled_at: datetime | None = Field(None)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaUpdateByDriver(BaseSchema):
     status: Literal["accepted", "started", "canceled"] | None = Field(None, max_length=50)
     status_reason: str | None = Field(None, max_length=255)
     started_at: datetime | None = Field(None)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaAcceptByDriver(BaseSchema):
@@ -64,12 +66,14 @@ class RideSchemaAcceptByDriver(BaseSchema):
     driver_profile_id: int | None = Field(None, gt=0)
     status_reason: str | None = Field(None, max_length=255)
     started_at: datetime | None = Field(None)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaFinishByDriver(BaseSchema):
     status: Literal["completed"] = Field("completed", max_length=50)
     completed_at: datetime | None = Field(None)
     actual_fare: float = Field(0, ge=0)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaFinishWithAnomaly(RideSchemaFinishByDriver):

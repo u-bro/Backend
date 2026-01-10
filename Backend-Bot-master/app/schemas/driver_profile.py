@@ -1,6 +1,7 @@
 from typing import Optional
 from .base import BaseSchema
-from datetime import datetime
+from datetime import datetime, timezone
+from pydantic import Field
 
 
 class DriverProfileCreate(BaseSchema):
@@ -21,6 +22,7 @@ class DriverProfileCreate(BaseSchema):
     documents_review_notes: Optional[str] = None
     current_class: Optional[str] = None
     ride_count: int = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DriverProfileUpdateMe(BaseSchema):
@@ -33,27 +35,28 @@ class DriverProfileUpdateMe(BaseSchema):
     license_category: Optional[str] = None
     experience_years: Optional[int] = None
     current_class: Optional[str] = None
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DriverProfileUpdate(DriverProfileCreate):
     user_id: Optional[int] = None
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     classes_allowed: Optional[list[str]] = None
 
 
 class DriverProfileApproveIn(BaseSchema):
     approved: bool = True
+    approved_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DriverProfileApprove(DriverProfileApproveIn):
     approved_by: int
 
 
-class DriverProfileSchema(DriverProfileCreate):
+class DriverProfileSchema(DriverProfileUpdate):
     id: int
     rating_avg: Optional[int] = None
-    rating_count: Optional[int] = 0
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    approved: Optional[bool] = False
+    rating_count: int = 0
+    approved: bool = False
     approved_by: Optional[int] = None
     approved_at: Optional[datetime] = None

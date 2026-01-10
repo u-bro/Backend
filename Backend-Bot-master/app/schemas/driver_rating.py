@@ -1,6 +1,6 @@
 from typing import Optional
 from . import BaseSchema
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import Field
 
 class DriverRatingCreateIn(BaseSchema):
@@ -8,8 +8,7 @@ class DriverRatingCreateIn(BaseSchema):
     ride_id: int = Field(..., gt=0)
     rate: int = Field(..., ge=1, le=5)
     comment: Optional[str] = Field(None, max_length=255)
-    created_at: Optional[datetime] = Field(None)
-
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class DriverRatingCreate(DriverRatingCreateIn):
     client_id: int = Field(..., gt=0)
@@ -18,7 +17,6 @@ class DriverRatingCreate(DriverRatingCreateIn):
 class DriverRatingUpdate(BaseSchema):
     rate: Optional[int] = Field(None, ge=1, le=5)
     comment: Optional[str] = Field(None, max_length=255)
-    created_at: Optional[datetime] = Field(None)
 
 
 class DriverRatingSchema(DriverRatingCreate):
