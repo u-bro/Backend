@@ -5,10 +5,11 @@ from app.backend.routers.base import BaseRouter
 from app.crud.ride import ride_crud
 from app.models import Ride
 from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver
+from app.schemas.in_app_notification import InAppNotificationCreate
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile
 from app.models import Ride
 from app.services import pdf_generator
-from app.crud import document_crud
+from app.crud import document_crud, in_app_notification_crud
 from app.services.matching_engine import matching_engine
 from app.services.driver_tracker import driver_tracker
 from datetime import datetime
@@ -61,6 +62,7 @@ class RideRouter(BaseRouter):
         accepted = await self.model_crud.accept(request.state.session, id, update_obj, user_id)
         if accepted is not None:
             await driver_tracker.assign_ride(request.state.session, driver_profile_id, accepted.id)
+            await in_app_notification_crud.create(request.state.session, InAppNotificationCreate(user_id=accepted.client_id, type="ride_accepted", title="Your ride is accepted by driver", message="Wait for a driver, idk"))
             return accepted
 
         existing = await self.model_crud.get_by_id(request.state.session, id)

@@ -1,16 +1,27 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.base import CrudBase
 from app.models.in_app_notification import InAppNotification
-from app.schemas.in_app_notification import InAppNotificationSchema
-from sqlalchemy import select, and_
+from app.schemas.in_app_notification import InAppNotificationSchema, InAppNotificationCreate
+from sqlalchemy import select, and_, insert
 from datetime import datetime, timezone
 from fastapi import HTTPException
+from app.services.websocket_manager import manager
 
 
 class InAppNotificationCrud(CrudBase[InAppNotification, InAppNotificationSchema]):
     def __init__(self) -> None:
         super().__init__(InAppNotification, InAppNotificationSchema)
     
+    async def create(self, session: AsyncSession, create_obj: InAppNotificationCreate) -> InAppNotificationSchema | None:
+        stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
+        result = await self.execute_get_one(session, stmt)
+        if not result:
+            return None
+
+        result_model = self.schema.model_validate(result)
+        await manager.send_personal_message(create_obj.user_id, result_model.model_dump())
+        return result_model
+
     async def get_by_user_id(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10):
         offset = (page - 1) * page_size
         result = await session.execute(select(self.model).where(self.model.user_id == user_id).offset(offset).limit(page_size))

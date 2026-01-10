@@ -9,3 +9,4 @@ from .commission import commission_crud
 from .transaction import transaction_crud
 from .document import document_crud
 from .driver_location import driver_location_crud
+from .in_app_notification import in_app_notification_crud

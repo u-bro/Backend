@@ -31,9 +31,7 @@ class InAppNotificationRouter(BaseRouter):
         return await super().get_by_id(request, id)
 
     async def create(self, request: Request, body: InAppNotificationCreate) -> InAppNotificationSchema:
-        notification = await self.model_crud.create(request.state.session, body)
-        await manager.send_personal_message(body.user_id, notification.model_dump())
-        return notification
+        return await self.model_crud.create(request.state.session, body)
 
     async def update(self, request: Request, id: int, body: InAppNotificationUpdate) -> InAppNotificationSchema:
         return await self.model_crud.update(request.state.session, id, body)
