@@ -40,7 +40,7 @@ class RideRouter(BaseRouter):
     async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
         ride = await super().create(request, create_obj)
-        await matching_engine.send_to_suitable_drivers(self._ride_schema_to_dict(ride))
+        await matching_engine.send_to_suitable_drivers(ride.model_dump())
         return ride
 
     async def update(self, request: Request, id: int, update_obj: RideSchema, user_id: int = Depends(get_current_user_id)) -> RideSchema:
@@ -84,20 +84,5 @@ class RideRouter(BaseRouter):
         ride = await self.model_crud.update(request.state.session, id, update_obj, user_id)
         await driver_tracker.release_ride(request.state.session, ride.driver_profile_id)
         return ride
-
-    def _ride_schema_to_dict(self, ride_schema):
-        ride_dict = ride_schema.model_dump()
-        def convert_datetimes(value: Any) -> Any:
-            if isinstance(value, datetime):
-                return value.isoformat()
-            if isinstance(value, dict):
-                return {k: convert_datetimes(v) for k, v in value.items()}
-            if isinstance(value, list):
-                return [convert_datetimes(v) for v in value]
-            if isinstance(value, tuple):
-                return tuple(convert_datetimes(v) for v in value)
-            return value
-
-        return convert_datetimes(ride_dict)
 
 ride_router = RideRouter().router

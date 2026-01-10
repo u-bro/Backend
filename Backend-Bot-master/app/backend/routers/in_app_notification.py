@@ -3,6 +3,7 @@ from fastapi import Request, Depends
 from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.in_app_notification import in_app_notification_crud
+from app.services.websocket_manager import manager
 from app.schemas.in_app_notification import InAppNotificationSchema, InAppNotificationCreate, InAppNotificationUpdate
 from app.backend.deps import require_role, get_current_user_id
 
@@ -30,7 +31,9 @@ class InAppNotificationRouter(BaseRouter):
         return await super().get_by_id(request, id)
 
     async def create(self, request: Request, body: InAppNotificationCreate) -> InAppNotificationSchema:
-        return await self.model_crud.create(request.state.session, body)
+        notification = await self.model_crud.create(request.state.session, body)
+        await manager.send_personal_message(body.user_id, notification.model_dump())
+        return notification
 
     async def update(self, request: Request, id: int, body: InAppNotificationUpdate) -> InAppNotificationSchema:
         return await self.model_crud.update(request.state.session, id, body)
