@@ -6,6 +6,7 @@ import math, logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud import driver_location_crud, driver_profile_crud
 from app.schemas.driver_location import DriverLocationUpdateMe, DriverLocationUpdate
+from app.schemas.driver_profile import DriverProfileSchema
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,9 @@ class DriverTracker:
         self._user_to_driver: Dict[int, int] = {}
         self._class_index: Dict[str, Set[int]] = {}
     
-    async def register_driver(self, session: AsyncSession, driver_profile_id: int, user_id: int, classes_allowed: List[str], rating: float = 5.0) -> DriverState:
-        classes_set = {c.lower() for c in classes_allowed}
+    async def register_driver(self, session: AsyncSession, driver_profile: DriverProfileSchema) -> DriverState:
+        classes_set = driver_profile.classes_allowed
+        driver_profile_id = driver_profile.id
         driver_location = await driver_location_crud.get_by_driver_profile_id(session, driver_profile_id)
         if not driver_location:
             driver_location = DriverLocationUpdateMe(status=DriverStatus.OFFLINE)
@@ -56,22 +58,22 @@ class DriverTracker:
         if driver_profile_id in self._drivers:
             state = self._drivers[driver_profile_id]
             state.classes_allowed = classes_set
-            state.rating = rating
+            state.rating = driver_profile.rating_avg
             state.status=DriverStatus(driver_location.status)
             state.latitude=driver_location.latitude
             state.longitude=driver_location.longitude
         else:
             state = DriverState(
                 driver_profile_id=driver_profile_id,
-                user_id=user_id,
+                user_id=driver_profile.user_id,
                 classes_allowed=classes_set,
-                rating=rating,
+                rating=driver_profile.rating_avg,
                 status=DriverStatus(driver_location.status),
                 latitude=driver_location.latitude,
                 longitude=driver_location.longitude
             )
             self._drivers[driver_profile_id] = state
-            self._user_to_driver[user_id] = driver_profile_id
+            self._user_to_driver[driver_profile.user_id] = driver_profile_id
         
         self._update_class_index(driver_profile_id, classes_set)
         

@@ -17,11 +17,7 @@ class MatchingEngine:
             return
 
         self.connected_driver_user_ids.add(int(profile.user_id))
-        classes_allowed = getattr(profile, "classes_allowed", [])
-        rating_avg = getattr(profile, "rating_avg", None)
-        rating = float(rating_avg) if rating_avg is not None else 5.0
-
-        await self.tracker.register_driver(session, int(profile.id), int(profile.user_id), list(classes_allowed), rating)
+        await self.tracker.register_driver(session, profile)
 
     def unregister_connected_driver(self, user_id: int) -> None:
         self.connected_driver_user_ids.discard(int(user_id))
@@ -32,7 +28,6 @@ class MatchingEngine:
             return []
         
         relevant_rides = []
-        
         for ride in rides:
             ride_class = ride.get('ride_class')
             if not driver.has_permit(ride_class):

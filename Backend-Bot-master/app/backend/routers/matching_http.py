@@ -31,7 +31,7 @@ class MatchingHttpRouter(BaseRouter):
         if not profile:
             raise HTTPException(status_code=404, detail="Driver profile not found")
 
-        state = await driver_tracker.register_driver(request.state.session, profile.id, profile.user_id, profile.classes_allowed, profile.rating_avg)
+        state = await driver_tracker.register_driver(request.state.session, profile)
 
         return {"status": "registered", "driver_profile_id": state.driver_profile_id, "classes_allowed": list(state.classes_allowed)}
 
