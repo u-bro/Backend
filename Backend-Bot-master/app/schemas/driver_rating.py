@@ -8,7 +8,7 @@ class DriverRatingCreateIn(BaseSchema):
     ride_id: int = Field(..., gt=0)
     rate: int = Field(..., ge=1, le=5)
     comment: Optional[str] = Field(None, max_length=255)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class DriverRatingCreate(DriverRatingCreateIn):
     client_id: int = Field(..., gt=0)

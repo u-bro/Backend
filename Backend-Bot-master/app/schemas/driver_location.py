@@ -12,7 +12,7 @@ class DriverLocationCreate(BaseSchema):
     provider: Optional[str] = None
     status: Literal["offline", "online", "busy"] = "offline"
     last_seen_at: Optional[datetime] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DriverLocationUpdate(BaseSchema):

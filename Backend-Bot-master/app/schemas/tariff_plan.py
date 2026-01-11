@@ -11,7 +11,7 @@ class TariffPlanCreate(BaseSchema):
     effective_from: datetime = Field(None)
     effective_to: datetime | None = Field(None)
     rules: dict | None = Field(None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class TariffPlanUpdate(BaseSchema):
@@ -22,7 +22,7 @@ class TariffPlanUpdate(BaseSchema):
     effective_from: datetime | None = Field(None)
     effective_to: datetime | None = Field(None)
     rules: dict | None = Field(None)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class TariffPlanSchema(TariffPlanCreate):
