@@ -22,7 +22,7 @@ class RideSchemaIn(BaseSchema):
 
 class RideSchemaCreate(RideSchemaIn):
     client_id: int = Field(..., gt=0)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class RideSchema(RideSchemaCreate):
     id: int = Field(..., gt=0)
@@ -51,14 +51,14 @@ class RideSchemaUpdateByClient(BaseSchema):
     dropoff_lng: float | None = Field(None)
     distance_meters: int | None = Field(None, ge=0)
     canceled_at: datetime | None = Field(None)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaUpdateByDriver(BaseSchema):
     status: Literal["accepted", "started", "canceled"] | None = Field(None, max_length=50)
     status_reason: str | None = Field(None, max_length=255)
     started_at: datetime | None = Field(None)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaAcceptByDriver(BaseSchema):
@@ -66,14 +66,14 @@ class RideSchemaAcceptByDriver(BaseSchema):
     driver_profile_id: int | None = Field(None, gt=0)
     status_reason: str | None = Field(None, max_length=255)
     started_at: datetime | None = Field(None)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaFinishByDriver(BaseSchema):
     status: Literal["completed"] = Field("completed", max_length=50)
     completed_at: datetime | None = Field(None)
     actual_fare: float = Field(0, ge=0)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaFinishWithAnomaly(RideSchemaFinishByDriver):

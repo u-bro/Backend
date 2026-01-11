@@ -12,7 +12,7 @@ class RideStatusHistoryCreate(BaseSchema):
     actor_role: Literal["client", "driver"] | None = Field(None, max_length=50)
     reason: str | None = Field(None, max_length=255)
     meta: dict | None = Field(None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideStatusHistorySchema(RideStatusHistoryCreate):

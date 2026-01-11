@@ -22,7 +22,7 @@ class PhoneVerificationSchemaCreate(BaseSchema):
     status: Optional[str] = None
     attempts: Optional[int] = 0
     is_registred: Optional[bool] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class PhoneVerificationVerifyRequest(BaseSchema):

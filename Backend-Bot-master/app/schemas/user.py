@@ -12,13 +12,13 @@ class UserSchemaCreate(BaseSchema):
     city: str | None = Field(None, max_length=100)
     photo_url: str | None = Field(None)
     role_id: int = Field(..., gt=0)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class UserSchemaUpdate(UserSchemaCreate):
     last_active: datetime | None = Field(None)
     is_active: bool | None = Field(None) 
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class UserSchemaUpdateMe(BaseSchema):
@@ -29,7 +29,7 @@ class UserSchemaUpdateMe(BaseSchema):
     email: str | None = Field(None, max_length=255)
     city: str | None = Field(None, max_length=100)
     photo_url: str | None = Field(None)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class UserSchema(UserSchemaUpdate):
