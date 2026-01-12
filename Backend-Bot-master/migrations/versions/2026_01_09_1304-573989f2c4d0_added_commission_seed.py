@@ -23,7 +23,8 @@ def upgrade() -> None:
         INSERT INTO commissions (id, name, percentage, fixed_amount, currency, valid_from, valid_to, created_at)
         VALUES
         (1, 'Plan1', 5.0, 0, 'USD', '2026-01-01', '2026-12-31', NOW()),
-        (2, 'Plan2', 0, 50, 'RUB', '2026-02-01', '2026-12-31', NOW());
+        (2, 'Plan2', 0, 50, 'RUB', '2026-02-01', '2026-12-31', NOW())
+        ON CONFLICT DO NOTHING;
     """)
 
 
