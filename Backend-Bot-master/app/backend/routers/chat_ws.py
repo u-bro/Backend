@@ -9,6 +9,7 @@ from app.services.chat_service import MessageType, chat_service
 from app.services.websocket_manager import manager
 from app.backend.deps import get_current_user_id_ws
 from starlette.status import WS_1008_POLICY_VIOLATION
+from app.models.chat_message import ChatMessage
 
 
 class ChatWebsocketRouter(BaseWebsocketRouter):
@@ -131,8 +132,8 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             await websocket.send_json({"type": "error", "code": "moderation_failed", "message": moderation.reason})
             return
 
-        message = await chat_service.save_message(
-            session=session,
+        message = await chat_service.save_message(session,
+        ChatMessage(
             ride_id=ride_id,
             sender_id=user_id,
             text=moderation.filtered,
@@ -140,7 +141,8 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             receiver_id=data.get("receiver_id"),
             attachments=data.get("attachments"),
             is_moderated=True,
-        )
+            created_at=datetime.now(timezone.utc),
+        ))
 
         await manager.send_to_ride(
             ride_id,

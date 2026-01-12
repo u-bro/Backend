@@ -6,6 +6,8 @@ from app.services.chat_service import chat_service
 from app.crud import ride_crud, driver_profile_crud
 from app.backend.deps import get_current_user_id
 from app.services.websocket_manager import manager
+from app.models.chat_message import ChatMessage
+from datetime import datetime, timezone
 
 
 class ChatHttpRouter(BaseRouter):
@@ -59,15 +61,16 @@ class ChatHttpRouter(BaseRouter):
         if not moderation.passed:
             raise HTTPException(status_code=400, detail=moderation.reason)
 
-        message = await chat_service.save_message(
-            session=session,
+        message = await chat_service.save_message(session,
+        ChatMessage(
             ride_id=ride_id,
             sender_id=sender_id,
             text=moderation.filtered,
             message_type=body.message_type,
             attachments=body.attachments,
             is_moderated=True,
-        )
+            created_at=datetime.now(timezone.utc),
+        ))
 
         await manager.send_to_ride(ride_id, {"type": "new_message", "message": {"id": message.id, "ride_id": ride_id, "sender_id": sender_id, "text": message.text, "message_type": message.message_type, "created_at": message.created_at.isoformat() if message.created_at else None}})
 
