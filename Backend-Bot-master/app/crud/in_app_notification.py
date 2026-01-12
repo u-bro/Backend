@@ -19,7 +19,7 @@ class InAppNotificationCrud(CrudBase[InAppNotification, InAppNotificationSchema]
             return None
 
         result_model = self.schema.model_validate(result)
-        await manager.send_personal_message(create_obj.user_id, result_model.model_dump())
+        await manager.send_personal_message(create_obj.user_id, {"type": "notification", "notification": result_model.model_dump()})
         return result_model
 
     async def get_by_user_id(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10):
