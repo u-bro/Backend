@@ -13,13 +13,17 @@ class InAppNotificationCrud(CrudBase[InAppNotification, InAppNotificationSchema]
         super().__init__(InAppNotification, InAppNotificationSchema)
     
     async def create(self, session: AsyncSession, create_obj: InAppNotificationCreate) -> InAppNotificationSchema | None:
+        if create_obj.dedup_key:
+            existing = await session.execute(select(self.model).where(and_(self.model.dedup_key == create_obj.dedup_key, self.model.user_id == create_obj.user_id, self.model.type == create_obj.type)))
+            if existing.scalar_one_or_none():
+                return None
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
         result = await self.execute_get_one(session, stmt)
         if not result:
             return None
 
         result_model = self.schema.model_validate(result)
-        await manager.send_personal_message(create_obj.user_id, result_model.model_dump())
+        await manager.send_personal_message(create_obj.user_id, {"type": "notification", "notification": result_model.model_dump()})
         return result_model
 
     async def get_by_user_id(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10):
