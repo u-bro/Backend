@@ -12,7 +12,6 @@ def require_owner(model: Type[T], owner_field_name: str):
 
         result = await session.execute(select(model).where(model.id == id))
         item = result.scalar_one_or_none()
-
         if item is None or getattr(item, owner_field_name, None) != user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 

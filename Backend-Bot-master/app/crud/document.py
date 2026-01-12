@@ -1,4 +1,6 @@
 import anyio, boto3
+from botocore.exceptions import ClientError
+from fastapi import HTTPException
 from app.config import S3_DOCUMENTS_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_KEY
 
 
@@ -23,8 +25,13 @@ class CrudDocument:
         )
 
     def _get_object_bytes(self, key: str) -> bytes:
-        obj = self.client.get_object(Bucket=self.bucket, Key=key)
-        return obj["Body"].read()
+        try:
+            obj = self.client.get_object(Bucket=self.bucket, Key=key)
+            return obj["Body"].read()
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchKey':
+                raise HTTPException(status_code=404, detail="Document not found")
+            raise HTTPException(status_code=500, detail=f"Error getting object: {e}")
 
     def _delete_object(self, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=key)

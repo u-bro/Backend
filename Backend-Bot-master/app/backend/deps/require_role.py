@@ -1,6 +1,5 @@
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import desc, select
-from datetime import datetime
 from app.models import User
 from app.models.phone_verification import PhoneVerification
 from app.backend.deps.get_current_user import get_current_user
