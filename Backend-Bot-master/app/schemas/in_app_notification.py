@@ -9,6 +9,7 @@ class InAppNotificationCreate(BaseSchema):
     title: str = Field(..., max_length=255)
     message: str = Field(..., max_length=255)
     data: Optional[dict] = Field(None)
+    dedup_key: Optional[str] = Field(None)
     created_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
