@@ -1,11 +1,11 @@
 import anyio, boto3
-from app.config import S3_DOCUMENTS_BUCKET, AWS_REGION, AWS_ACCESS_KEY, AWS_SECRET_KEY
+from app.config import S3_DOCUMENTS_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_KEY
 
 
 class CrudDocument:
-    def __init__(self, bucket: str, region: str | None = None):
+    def __init__(self, bucket: str):
         self.bucket = bucket
-        self.client = boto3.client("s3", region_name=region, aws_access_key_id=AWS_ACCESS_KEY, aws_secret_access_key=AWS_SECRET_KEY)
+        self.client = boto3.client("s3", endpoint_url="https://s3.selcdn.ru", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_KEY)
 
     def _put_object(self, key: str, pdf_bytes: bytes, metadata: dict | None = None) -> None:
         extra: dict = {
@@ -51,10 +51,7 @@ class CrudDocument:
         )
 
     def public_url(self, key: str) -> str:
-        region = self.client.meta.region_name
-        if region:
-            return f"https://{self.bucket}.s3.{region}.amazonaws.com/{key}"
-        return f"https://{self.bucket}.s3.amazonaws.com/{key}"
+        return f"https://{self.bucket}.s3.selcdn.ru/{key}"
 
     async def create(self, key: str, pdf_bytes: bytes, metadata: dict | None = None) -> None:
         return await self.upload_pdf_bytes(key, pdf_bytes, metadata=metadata)
@@ -66,4 +63,4 @@ class CrudDocument:
         return await self.delete_by_key(key)
 
 
-document_crud = CrudDocument(bucket=S3_DOCUMENTS_BUCKET, region=AWS_REGION)
+document_crud = CrudDocument(bucket=S3_DOCUMENTS_BUCKET)

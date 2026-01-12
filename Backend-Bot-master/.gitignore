@@ -9,6 +9,7 @@ __pycache__/
 *.pyo
 *.pyd
 *.db
+test*.py
 
 # Virtual Environment
 venv/
