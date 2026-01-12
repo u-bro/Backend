@@ -9,7 +9,6 @@ from sqlalchemy.orm import selectinload
 from app.models.chat_message import ChatMessage
 from app.models.ride import Ride
 from app.schemas.chat_message import ChatMessageSchema
-from .websocket_manager import manager
 from app.logger import logger
 
 
@@ -138,26 +137,24 @@ class ChatService:
 
         return True
     
-    async def save_message(self, session: AsyncSession, message: ChatMessage) -> ChatMessageSchema:
+    async def save_message(self, session: AsyncSession, ride_id: int, sender_id: int, text: str, message_type: str = MessageType.TEXT, receiver_id: Optional[int] = None, attachments: Optional[Dict[str, Any]] = None, is_moderated: bool = True) -> ChatMessageSchema:
+        message = ChatMessage(
+            ride_id=ride_id,
+            sender_id=sender_id,
+            receiver_id=receiver_id,
+            text=text,
+            message_type=message_type,
+            attachments=attachments,
+            is_moderated=is_moderated,
+            created_at=datetime.now(timezone.utc),
+        )
+        
         session.add(message)
         await session.flush()
         await session.refresh(message)
+        
         return ChatMessageSchema.model_validate(message)
     
-    async def save_message_and_send_to_ride(self, session: AsyncSession, ride_id: int, text: str, sender_id: int | None = None, message_type: str = MessageType.TEXT, receiver_id: Optional[int] = None, attachments: Optional[Dict[str, Any]] = None, is_moderated: bool = True) -> ChatMessageSchema:
-        message = {
-            "ride_id": ride_id,
-            "sender_id": sender_id,
-            "receiver_id": receiver_id,
-            "text": text,
-            "message_type": message_type,
-            "attachments": attachments,
-            "is_moderated": is_moderated,
-            "created_at": datetime.now(timezone.utc),
-        }
-        await manager.send_to_ride(ride_id, message)
-        return await self.save_message(session, ChatMessage(**message))
-
     async def get_chat_history(self, session: AsyncSession, ride_id: int, limit: int = 50, before_id: Optional[int] = None, include_deleted: bool = False) -> List[ChatMessageSchema]:
         conditions = [ChatMessage.ride_id == ride_id]
         

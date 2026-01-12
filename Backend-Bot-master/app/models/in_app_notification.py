@@ -14,7 +14,6 @@ class InAppNotification(Base):
     message: Mapped[str] = mapped_column(String, nullable=False)
     data = mapped_column(JSONB, nullable=True)
     read_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)
-    dedup_key = mapped_column(String, nullable=True)
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     user = relationship('User')
