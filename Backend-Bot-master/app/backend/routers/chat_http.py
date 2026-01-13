@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.schemas.chat_message import ChatHistoryResponse, SendMessageRequest, SendMessageResponse
+from app.schemas.chat_message import ChatHistoryResponse, SendMessageRequest, ChatMessageSchema
 from app.services.chat_service import chat_service
 from app.crud import ride_crud, driver_profile_crud
 from app.backend.deps import get_current_user_id
@@ -24,12 +24,7 @@ class ChatHttpRouter(BaseRouter):
     async def get_chat_history(self, request: Request, ride_id: int, limit: int = Query(50, ge=1, le=100), before_id: Optional[int] = Query(None, description="message id")) -> ChatHistoryResponse:
         session = request.state.session
 
-        messages = await chat_service.get_chat_history(
-            session=session,
-            ride_id=ride_id,
-            limit=limit + 1,
-            before_id=before_id,
-        )
+        messages = await chat_service.get_chat_history(session=session, ride_id=ride_id, limit=limit + 1, before_id=before_id)
 
         ride = await ride_crud.get_by_id(session, ride_id)
         if not ride:
@@ -43,15 +38,9 @@ class ChatHttpRouter(BaseRouter):
         if has_more:
             messages = messages[1:]
 
-        return ChatHistoryResponse(
-            ride_id=ride_id,
-            messages=[m.model_dump() for m in messages],
-            user_ids=user_ids,
-            count=len(messages),
-            has_more=has_more,
-        )
+        return ChatHistoryResponse(ride_id=ride_id, messages=[m.model_dump() for m in messages], user_ids=user_ids, count=len(messages), has_more=has_more)
 
-    async def send_message(self, request: Request, ride_id: int, body: SendMessageRequest, sender_id: int = Depends(get_current_user_id)) -> SendMessageResponse:
+    async def send_message(self, request: Request, ride_id: int, body: SendMessageRequest, sender_id: int = Depends(get_current_user_id)) -> ChatMessageSchema:
         session = request.state.session
         allowed, error = chat_service.check_rate_limit(sender_id)
         if not allowed:
@@ -61,29 +50,9 @@ class ChatHttpRouter(BaseRouter):
         if not moderation.passed:
             raise HTTPException(status_code=400, detail=moderation.reason)
 
-        message = await chat_service.save_message(session,
-        ChatMessage(
-            ride_id=ride_id,
-            sender_id=sender_id,
-            text=moderation.filtered,
-            message_type=body.message_type,
-            attachments=body.attachments,
-            is_moderated=True,
-            created_at=datetime.now(timezone.utc),
-        ))
-
+        message = await chat_service.save_message(session, ChatMessage(ride_id=ride_id, sender_id=sender_id, text=moderation.filtered, message_type=body.message_type, attachments=body.attachments, is_moderated=True, created_at=datetime.now(timezone.utc)))
         await manager.send_to_ride(ride_id, {"type": "new_message", "message": {"id": message.id, "ride_id": ride_id, "sender_id": sender_id, "text": message.text, "message_type": message.message_type, "created_at": message.created_at.isoformat() if message.created_at else None}})
-
-        return SendMessageResponse(
-            id=message.id,
-            ride_id=ride_id,
-            sender_id=sender_id,
-            text=message.text,
-            message_type=message.message_type,
-            is_moderated=message.is_moderated,
-            created_at=message.created_at,
-            moderation_note="Censored" if moderation.original != moderation.filtered else None,
-        )
+        return message
 
     async def delete_message(self, request: Request, ride_id: int, message_id: int, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
         session = request.state.session
@@ -98,7 +67,6 @@ class ChatHttpRouter(BaseRouter):
             raise HTTPException(status_code=404, detail="Message not found or you don't have permission")
 
         await manager.send_to_ride(ride_id, {"type": "message_edited", "message": {"id": message.id, "text": message.text, "edited_at": message.edited_at.isoformat() if message.edited_at else None}})
-
         return {"status": "edited", "message": {"id": message.id, "text": message.text, "edited_at": message.edited_at}}
 
     async def get_chat_stats(self) -> Dict[str, Any]:

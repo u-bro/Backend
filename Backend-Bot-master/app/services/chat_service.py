@@ -10,6 +10,7 @@ from app.models.chat_message import ChatMessage
 from app.models.ride import Ride
 from app.schemas.chat_message import ChatMessageSchema
 from app.logger import logger
+from .websocket_manager import manager
 
 
 

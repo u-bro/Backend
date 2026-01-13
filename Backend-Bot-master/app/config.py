@@ -37,3 +37,5 @@ REFRESH_TOKEN_SALT = os.environ.get('REFRESH_TOKEN_SALT') or 'test-refresh-token
 S3_DOCUMENTS_BUCKET=os.environ.get('S3_DOCUMENTS_BUCKET') or 'ubro-documents'
 AWS_ACCESS_KEY_ID=os.environ.get('AWS_ACCESS_KEY_ID') or 'test-aws-access-key-id'
 AWS_SECRET_KEY=os.environ.get('AWS_SECRET_KEY') or 'test-aws-secret-access-key'
+
+FIREBASE_SERVICE_ACCOUNT_PATH=os.environ.get('FIREBASE_SERVICE_ACCOUNT_PATH') or 'firebase-service-account.json'
