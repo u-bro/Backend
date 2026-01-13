@@ -43,25 +43,8 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
         await manager.connect(websocket, user_id)
         manager.join_ride(ride_id, user_id)
 
-        await manager.send_to_ride(
-            ride_id,
-            {
-                "type": "user_joined",
-                "ride_id": ride_id,
-                "user_id": user_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
-            exclude_user_id=user_id,
-        )
-
-        await websocket.send_json(
-            {
-                "type": "connected",
-                "ride_id": ride_id,
-                "user_id": user_id,
-                "message": "Connected to chat",
-            }
-        )
+        await manager.send_to_ride(ride_id, {"type": "user_joined", "ride_id": ride_id, "user_id": user_id, "timestamp": datetime.now(timezone.utc).isoformat()}, exclude_user_id=user_id)
+        await websocket.send_json({"type": "connected", "ride_id": ride_id, "user_id": user_id, "message": "Connected to chat"})
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:
         ride_id = int(context["ride_id"])
@@ -70,17 +53,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
         manager.disconnect(websocket, user_id)
         manager.leave_ride(ride_id, user_id)
 
-        await manager.send_to_ride(
-            ride_id,
-            {
-                "type": "user_left",
-                "ride_id": ride_id,
-                "user_id": user_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            },
-            exclude_user_id=user_id,
-        )
-
+        await manager.send_to_ride(ride_id, {"type": "user_left", "ride_id": ride_id, "user_id": user_id, "timestamp": datetime.now(timezone.utc).isoformat()}, exclude_user_id=user_id)
         logger.info(f"User {user_id} disconnected from chat {ride_id}")
 
     async def on_error(self, websocket: WebSocket, exc: Exception, **context: Any) -> None:
@@ -98,15 +71,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
         ride_id = int(context["ride_id"])
         user_id = int(context["user_id"])
 
-        await manager.send_to_ride(
-            ride_id,
-            {
-                "type": "user_typing",
-                "ride_id": ride_id,
-                "user_id": user_id,
-            },
-            exclude_user_id=user_id,
-        )
+        await manager.send_to_ride(ride_id, {"type": "user_typing", "ride_id": ride_id, "user_id": user_id}, exclude_user_id=user_id)
 
     async def handle_message(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         ride_id = int(context["ride_id"])
@@ -127,22 +92,11 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             return
 
         moderation = chat_service.moderate_message(text)
-
         if not moderation.passed:
             await websocket.send_json({"type": "error", "code": "moderation_failed", "message": moderation.reason})
             return
 
-        message = await chat_service.save_message(session,
-        ChatMessage(
-            ride_id=ride_id,
-            sender_id=user_id,
-            text=moderation.filtered,
-            message_type=message_type,
-            receiver_id=data.get("receiver_id"),
-            attachments=data.get("attachments"),
-            is_moderated=True,
-            created_at=datetime.now(timezone.utc),
-        ))
+        message = await chat_service.save_message(session, ChatMessage(ride_id=ride_id, sender_id=user_id, text=moderation.filtered, message_type=message_type, receiver_id=data.get("receiver_id"), attachments=data.get("attachments"), is_moderated=True, created_at=datetime.now(timezone.utc)))
 
         await manager.send_to_ride(
             ride_id,

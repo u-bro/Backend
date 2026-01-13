@@ -1,11 +1,11 @@
-from typing import Optional
+from typing import Literal, Optional
 from datetime import datetime, timezone
 from pydantic import Field
 from .base import BaseSchema
 
 class DeviceTokenIn(BaseSchema):
     token: str = Field(..., max_length=255)
-    platform: str = Field(..., max_length=255)
+    platform: Literal['android', 'ios'] = Field(...)
 
 
 class DeviceTokenCreate(DeviceTokenIn):
@@ -15,7 +15,7 @@ class DeviceTokenCreate(DeviceTokenIn):
 
 class DeviceTokenUpdate(BaseSchema):
     token: Optional[str] = Field(None, max_length=255)
-    platform: Optional[str] = Field(None, max_length=255)
+    platform: Optional[Literal['android', 'ios']] = Field(None)
     created_at: Optional[datetime] = Field(None)
 
 
