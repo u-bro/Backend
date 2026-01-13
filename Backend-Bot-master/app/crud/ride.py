@@ -113,7 +113,7 @@ class CrudRide(CrudBase):
         data.pop("expected_fare", None)
         data.pop("expected_fare_snapshot", None)
 
-        should_reprice = any(key in data for key in ("distance_meters", "tariff_plan_id",))
+        should_reprice = any(key in data for key in ("distance_meters", "tariff_plan_id"))
         if should_reprice:
             tariff_plan_id = data.get("tariff_plan_id", existing.tariff_plan_id)
             tariff_plan = await tariff_plan_crud.get_by_id(session, int(tariff_plan_id))

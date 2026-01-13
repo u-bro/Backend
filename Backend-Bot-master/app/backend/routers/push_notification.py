@@ -1,5 +1,4 @@
 from fastapi import Depends, Request
-
 from app.backend.deps import require_role
 from app.backend.routers.base import BaseRouter
 from app.crud.device_token import device_token_crud

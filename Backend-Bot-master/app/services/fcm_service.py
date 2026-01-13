@@ -7,7 +7,6 @@ from app.config import FIREBASE_SERVICE_ACCOUNT_PATH, ROOT_DIR
 from app.logger import logger
 from app.schemas.push import PushSendToTokenRequest, PushSendToTopicRequest, PushSendToUserRequest
 from app.crud.device_token import device_token_crud
-from fastapi import HTTPException
 
 
 class FCMService:
