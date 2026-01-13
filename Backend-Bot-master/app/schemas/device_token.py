@@ -1,12 +1,15 @@
 from typing import Optional
-from . import BaseSchema
 from datetime import datetime, timezone
 from pydantic import Field
+from .base import BaseSchema
 
-class DeviceTokenCreate(BaseSchema):
-    user_id: int = Field(..., gt=0)
+class DeviceTokenIn(BaseSchema):
     token: str = Field(..., max_length=255)
     platform: str = Field(..., max_length=255)
+
+
+class DeviceTokenCreate(DeviceTokenIn):
+    user_id: int = Field(..., gt=0)
     created_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

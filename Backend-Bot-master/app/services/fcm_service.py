@@ -1,9 +1,10 @@
 import asyncio, json, firebase_admin
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional, Union
 from firebase_admin import credentials, messaging
 from app.config import FIREBASE_SERVICE_ACCOUNT_PATH, ROOT_DIR
 from app.logger import logger
+from app.schemas.push import PushSendToTokenRequest, PushSendToTopicRequest, PushSendToUserRequest
 
 
 class FCMService:
@@ -54,20 +55,25 @@ class FCMService:
             self._initialized = True
             logger.info("Firebase Admin SDK initialized")
 
-    async def send_to_token(self, token: str, title: Optional[str] = None, body: Optional[str] = None, data: Optional[Dict[str, Any]] = None, image: Optional[str] = None) -> str:
+    async def send_to_token(self, payload: PushSendToTokenRequest) -> str:
         await self.initialize()
 
         message = messaging.Message(
-            token=token,
-            notification=messaging.Notification(title=title, body=body, image=image)
-            if (title is not None or body is not None or image is not None)
+            token=payload.token,
+            notification=messaging.Notification(title=payload.title, body=payload.body, image=payload.image)
+            if (payload.title is not None or payload.body is not None or payload.image is not None)
             else None,
-            data=self._normalize_data(data),
+            data=self._normalize_data(payload.data),
         )
 
         return await asyncio.to_thread(messaging.send, message)
 
-    async def send_to_tokens(self, tokens: Iterable[str], title: Optional[str] = None, body: Optional[str] = None, data: Optional[Dict[str, Any]] = None, image: Optional[str] = None, dry_run: bool = False) -> messaging.BatchResponse:
+    async def send_to_tokens(
+        self,
+        tokens: Iterable[str],
+        payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest],
+        dry_run: bool = False,
+    ) -> messaging.BatchResponse:
         await self.initialize()
 
         tokens_list = [t for t in tokens if t]
@@ -76,23 +82,23 @@ class FCMService:
 
         message = messaging.MulticastMessage(
             tokens=tokens_list,
-            notification=messaging.Notification(title=title, body=body, image=image)
-            if (title is not None or body is not None or image is not None)
+            notification=messaging.Notification(title=payload.title, body=payload.body, image=payload.image)
+            if (payload.title is not None or payload.body is not None or payload.image is not None)
             else None,
-            data=self._normalize_data(data),
+            data=self._normalize_data(payload.data),
         )
 
         return await asyncio.to_thread(messaging.send_multicast, message, dry_run)
 
-    async def send_to_topic(self, topic: str, title: Optional[str] = None, body: Optional[str] = None, data: Optional[Dict[str, Any]] = None, image: Optional[str] = None) -> str:
+    async def send_to_topic(self, payload: PushSendToTopicRequest) -> str:
         await self.initialize()
 
         message = messaging.Message(
-            topic=topic,
-            notification=messaging.Notification(title=title, body=body, image=image)
-            if (title is not None or body is not None or image is not None)
+            topic=payload.topic,
+            notification=messaging.Notification(title=payload.title, body=payload.body, image=payload.image)
+            if (payload.title is not None or payload.body is not None or payload.image is not None)
             else None,
-            data=self._normalize_data(data),
+            data=self._normalize_data(payload.data),
         )
 
         return await asyncio.to_thread(messaging.send, message)

@@ -26,6 +26,8 @@ from app.backend.routers.driver_rating import driver_rating_router
 from app.backend.routers.ride_status_history import ride_status_history_router
 from app.backend.routers.in_app_notification import in_app_notification_router
 from app.backend.routers.notification_ws import notification_ws_router
+from app.backend.routers.device_token import device_token_router
+from app.backend.routers.push_notification import push_notification_router
 
 
 app = FastAPI()
@@ -61,6 +63,8 @@ app.include_router(driver_rating_router, tags=['DriverRatings'], prefix=API_PREF
 app.include_router(ride_status_history_router, tags=['RideStatusHistory'], prefix=API_PREFIX)
 app.include_router(in_app_notification_router, tags=['InAppNotifications'], prefix=API_PREFIX)
 app.include_router(notification_ws_router, tags=['Notification(WebSocket)'], prefix=API_PREFIX)
+app.include_router(device_token_router, tags=['DeviceTokens'], prefix=API_PREFIX)
+app.include_router(push_notification_router, tags=['PushNotifications'], prefix=API_PREFIX)
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request: Request, exc: ResponseValidationError):
