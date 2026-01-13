@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, Request
 
 from app.backend.deps import require_role
 from app.backend.routers.base import BaseRouter
@@ -25,12 +25,7 @@ class PushAdminRouter(BaseRouter):
         return {"message_id": message_id}
 
     async def send_to_user(self, request: Request, body: PushSendToUserRequest) -> dict:
-        tokens = await self.model_crud.get_by_user_id(request.state.session, body.user_id)
-        token_values = [t.token for t in tokens]
-        if not token_values:
-            raise HTTPException(status_code=404, detail="User has no device tokens")
-
-        resp = await fcm_service.send_to_tokens(token_values, body)
+        resp = await fcm_service.send_to_user(request.state.session, body.user_id, body)
         return {"success_count": resp.success_count, "failure_count": resp.failure_count}
 
 

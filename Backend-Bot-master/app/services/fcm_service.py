@@ -2,9 +2,12 @@ import asyncio, json, firebase_admin
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Union
 from firebase_admin import credentials, messaging
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import FIREBASE_SERVICE_ACCOUNT_PATH, ROOT_DIR
 from app.logger import logger
 from app.schemas.push import PushSendToTokenRequest, PushSendToTopicRequest, PushSendToUserRequest
+from app.crud.device_token import device_token_crud
+from fastapi import HTTPException
 
 
 class FCMService:
@@ -68,12 +71,7 @@ class FCMService:
 
         return await asyncio.to_thread(messaging.send, message)
 
-    async def send_to_tokens(
-        self,
-        tokens: Iterable[str],
-        payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest],
-        dry_run: bool = False,
-    ) -> messaging.BatchResponse:
+    async def send_to_tokens(self, tokens: Iterable[str], payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest], dry_run: bool = False) -> messaging.BatchResponse:
         await self.initialize()
 
         tokens_list = [t for t in tokens if t]
@@ -89,6 +87,15 @@ class FCMService:
         )
 
         return await asyncio.to_thread(messaging.send_multicast, message, dry_run)
+
+    async def send_to_user(self, session: AsyncSession, user_id: int, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.BatchResponse | None:
+        tokens = await device_token_crud.get_by_user_id(session, user_id)
+        token_values = [t.token for t in tokens]
+        if not token_values:
+            return None
+        
+        return await self.send_to_tokens(token_values, payload)
+
 
     async def send_to_topic(self, payload: PushSendToTopicRequest) -> str:
         await self.initialize()
