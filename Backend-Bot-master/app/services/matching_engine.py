@@ -2,7 +2,7 @@ from typing import Any, List, Optional, Set
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.websocket_manager import manager
 from app.schemas.driver_profile import DriverProfileSchema
-from app.services.driver_tracker import driver_tracker
+from app.crud.driver_tracker import driver_tracker
 from app.config import MAX_DISTANCE_KM
 
 class MatchingEngine:

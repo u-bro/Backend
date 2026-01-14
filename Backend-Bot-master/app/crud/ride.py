@@ -8,7 +8,8 @@ from .tariff_plan import tariff_plan_crud
 from .commission import commission_crud
 from .ride_status_history import ride_status_history_crud
 from .driver_profile import driver_profile_crud
-from .driver_location import driver_location_crud 
+from .driver_location import driver_location_crud
+from .driver_tracker import driver_tracker 
 from app.models import Ride, TariffPlan, Commission, DriverLocation
 from app.schemas.ride import RideSchema
 from app.schemas.ride_status_history import RideStatusHistoryCreate
@@ -193,8 +194,8 @@ class CrudRide(CrudBase):
         update_stmt_rides = update(self.model).where(self.model.id.in_(ids)).values(status="canceled")
         await session.execute(update_stmt_rides)
 
-        update_stmt_profiles = update(DriverLocation).where(and_(DriverLocation.driver_profile_id.in_(driver_profile_ids), DriverLocation.status == 'busy')).values(status="online")
-        await session.execute(update_stmt_profiles)    
+        for id in driver_profile_ids:
+            await driver_tracker.release_ride(session, id)
 
     async def get_by_client_id(self, session: AsyncSession, client_id: int) -> list[RideSchema]:
         stmt = select(self.model).where(self.model.client_id == client_id)

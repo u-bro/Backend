@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Dict, Optional, Set
 from dataclasses import dataclass, field
 import math, logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.crud import driver_location_crud, driver_profile_crud
+from .driver_location import driver_location_crud
+from .driver_profile import driver_profile_crud
 from app.schemas.driver_location import DriverLocationUpdateMe, DriverLocationUpdate
 from app.schemas.driver_profile import DriverProfileSchema
 

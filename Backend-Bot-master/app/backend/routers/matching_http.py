@@ -2,7 +2,7 @@ from typing import Any, Dict, List
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
 from app.crud import driver_profile_crud, ride_crud, driver_location_crud
-from app.services.driver_tracker import driver_tracker
+from app.crud.driver_tracker import driver_tracker
 from app.services.matching_engine import matching_engine
 from app.services.websocket_manager import manager
 from app.backend.deps import get_current_driver_profile_id, require_role

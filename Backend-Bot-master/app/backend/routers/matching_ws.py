@@ -3,7 +3,7 @@ from typing import Any, Dict
 from fastapi import WebSocket, Depends, WebSocketException
 from app.backend.routers.websocket_base import BaseWebsocketRouter
 from app.services.websocket_manager import manager
-from app.services.driver_tracker import driver_tracker, DriverStatus
+from app.crud.driver_tracker import driver_tracker, DriverStatus
 from app.logger import logger
 from app.backend.deps import get_current_user_id_ws
 from app.db import async_session_maker
