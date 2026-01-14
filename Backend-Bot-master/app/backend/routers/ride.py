@@ -11,7 +11,8 @@ from app.backend.deps import require_role, get_current_user_id, get_current_driv
 from app.models import Ride
 from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud
 from app.services.chat_service import chat_service
-from app.services import driver_tracker, pdf_generator, fcm_service
+from app.services import pdf_generator, fcm_service
+from app.crud.driver_tracker import driver_tracker
 
 
 class RideRouter(BaseRouter):

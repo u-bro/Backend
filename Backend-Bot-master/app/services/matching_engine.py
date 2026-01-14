@@ -1,8 +1,8 @@
-from typing import Any, List, Optional, Set
+from typing import Optional, Set
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.websocket_manager import manager
 from app.schemas.driver_profile import DriverProfileSchema
-from app.services.driver_tracker import driver_tracker
+from app.crud.driver_tracker import driver_tracker
 from app.config import MAX_DISTANCE_KM
 
 class MatchingEngine:
@@ -21,37 +21,6 @@ class MatchingEngine:
 
     def unregister_connected_driver(self, user_id: int) -> None:
         self.connected_driver_user_ids.discard(int(user_id))
-    
-    def get_driver_feed(self, driver_profile_id: int, rides: List[dict], limit: int = 20) -> List[dict]:
-        driver = self.tracker.get_driver(driver_profile_id)
-        if not driver or not driver.is_available() or driver.latitude is None or driver.longitude is None :
-            return []
-        
-        relevant_rides = []
-        for ride in rides:
-            ride_class = ride.get('ride_class')
-            if not driver.has_permit(ride_class):
-                continue
-            
-            pickup_lat = ride.get('pickup_lat')
-            pickup_lng = ride.get('pickup_lng')
-            
-            distance = self.tracker._haversine_distance(
-                driver.latitude, driver.longitude,
-                float(pickup_lat), float(pickup_lng)
-            )
-            if distance > MAX_DISTANCE_KM:
-                continue
-
-            ride_with_distance = {
-                **ride,
-                'distance_to_pickup_km': round(distance, 2)
-            }
-            relevant_rides.append((distance, ride_with_distance))
-        
-        relevant_rides.sort(key=lambda x: x[0])
-        
-        return [r[1] for r in relevant_rides[:limit]]
     
     def get_stats(self) -> dict:
         return {"tracker_stats": self.tracker.get_stats()}

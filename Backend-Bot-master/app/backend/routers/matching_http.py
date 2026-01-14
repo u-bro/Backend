@@ -1,9 +1,8 @@
 from typing import Any, Dict, List
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.crud import driver_profile_crud, ride_crud, driver_location_crud
-from app.services.driver_tracker import driver_tracker
-from app.services.matching_engine import matching_engine
+from app.crud import driver_profile_crud, driver_location_crud
+from app.crud.driver_tracker import driver_tracker
 from app.services.websocket_manager import manager
 from app.backend.deps import get_current_driver_profile_id, require_role
 from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate, DriverLocationUpdateMe
@@ -40,9 +39,7 @@ class MatchingHttpRouter(BaseRouter):
         if not driver:
             return {"driver_profile_id": driver_profile_id, "driver_status": "not_connected", "count": 0, "rides": []}
         
-        pending_rides = await ride_crud.get_requested_rides(request.state.session, limit=limit * 2)
-        rides_dict = [r.model_dump() for r in pending_rides]
-        feed = matching_engine.get_driver_feed(driver_profile_id, rides_dict, limit)
+        feed = await driver_tracker.get_driver_feed(request.state.session, driver_profile_id, limit)
         return {"driver_profile_id": driver_profile_id, "driver_status": driver.status.value, "count": len(feed), "rides": feed}
 
     async def send_notification(self, user_id: int, message: Dict[str, Any]) -> Dict[str, Any]:
