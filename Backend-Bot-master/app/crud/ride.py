@@ -10,7 +10,7 @@ from .ride_status_history import ride_status_history_crud
 from .driver_profile import driver_profile_crud
 from .driver_location import driver_location_crud
 from .driver_tracker import driver_tracker 
-from app.models import Ride, TariffPlan, Commission, DriverLocation
+from app.models import Ride, TariffPlan, Commission
 from app.schemas.ride import RideSchema
 from app.schemas.ride_status_history import RideStatusHistoryCreate
 from fastapi import HTTPException
@@ -175,12 +175,6 @@ class CrudRide(CrudBase):
             return None
         await driver_profile_crud.ride_count_decrement(session, result.driver_profile_id)
         return self.schema.model_validate(result)
-
-    async def get_requested_rides(self, session: AsyncSession, limit: int = 1) -> list[RideSchema]:
-        stmt = select(self.model).where(and_(self.model.status == "requested", self.model.driver_profile_id.is_(None))).limit(limit)
-        result = await session.execute(stmt)
-        rides = result.scalars().all()
-        return [self.schema.model_validate(ride) for ride in rides]
     
     async def cancel_rides_by_user_id(self, session: AsyncSession, user_id: int):
         stmt = select(self.model).where(and_(self.model.status.in_(["requested", "accepted", "started"]), self.model.client_id == user_id))
