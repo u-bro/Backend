@@ -11,7 +11,7 @@ from app.backend.deps import require_role, get_current_user_id, get_current_driv
 from app.models import Ride
 from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud
 from app.services.chat_service import chat_service
-from app.services import matching_engine, driver_tracker, pdf_generator, fcm_service
+from app.services import driver_tracker, pdf_generator, fcm_service
 
 
 class RideRouter(BaseRouter):
@@ -40,7 +40,6 @@ class RideRouter(BaseRouter):
     async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
         ride = await super().create(request, create_obj)
-        await matching_engine.send_to_suitable_drivers(ride.model_dump())
         return ride
 
     async def update(self, request: Request, id: int, update_obj: RideSchema, user_id: int = Depends(get_current_user_id)) -> RideSchema:
