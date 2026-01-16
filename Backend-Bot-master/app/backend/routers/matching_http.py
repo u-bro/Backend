@@ -3,7 +3,7 @@ from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
 from app.crud import driver_profile_crud, driver_location_crud
 from app.crud.driver_tracker import driver_tracker
-from app.services.websocket_manager import manager
+from app.services.websocket_manager import manager_driver_feed
 from app.backend.deps import get_current_driver_profile_id, require_role
 from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate, DriverLocationUpdateMe
 
@@ -43,23 +43,30 @@ class MatchingHttpRouter(BaseRouter):
         return {"driver_profile_id": driver_profile_id, "driver_status": driver.status.value, "count": len(feed), "rides": feed}
 
     async def send_notification(self, user_id: int, message: Dict[str, Any]) -> Dict[str, Any]:
-        if not manager.is_connected(user_id):
+        if not manager_driver_feed.is_connected(user_id):
             raise HTTPException(status_code=404, detail="User not connected")
-        await manager.send_personal_message(user_id, {"type": "notification", **message})
+        await manager_driver_feed.send_personal_message(user_id, {"type": "notification", **message})
         return {"status": "sent", "user_id": user_id}
 
     async def broadcast_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
-        await manager.broadcast({"type": "broadcast", **message})
-        return {"status": "broadcasted", "recipients": manager.get_connection_count()}
+        await manager_driver_feed.broadcast({"type": "broadcast", **message})
+        return {"status": "broadcasted", "recipients": manager_driver_feed.get_connection_count()}
 
     async def create(self, request: Request, create_obj: DriverLocationCreate) -> DriverLocationSchema:
         return await self.model_crud.create(request.state.session, create_obj)
 
     async def update(self, request: Request, update_obj: DriverLocationUpdate, id: int) -> DriverLocationSchema:
-        return await self.model_crud.update(request.state.session, id, update_obj)
+        session = request.state.session
+        if update_obj.status:
+            driver_location = await self.model_crud.get_by_id(session, id)
+            await driver_tracker.set_status_by_driver(session, driver_location.driver_profile_id, update_obj.status)
+        return await self.model_crud.update(session, id, update_obj)
 
     async def update_me(self, request: Request, update_obj: DriverLocationUpdateMe, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> DriverLocationSchema:
-        return await self.model_crud.update_me(request.state.session, driver_profile_id, update_obj)
+        session = request.state.session
+        if update_obj.status:
+            await driver_tracker.set_status_by_driver(session, driver_profile_id, update_obj.status)
+        return await self.model_crud.update_me(session, driver_profile_id, update_obj)
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> List[DriverLocationSchema]:
         return await self.model_crud.get_paginated(request.state.session, page, page_size)
@@ -71,6 +78,6 @@ class MatchingHttpRouter(BaseRouter):
         return driver_location
 
     async def get_drivers_stats(self) -> Dict[str, Any]:
-        return {**driver_tracker.get_stats(), "ws_connections": manager.get_connection_count()}
+        return {**driver_tracker.get_stats(), "ws_connections": manager_driver_feed.get_connection_count()}
 
 matching_http_router = MatchingHttpRouter().router

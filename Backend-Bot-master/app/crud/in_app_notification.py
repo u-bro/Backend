@@ -5,7 +5,7 @@ from app.schemas.in_app_notification import InAppNotificationSchema, InAppNotifi
 from sqlalchemy import select, and_, insert
 from datetime import datetime, timezone
 from fastapi import HTTPException
-from app.services.websocket_manager import manager
+from app.services.websocket_manager import manager_notifications
 
 
 class InAppNotificationCrud(CrudBase[InAppNotification, InAppNotificationSchema]):
@@ -24,7 +24,7 @@ class InAppNotificationCrud(CrudBase[InAppNotification, InAppNotificationSchema]
             return None
 
         result_model = self.schema.model_validate(result)
-        await manager.send_personal_message(create_obj.user_id, result_model.model_dump())
+        await manager_notifications.send_personal_message(create_obj.user_id, result_model.model_dump())
         return result_model
 
     async def get_by_user_id(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10):

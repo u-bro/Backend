@@ -1,11 +1,10 @@
 from typing import Any, Dict
-from fastapi import WebSocket, Depends, WebSocketException
+from fastapi import WebSocket, Depends
 from app.backend.routers.websocket_base import BaseWebsocketRouter
-from app.services.websocket_manager import manager
+from app.services.websocket_manager import manager_notifications
 from app.logger import logger
 from app.backend.deps import get_current_user_id_ws
 from app.db import async_session_maker
-from starlette.status import WS_1008_POLICY_VIOLATION
 
 
 class NotificationWebsocketRouter(BaseWebsocketRouter):
@@ -22,12 +21,12 @@ class NotificationWebsocketRouter(BaseWebsocketRouter):
 
     async def on_connect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = context["user_id"]
-        await manager.connect(websocket, int(user_id))
+        await manager_notifications.connect(websocket, int(user_id))
         await websocket.send_json({"type": "connected", "user_id": user_id})
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = context["user_id"]
-        manager.disconnect(websocket, user_id)
+        manager_notifications.disconnect(websocket, user_id)
         logger.info(f"User {user_id} disconnected")
 
     async def on_error(self, websocket: WebSocket, exc: Exception, **context: Any) -> None:

@@ -41,3 +41,17 @@ AWS_ACCESS_KEY_ID=os.environ.get('AWS_ACCESS_KEY_ID') or 'test-aws-access-key-id
 AWS_SECRET_KEY=os.environ.get('AWS_SECRET_KEY') or 'test-aws-secret-access-key'
 
 FIREBASE_SERVICE_ACCOUNT_PATH=os.environ.get('FIREBASE_SERVICE_ACCOUNT_PATH') or 'firebase-service-account.json'
+
+TOCHKA_USE_SANDBOX = (os.getenv("TOCHKA_USE_SANDBOX", "false").lower() in ("1", "true", "yes"))
+TOCHKA_BASE_URL = os.getenv("TOCHKA_BASE_URL", "https://enter.tochka.com/uapi/")
+TOCHKA_SANDBOX_URL = os.getenv("TOCHKA_SANDBOX_URL", "https://enter.tochka.com/sandbox/v2/")
+TOCHKA_OAUTH_TOKEN_URL = os.getenv("TOCHKA_OAUTH_TOKEN_URL", "https://enter.tochka.com/connect/token")
+TOCHKA_OAUTH_CLIENT_ID = os.getenv("TOCHKA_OAUTH_CLIENT_ID")
+TOCHKA_OAUTH_CLIENT_SECRET = os.getenv("TOCHKA_OAUTH_CLIENT_SECRET")
+TOCHKA_OAUTH_SCOPE = os.getenv("TOCHKA_OAUTH_SCOPE", "MakeAcquiringOperation ReadAcquiringData")
+
+TOCHKA_ACQUIRING_CUSTOMER_CODE = os.getenv("TOCHKA_ACQUIRING_CUSTOMER_CODE")
+TOCHKA_ACQUIRING_MERCHANT_ID = os.getenv("TOCHKA_ACQUIRING_MERCHANT_ID")
+
+TOCHKA_ACQUIRING_REDIRECT_URL = os.getenv("TOCHKA_ACQUIRING_REDIRECT_URL")
+TOCHKA_ACQUIRING_FAIL_REDIRECT_URL = os.getenv("TOCHKA_ACQUIRING_FAIL_REDIRECT_URL")

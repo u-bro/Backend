@@ -1,0 +1,85 @@
+from app.crud.base import CrudBase
+from app.models import RideDriversRequest
+from app.schemas.ride_drivers_request import RideDriversRequestSchema, RideDriversRequestUpdate, RideDriversRequestCreate
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import select, update, insert
+from .in_app_notification import in_app_notification_crud
+from .driver_profile import driver_profile_crud
+from .ride import ride_crud
+from .driver_tracker import driver_tracker
+from app.schemas.in_app_notification import InAppNotificationCreate
+from app.services import fcm_service
+from app.schemas.push import PushNotificationData
+from app.schemas.ride import RideSchemaAcceptByDriver
+from fastapi import HTTPException
+
+
+class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSchema]):
+    def __init__(self) -> None:
+        super().__init__(RideDriversRequest, RideDriversRequestSchema)
+
+    async def get_by_ride_id(self, session: AsyncSession, ride_id: int):
+        result = await session.execute(select(self.model).where(self.model.ride_id == ride_id))
+        ride_drivers_requests = result.scalars().all()
+        return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
+
+    async def get_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
+        result = await session.execute(select(self.model).where(self.model.driver_profile_id == driver_profile_id))
+        ride_drivers_requests = result.scalars().all()
+        return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
+
+    async def get_by_ride_id_and_driver_profile_id(self, session: AsyncSession, ride_id: int, driver_profile_id: int):
+        result = await session.execute(select(self.model).where(self.model.ride_id == ride_id, self.model.driver_profile_id == driver_profile_id))
+        ride_drivers_request = result.scalar_one_or_none()
+        return self.schema.model_validate(ride_drivers_request) if ride_drivers_request else None
+
+    async def create(self, session: AsyncSession, create_obj: RideDriversRequestCreate) -> RideDriversRequestSchema | None:
+        stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
+        result = await self.execute_get_one(session, stmt)
+        if not result:
+            return None
+        
+        ride = await ride_crud.get_by_id(session, result.ride_id)
+        if not ride:
+            raise HTTPException(status_code=404, detail="Ride not found")
+        
+        result_validated = self.schema.model_validate(result)
+        await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_offer", title="New ride offer", message="New ride offer from driver", data={"offer_id": result.id, "ride_id": result.ride_id, "driver_profile_id": result.driver_profile_id}, dedup_key=str(result.id)))
+        await fcm_service.send_to_user(session, ride.client_id, PushNotificationData(title="New ride offer", body="New ride offer from driver"))
+        return result_validated
+
+    async def update(self, session: AsyncSession, id: int, update_obj: RideDriversRequestUpdate) -> RideDriversRequestSchema | None:
+        update_data = update_obj.model_dump(exclude_none=True)
+        if not update_data:
+            return await self.get_by_id(session, id)
+        
+        stmt = (
+            update(self.model)
+            .where(self.model.id == id)
+            .values(update_data)
+            .returning(self.model)
+        )
+        result = await self.execute_get_one(session, stmt)
+        if not result:
+            return None
+
+        driver_profile = await driver_profile_crud.get_by_id(session, result.driver_profile_id)
+
+        if result.status == 'accepted':
+            accepted = await ride_crud.accept(session, result.ride_id, RideSchemaAcceptByDriver(driver_profile_id=result.driver_profile_id), driver_profile.user_id)
+            await driver_tracker.assign_ride(session, driver_profile.id, accepted.id)
+
+            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=driver_profile.user_id, type="ride_offer_accepted", title="Ride offer accepted", message="Your ride offer is accepted", dedup_key=str(result.id)))
+            await fcm_service.send_to_user(session, driver_profile.user_id, PushNotificationData(title="Ride offer accepted", body="Your ride offer is accepted"))
+
+            other_requests = await self.get_by_ride_id(session, result.ride_id)
+            for request in other_requests:
+                if request.id != id:
+                    await self.update(session, request.id, RideDriversRequestUpdate(status='rejected'))
+        if result.status == 'rejected':
+            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=driver_profile.user_id, type="ride_offer_rejected", title="Ride offer rejected", message="Your ride offer is rejected", dedup_key=str(result.id)))
+            await fcm_service.send_to_user(session, driver_profile.user_id, PushNotificationData(title="Ride offer rejected", body="Your ride offer is rejected"))
+        return self.schema.model_validate(result)
+            
+
+ride_drivers_request_crud = RideDriversRequestCrud()

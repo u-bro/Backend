@@ -1,6 +1,6 @@
 from typing import Optional, Set
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.services.websocket_manager import manager
+from app.services.websocket_manager import manager_driver_feed
 from app.schemas.driver_profile import DriverProfileSchema
 from app.crud.driver_tracker import driver_tracker
 from app.config import MAX_DISTANCE_KM
@@ -36,7 +36,7 @@ class MatchingEngine:
             if not self._is_suitable_driver(user_id, pickup_lat, pickup_lng, message.get('ride_class')):
                 continue
 
-            await manager.send_personal_message(user_id, {"type": "new_ride", "details": message})
+            await manager_driver_feed.send_personal_message(user_id, {"type": "new_ride", "details": message})
 
     def _is_suitable_driver(self, user_id: int, pickup_lat: float, pickup_lng: float, ride_class: str):
             state = self.tracker.get_driver_by_user(user_id)
