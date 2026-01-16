@@ -1494,7 +1494,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Economy\",\n  \"base_fare\": 150,\n  \"rate_per_meter\": 0.02,\n  \"multiplier\": 1.0,\n  \"commission_percentage\": 10\n}",
+              "raw": "{\n  \"name\": \"Economy\",\n  \"base_fare\": 150,\n  \"rate_per_meter\": 0.02,\n  \"multiplier\": 1.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1535,7 +1535,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Economy\",\n  \"base_fare\": 200,\n  \"rate_per_meter\": 0.02,\n  \"multiplier\": 1.0,\n  \"commission_percentage\": 10\n}",
+              "raw": "{\n  \"name\": \"Economy\",\n  \"base_fare\": 200,\n  \"rate_per_meter\": 0.02,\n  \"multiplier\": 1.0\n}",
               "options": {
                 "raw": {
                   "language": "json"

@@ -17,13 +17,13 @@ class DriverLocationCrud(CrudBase[DriverLocation, DriverLocationSchema]):
     async def update_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int, update_obj: DriverLocationUpdate | DriverLocationUpdateMe, **kwargs) -> DriverLocationSchema:
         item = await self.get_by_driver_profile_id(session, driver_profile_id)
         if not item:
-            raise HTTPException(status_code=404, detail="Driver profile not found")
+            raise HTTPException(status_code=404, detail="Driver location not found")
         return await super().update(session, item.id, update_obj)
 
     async def update_me(self, session: AsyncSession, driver_profile_id: int, update_obj: DriverLocationUpdate | DriverLocationUpdateMe, **kwargs) -> DriverLocationSchema:
         item = await self.get_by_driver_profile_id(session, driver_profile_id)
         if not item:
-            raise HTTPException(status_code=404, detail="Driver profile not found")
+            raise HTTPException(status_code=404, detail="Driver location not found")
         if item.status == 'busy' and update_obj.status:
             raise HTTPException(status_code=400, detail="Driver is busy, status can't be changed")
         return await super().update(session, item.id, update_obj)
