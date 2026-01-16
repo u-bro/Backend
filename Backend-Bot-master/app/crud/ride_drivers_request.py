@@ -67,6 +67,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
 
         if result.status == 'accepted':
             accepted = await ride_crud.accept(session, result.ride_id, RideSchemaAcceptByDriver(driver_profile_id=result.driver_profile_id), driver_profile.user_id)
+            if not accepted:
+                raise HTTPException(status_code=400, detail="Ride request is not accepted. Perhaps, ride is already accepted")
             await driver_tracker.assign_ride(session, driver_profile.id, accepted.id)
 
             await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=driver_profile.user_id, type="ride_offer_accepted", title="Ride offer accepted", message="Your ride offer is accepted", dedup_key=str(result.id)))
