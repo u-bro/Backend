@@ -8,9 +8,10 @@ from app.models import Ride
 from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver
 from app.schemas.push import PushNotificationData
 from app.schemas.in_app_notification import InAppNotificationCreate
+from app.schemas.ride_drivers_request import RideDriversRequestCreate, RideDriversRequestSchema
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile
 from app.models import Ride
-from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud
+from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud, ride_drivers_request_crud
 from app.services.chat_service import chat_service
 from app.services import pdf_generator, fcm_service
 from app.crud.driver_tracker import driver_tracker
@@ -66,19 +67,20 @@ class RideRouter(BaseRouter):
             await driver_tracker.release_ride(session, ride.driver_profile_id)
         return ride
 
-    async def accept_ride(self, request: Request, id: int, update_obj: RideSchemaAcceptByDriver, driver_profile_id: int = Depends(get_current_driver_profile_id), user_id: int = Depends(get_current_user_id)) -> RideSchema:
+    async def accept_ride(self, request: Request, id: int, update_obj: RideSchemaAcceptByDriver, driver_profile_id: int = Depends(get_current_driver_profile_id), user_id: int = Depends(get_current_user_id)) -> RideDriversRequestSchema:
         session = request.state.session
-        update_obj = RideSchemaAcceptByDriver(driver_profile_id=driver_profile_id, **update_obj.model_dump(exclude={"driver_profile_id"}),)
-        accepted = await self.model_crud.accept(session, id, update_obj, user_id)
-        if accepted is not None:
-            await driver_tracker.assign_ride(session, driver_profile_id, accepted.id)
-            await self.send_notifications(session, accepted.client_id, "ride_accepted", "Your ride is accepted by driver", "Wait for a driver", accepted.id)
-            return accepted
+        return await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, status="requested"))
+        # update_obj = RideSchemaAcceptByDriver(driver_profile_id=driver_profile_id, **update_obj.model_dump(exclude={"driver_profile_id"}),)
+        # accepted = await self.model_crud.accept(session, id, update_obj, user_id)
+        # if accepted is not None:
+        #     await driver_tracker.assign_ride(session, driver_profile_id, accepted.id)
+        #     await self.send_notifications(session, accepted.client_id, "ride_accepted", "Your ride is accepted by driver", "Wait for a driver", accepted.id)
+        #     return accepted
 
-        existing = await self.model_crud.get_by_id(session, id)
-        if existing is None:
-            raise HTTPException(status_code=404, detail="Ride not found")
-        raise HTTPException(status_code=409, detail="Ride already accepted")
+        # existing = await self.model_crud.get_by_id(session, id)
+        # if existing is None:
+        #     raise HTTPException(status_code=404, detail="Ride not found")
+        # raise HTTPException(status_code=409, detail="Ride already accepted")
 
     async def update_by_driver(self, request: Request, id: int, update_obj: RideSchemaUpdateByDriver, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         session = request.state.session

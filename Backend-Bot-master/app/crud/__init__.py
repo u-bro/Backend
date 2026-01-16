@@ -12,3 +12,4 @@ from .driver_location import driver_location_crud
 from .in_app_notification import in_app_notification_crud
 from .device_token import device_token_crud
 from .commission_payment import commission_payment_crud
+from .ride_drivers_request import ride_drivers_request_crud
