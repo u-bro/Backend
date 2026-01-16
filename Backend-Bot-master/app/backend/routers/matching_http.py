@@ -56,10 +56,17 @@ class MatchingHttpRouter(BaseRouter):
         return await self.model_crud.create(request.state.session, create_obj)
 
     async def update(self, request: Request, update_obj: DriverLocationUpdate, id: int) -> DriverLocationSchema:
-        return await self.model_crud.update(request.state.session, id, update_obj)
+        session = request.state.session
+        if update_obj.status:
+            driver_location = await self.model_crud.get_by_id(session, id)
+            await driver_tracker.set_status_by_driver(session, driver_location.driver_profile_id, update_obj.status)
+        return await self.model_crud.update(session, id, update_obj)
 
     async def update_me(self, request: Request, update_obj: DriverLocationUpdateMe, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> DriverLocationSchema:
-        return await self.model_crud.update_me(request.state.session, driver_profile_id, update_obj)
+        session = request.state.session
+        if update_obj.status:
+            await driver_tracker.set_status_by_driver(session, driver_profile_id, update_obj.status)
+        return await self.model_crud.update_me(session, driver_profile_id, update_obj)
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> List[DriverLocationSchema]:
         return await self.model_crud.get_paginated(request.state.session, page, page_size)

@@ -134,6 +134,10 @@ class DriverTracker:
             await driver_location_crud.update_by_driver_profile_id(session, driver_id, DriverLocationUpdateMe(status=status))
             return await self.set_status(driver_id, status)
         return None
+
+    async def set_status_by_driver(self, session: AsyncSession, driver_profile_id: int, status: DriverStatus) -> Optional[DriverState]:
+        await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdateMe(status=status))
+        return await self.set_status(driver_profile_id, status)
     
     async def assign_ride(self, session: AsyncSession, driver_profile_id: int, ride_id: int) -> Optional[DriverState]:
         await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdate(status='busy'))
