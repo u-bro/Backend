@@ -15,3 +15,4 @@ from .driver_rating import DriverRating
 from .refresh_token import RefreshToken
 from .in_app_notification import InAppNotification
 from .device_token import DeviceToken
+from .commission_payment import CommissionPayment
