@@ -8,7 +8,7 @@ from .driver_location import driver_location_crud
 from .driver_profile import driver_profile_crud
 from app.schemas.driver_location import DriverLocationUpdateMe, DriverLocationUpdate
 from app.schemas.driver_profile import DriverProfileSchema
-from app.services.websocket_manager import manager
+from app.services.websocket_manager import manager_driver_feed
 from app.db import async_session_maker
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -239,11 +239,11 @@ class DriverTracker:
     
     async def _feed_loop(self, user_id: int, driver_profile_id: int) -> None:
         try:
-            while manager.is_connected(user_id):
+            while manager_driver_feed.is_connected(user_id):
                 async with async_session_maker() as session:
                     feed = await self.get_driver_feed(session, driver_profile_id, FEED_LIMIT)
 
-                    await manager.send_personal_message(
+                    await manager_driver_feed.send_personal_message(
                         user_id,
                         {
                             "type": "ride_feed",

@@ -3,7 +3,7 @@ from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
 from app.crud import driver_profile_crud, driver_location_crud
 from app.crud.driver_tracker import driver_tracker
-from app.services.websocket_manager import manager
+from app.services.websocket_manager import manager_driver_feed
 from app.backend.deps import get_current_driver_profile_id, require_role
 from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate, DriverLocationUpdateMe
 
@@ -43,14 +43,14 @@ class MatchingHttpRouter(BaseRouter):
         return {"driver_profile_id": driver_profile_id, "driver_status": driver.status.value, "count": len(feed), "rides": feed}
 
     async def send_notification(self, user_id: int, message: Dict[str, Any]) -> Dict[str, Any]:
-        if not manager.is_connected(user_id):
+        if not manager_driver_feed.is_connected(user_id):
             raise HTTPException(status_code=404, detail="User not connected")
-        await manager.send_personal_message(user_id, {"type": "notification", **message})
+        await manager_driver_feed.send_personal_message(user_id, {"type": "notification", **message})
         return {"status": "sent", "user_id": user_id}
 
     async def broadcast_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
-        await manager.broadcast({"type": "broadcast", **message})
-        return {"status": "broadcasted", "recipients": manager.get_connection_count()}
+        await manager_driver_feed.broadcast({"type": "broadcast", **message})
+        return {"status": "broadcasted", "recipients": manager_driver_feed.get_connection_count()}
 
     async def create(self, request: Request, create_obj: DriverLocationCreate) -> DriverLocationSchema:
         return await self.model_crud.create(request.state.session, create_obj)
@@ -78,6 +78,6 @@ class MatchingHttpRouter(BaseRouter):
         return driver_location
 
     async def get_drivers_stats(self) -> Dict[str, Any]:
-        return {**driver_tracker.get_stats(), "ws_connections": manager.get_connection_count()}
+        return {**driver_tracker.get_stats(), "ws_connections": manager_driver_feed.get_connection_count()}
 
 matching_http_router = MatchingHttpRouter().router

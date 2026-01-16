@@ -105,3 +105,5 @@ class ConnectionManager:
         return convert_datetimes(dictionary)
 
 manager = ConnectionManager()
+manager_driver_feed = ConnectionManager()
+manager_notifications = ConnectionManager()

@@ -3,7 +3,6 @@ from fastapi import Request, Depends
 from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.in_app_notification import in_app_notification_crud
-from app.services.websocket_manager import manager
 from app.schemas.in_app_notification import InAppNotificationSchema, InAppNotificationCreate, InAppNotificationUpdate
 from app.backend.deps import require_role, get_current_user_id
 

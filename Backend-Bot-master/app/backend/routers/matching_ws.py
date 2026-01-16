@@ -1,7 +1,7 @@
 from typing import Any, Dict
 from fastapi import WebSocket, Depends, WebSocketException
 from app.backend.routers.websocket_base import BaseWebsocketRouter
-from app.services.websocket_manager import manager
+from app.services.websocket_manager import manager_driver_feed
 from app.crud.driver_tracker import driver_tracker, DriverStatus
 from app.services.matching_engine import matching_engine
 from app.logger import logger
@@ -24,7 +24,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         self.router.add_api_websocket_route("/ws", self.websocket_endpoint)
 
     async def _stop_feed_task_if_last_connection(self, user_id: int) -> None:
-        if manager.is_connected(user_id):
+        if manager_driver_feed.is_connected(user_id):
             return
 
         await driver_tracker.stop_feed(user_id)
@@ -41,7 +41,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
             raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Not a driver")
 
         await matching_engine.register_connected_driver(session, driver_profile)
-        await manager.connect(websocket, int(user_id))
+        await manager_driver_feed.connect(websocket, int(user_id))
 
         await websocket.send_json({"type": "connected", "user_id": user_id})
 
@@ -49,10 +49,10 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = context["user_id"]
-        manager.disconnect(websocket, user_id)
+        manager_driver_feed.disconnect(websocket, user_id)
         await self._stop_feed_task_if_last_connection(int(user_id))
 
-        if not manager.is_connected(int(user_id)):
+        if not manager_driver_feed.is_connected(int(user_id)):
             matching_engine.unregister_connected_driver(int(user_id))
         logger.info(f"User {user_id} disconnected")
 
