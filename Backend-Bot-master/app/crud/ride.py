@@ -33,11 +33,15 @@ ALLOWED_TRANSITIONS = {
 
 class CrudRide(CrudBase):
     @staticmethod
-    def _calculate_expected_fare(tariff_plan: TariffPlan, distance_meters: int | None, commission: Commission) -> float | None:
-        return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier))) * (1 + commission.percentage / 100) + commission.fixed_amount
+    def _calculate_expected_fare(tariff_plan: TariffPlan, distance_meters: int | None) -> float | None:
+        return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier)))
 
     @staticmethod
-    def _build_snapshot(tariff_plan: TariffPlan, distance_meters: int | None, expected_fare: float | None, commission: Commission) -> dict:
+    def _calculate_commission_amount(expected_fare: float | None, commission: Commission) -> float | None:
+        return commission.fixed_amount + (expected_fare * commission.percentage / 100)
+
+    @staticmethod
+    def _build_snapshot(tariff_plan: TariffPlan, distance_meters: int | None, expected_fare: float | None, commission: Commission, commission_amount: float | None) -> dict:
         def _iso_utc_z(value: datetime | None) -> str | None:
             if value is None:
                 return None
@@ -72,8 +76,10 @@ class CrudRide(CrudBase):
                 "commission_fixed_amount": commission.fixed_amount,
                 "commission_percentage": commission.percentage,
                 "distance_meters": distance_meters,
-                "formula": "(base_fare + (distance_meters * rate_per_meter * multiplier)) * (1 + commission_percentage) + commission_fixed_amount",
+                "expected_fare_formula": "(base_fare + (distance_meters * rate_per_meter * multiplier))",
+                "commission_formula": "commission_fixed_amount + (expected_fare * commission_percentage / 100)",
                 "expected_fare": expected_fare,
+                "commission_amount": commission_amount
             },
             "meta": {
                 "calculated_at": _iso_utc_z(datetime.now(timezone.utc)),
@@ -82,9 +88,11 @@ class CrudRide(CrudBase):
 
     @staticmethod
     def _add_expected_fare_and_snapshot(data: dict, tariff_plan: TariffPlan, distance_meters: int, commission: Commission):
-        expected_fare = CrudRide._calculate_expected_fare(tariff_plan, distance_meters, commission)
-        snapshot = CrudRide._build_snapshot(tariff_plan, distance_meters, expected_fare, commission)
+        expected_fare = CrudRide._calculate_expected_fare(tariff_plan, distance_meters)
+        commission_amount = CrudRide._calculate_commission_amount(expected_fare, commission)
+        snapshot = CrudRide._build_snapshot(tariff_plan, distance_meters, expected_fare, commission, commission_amount)
         data["expected_fare"] = expected_fare
+        data["commission_amount"] = commission_amount
         data["expected_fare_snapshot"] = snapshot
 
     async def create(self, session: AsyncSession, create_obj) -> RideSchema | None:
