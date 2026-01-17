@@ -2,6 +2,7 @@ from typing import Literal
 from .base import BaseSchema
 from datetime import datetime, timezone
 from pydantic import Field
+from .driver_profile import DriverProfileSchema
 
 
 class RideDriversRequestCreate(BaseSchema):
@@ -20,3 +21,8 @@ class RideDriversRequestSchema(RideDriversRequestCreate):
     id: int = Field(..., gt=0)
     status: Literal['requested', 'accepted', 'rejected'] = Field(..., max_length=50)
     updated_at: datetime | None = None
+
+
+class RideDriversRequestSchemaWithDriverProfile(RideDriversRequestSchema):
+    driver_profile: DriverProfileSchema = Field(...)
+

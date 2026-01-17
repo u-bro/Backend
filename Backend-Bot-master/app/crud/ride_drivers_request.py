@@ -1,8 +1,9 @@
 from app.crud.base import CrudBase
 from app.models import RideDriversRequest
-from app.schemas.ride_drivers_request import RideDriversRequestSchema, RideDriversRequestUpdate, RideDriversRequestCreate
+from app.schemas.ride_drivers_request import RideDriversRequestSchema, RideDriversRequestUpdate, RideDriversRequestCreate, RideDriversRequestSchemaWithDriverProfile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, update, insert
+from sqlalchemy.orm import selectinload
 from .in_app_notification import in_app_notification_crud
 from .driver_profile import driver_profile_crud
 from .ride import ride_crud
@@ -22,6 +23,11 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         result = await session.execute(select(self.model).where(self.model.ride_id == ride_id))
         ride_drivers_requests = result.scalars().all()
         return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
+
+    async def get_by_ride_id_with_driver_profiles(self, session: AsyncSession, ride_id: int):
+        result = await session.execute(select(self.model).options(selectinload(self.model.driver_profile)).where(self.model.ride_id == ride_id))
+        ride_drivers_requests = result.scalars().all()
+        return [RideDriversRequestSchemaWithDriverProfile.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
 
     async def get_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
         result = await session.execute(select(self.model).where(self.model.driver_profile_id == driver_profile_id))
