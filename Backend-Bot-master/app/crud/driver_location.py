@@ -24,7 +24,7 @@ class DriverLocationCrud(CrudBase[DriverLocation, DriverLocationSchema]):
         item = await self.get_by_driver_profile_id(session, driver_profile_id)
         if not item:
             raise HTTPException(status_code=404, detail="Driver location not found")
-        if item.status == 'busy' and update_obj.status:
+        if item.status != 'offline' and item.status != 'online' and update_obj.status:
             raise HTTPException(status_code=400, detail="Driver is busy, status can't be changed")
         return await super().update(session, item.id, update_obj)
 
