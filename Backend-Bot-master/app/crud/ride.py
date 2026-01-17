@@ -10,7 +10,7 @@ from .ride_status_history import ride_status_history_crud
 from .driver_profile import driver_profile_crud
 from .driver_location import driver_location_crud
 from .driver_tracker import driver_tracker 
-from app.models import Ride, TariffPlan, Commission
+from app.models import Ride, TariffPlan, Commission, RideDriversRequest
 from app.schemas.ride import RideSchema
 from app.schemas.ride_status_history import RideStatusHistoryCreate
 from fastapi import HTTPException
@@ -190,6 +190,8 @@ class CrudRide(CrudBase):
 
         for id in driver_profile_ids:
             await driver_tracker.release_ride(session, id)
+        
+        await session.execute(update(RideDriversRequest).where(RideDriversRequest.ride_id.in_(ids)).values(status="rejected"))
 
     async def get_by_client_id(self, session: AsyncSession, client_id: int) -> list[RideSchema]:
         stmt = select(self.model).where(self.model.client_id == client_id)
