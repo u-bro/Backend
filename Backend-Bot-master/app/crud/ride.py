@@ -197,4 +197,10 @@ class CrudRide(CrudBase):
         rides = result.scalars().all()
         return [self.schema.model_validate(ride) for ride in rides]
 
+    async def get_requested_by_client_id(self, session: AsyncSession, client_id: int) -> RideSchema | None:
+        stmt = select(self.model).where(and_(self.model.client_id == client_id, self.model.status == "requested"))
+        result = await session.execute(stmt)
+        ride = result.scalar_one_or_none()
+        return self.schema.model_validate(ride) if ride else None
+
 ride_crud = CrudRide(Ride, RideSchema)

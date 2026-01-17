@@ -1,8 +1,9 @@
 from app.crud.base import CrudBase
 from app.models import RideDriversRequest
-from app.schemas.ride_drivers_request import RideDriversRequestSchema, RideDriversRequestUpdate, RideDriversRequestCreate
+from app.schemas.ride_drivers_request import RideDriversRequestSchema, RideDriversRequestUpdate, RideDriversRequestCreate, RideDriversRequestSchemaWithDriverProfile
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, update, insert
+from sqlalchemy.orm import selectinload
 from .in_app_notification import in_app_notification_crud
 from .driver_profile import driver_profile_crud
 from .ride import ride_crud
@@ -23,6 +24,11 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         ride_drivers_requests = result.scalars().all()
         return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
 
+    async def get_by_ride_id_with_driver_profiles(self, session: AsyncSession, ride_id: int):
+        result = await session.execute(select(self.model).options(selectinload(self.model.driver_profile)).where(self.model.ride_id == ride_id))
+        ride_drivers_requests = result.scalars().all()
+        return [RideDriversRequestSchemaWithDriverProfile.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
+
     async def get_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
         result = await session.execute(select(self.model).where(self.model.driver_profile_id == driver_profile_id))
         ride_drivers_requests = result.scalars().all()
@@ -34,6 +40,10 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         return self.schema.model_validate(ride_drivers_request) if ride_drivers_request else None
 
     async def create(self, session: AsyncSession, create_obj: RideDriversRequestCreate) -> RideDriversRequestSchema | None:
+        existing_ride_drivers_request = await self.get_by_ride_id_and_driver_profile_id(session, create_obj.ride_id, create_obj.driver_profile_id)
+        if existing_ride_drivers_request:
+            raise HTTPException(status_code=400, detail="Ride request on this ride already exists")
+
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
         result = await self.execute_get_one(session, stmt)
         if not result:
@@ -83,5 +93,10 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             await fcm_service.send_to_user(session, driver_profile.user_id, PushNotificationData(title="Ride offer rejected", body="Your ride offer is rejected"))
         return self.schema.model_validate(result)
             
+    async def rejected_by_ride_id(self, session: AsyncSession, ride_id: int):
+        result = await session.execute(select(self.model).where(self.model.ride_id == ride_id))
+        ride_drivers_requests = result.scalars().all()
+        ids = [ride_drivers_request.id for ride_drivers_request in ride_drivers_requests]
+        await session.execute(update(self.model).where(self.model.id.in_(ids)).values({"status": "rejected"}))
 
 ride_drivers_request_crud = RideDriversRequestCrud()

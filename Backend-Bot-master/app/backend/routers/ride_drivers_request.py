@@ -4,7 +4,7 @@ from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.ride_drivers_request import ride_drivers_request_crud
 from app.crud.ride import ride_crud
-from app.schemas.ride_drivers_request import RideDriversRequestSchema, RideDriversRequestUpdate
+from app.schemas.ride_drivers_request import RideDriversRequestSchema,RideDriversRequestSchemaWithDriverProfile, RideDriversRequestUpdate
 from app.backend.deps import require_role, require_owner
 from app.models import Ride, User
 
@@ -22,8 +22,8 @@ class RideDriversRequestRouter(BaseRouter):
         items = await super().get_paginated(request, page, page_size)
         return TypeAdapter(List[RideDriversRequestSchema]).validate_python(items)
 
-    async def get_by_ride_id(self, request: Request, id: int) -> list[RideDriversRequestSchema]:
-        return await self.model_crud.get_by_ride_id(request.state.session, id)
+    async def get_by_ride_id(self, request: Request, id: int) -> list[RideDriversRequestSchemaWithDriverProfile]:
+        return await self.model_crud.get_by_ride_id_with_driver_profiles(request.state.session, id)
 
     async def update(self, request: Request, id: int, body: RideDriversRequestUpdate, user: User = Depends(require_role(["user", "driver","admin"]))) -> RideDriversRequestSchema:
         session = request.state.session
