@@ -2,6 +2,7 @@ from typing import Any, Dict
 from fastapi import WebSocket, Depends
 from app.backend.routers.websocket_base import BaseWebsocketRouter
 from app.services.websocket_manager import manager_notifications
+from app.crud.ride import ride_crud
 from app.logger import logger
 from app.backend.deps import get_current_user_id_ws
 from app.db import async_session_maker
@@ -21,8 +22,13 @@ class NotificationWebsocketRouter(BaseWebsocketRouter):
 
     async def on_connect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = context["user_id"]
+        session = context["session"]
         await manager_notifications.connect(websocket, int(user_id))
         await websocket.send_json({"type": "connected", "user_id": user_id})
+        ride = await ride_crud.get_requested_by_client_id(session, user_id)
+        if ride:
+            await websocket.send_json({"type": "active_ride", "data": ride.model_dump(mode="json")})
+        
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = context["user_id"]

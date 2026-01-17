@@ -40,7 +40,7 @@ class ConnectionManager:
             return False
         
         message_with_timestamp = {
-            **self._convert_datetime_to_str_in_dict(message),
+            **self.convert_datetime_to_str_in_dict(message),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         for connection in self.active_connections[user_id]:
@@ -50,7 +50,7 @@ class ConnectionManager:
     
     async def broadcast(self, message: dict, exclude_user_id: Optional[int] = None) -> None:
         message_with_timestamp = {
-            **self._convert_datetime_to_str_in_dict(message),
+            **self.convert_datetime_to_str_in_dict(message),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
@@ -90,7 +90,7 @@ class ConnectionManager:
     def get_connection_count(self) -> int:
         return sum(len(conns) for conns in self.active_connections.values())
 
-    def _convert_datetime_to_str_in_dict(self, dictionary):
+    def convert_datetime_to_str_in_dict(self, dictionary):
         def convert_datetimes(value: Any) -> Any:
             if isinstance(value, datetime):
                 return value.isoformat()
