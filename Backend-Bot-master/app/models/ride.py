@@ -26,6 +26,7 @@ class Ride(Base):
     expected_fare: Mapped[float | None] = mapped_column(DECIMAL(15, 2), nullable=True)
     expected_fare_snapshot = mapped_column(JSONB, nullable=True)
     driver_fare: Mapped[float | None] = mapped_column(DECIMAL(15, 2), nullable=True)
+    commission_amount: Mapped[float | None] = mapped_column(DECIMAL(15, 2), nullable=True)
     actual_fare: Mapped[float | None] = mapped_column(DECIMAL(15, 2), nullable=True)
     distance_meters: Mapped[int | None] = mapped_column(Integer, nullable=True)
     distance_str: Mapped[str | None] = mapped_column(String(50), nullable=True)

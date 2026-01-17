@@ -36,6 +36,7 @@ class RideSchema(RideSchemaCreate):
     canceled_at: datetime | None = Field(None)
     expected_fare: float | None = Field(None, ge=0)
     expected_fare_snapshot: dict | None = Field(None)
+    commission_amount: float | None = Field(None, ge=0)
     actual_fare: float | None = Field(None, ge=0)
     ride_metadata: dict | None = Field(None)
     updated_at: datetime | None = Field(None)
