@@ -26,7 +26,7 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
         item = result.scalar_one_or_none()
         return self.schema.model_validate(item) if item else None
 
-    async def update_fields(self, session: AsyncSession, id: int, fields: dict) -> CommissionPaymentSchema | None:
+    async def update(self, session: AsyncSession, id: int, fields: dict) -> CommissionPaymentSchema | None:
         if not fields:
             return await self.get_by_id(session, id)
 
@@ -34,7 +34,7 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
         result = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(result) if result else None
 
-    async def create_row(self, session: AsyncSession, fields: dict) -> CommissionPaymentSchema:
+    async def create(self, session: AsyncSession, fields: dict) -> CommissionPaymentSchema:
         stmt = insert(self.model).values(fields).returning(self.model)
         result = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(result)

@@ -1,127 +1,88 @@
 from datetime import datetime, timezone
-from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 from app.backend.deps import require_role, require_owner
 from app.config import TOCHKA_ACQUIRING_FAIL_REDIRECT_URL, TOCHKA_ACQUIRING_REDIRECT_URL
-from app.crud import ride_crud, commission_crud, commission_payment_crud
+from app.crud import ride_crud, commission_payment_crud
 from app.schemas.commission_payment import CommissionPaymentCreateRequest, CommissionPaymentSchema
 from app.services.tochka_acquiring import TochkaAPIError, tochka_acquiring_client
 from app.models import Ride, CommissionPayment
+from app.backend.routers.base import BaseRouter
 
 
-commission_payment_router = APIRouter()
+class CommissionPaymentRouter(BaseRouter):
+    def __init__(self) -> None:
+        super().__init__(commission_payment_crud, "/commissions/payments")
+
+    def setup_routes(self) -> None:
+        self.router.add_api_route(f"{self.prefix}/{{id}}/payment-link", self.create_payment_link, methods=["POST"], status_code=201, dependencies=[Depends(require_owner(Ride, "client_id"))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_owner(CommissionPayment, "user_id"))])
+
+    async def create_payment_link(self, request: Request, id: int, body: CommissionPaymentCreateRequest, user=Depends(require_role(["user", "driver", "admin"]))) -> CommissionPaymentSchema:
+        session = request.state.session
+
+        ride = await ride_crud.get_by_id(session, id)
+        if not ride:
+            raise HTTPException(status_code=404, detail="Ride not found")
+
+        existing = await commission_payment_crud.get_by_ride_and_user(session, id, user.id, is_refund=False)
+        if existing and existing.payment_link:
+            return existing
+
+        amount = ride.commission_amount
+        purpose = f"Commission for ride #{id}"
+        redirect_url = body.redirect_url or TOCHKA_ACQUIRING_REDIRECT_URL
+        fail_redirect_url = body.fail_redirect_url or TOCHKA_ACQUIRING_FAIL_REDIRECT_URL
+        raw_request = {
+            "amount": float(amount),
+            "purpose": purpose,
+            "paymentMode": body.payment_mode,
+            "redirectUrl": redirect_url,
+            "failRedirectUrl": fail_redirect_url,
+        }
+
+        try:
+            resp = await tochka_acquiring_client.create_payment_link(
+                amount=float(amount),
+                purpose=purpose,
+                payment_mode=list(body.payment_mode),
+                redirect_url=redirect_url,
+                fail_redirect_url=fail_redirect_url,
+            )
+        except TochkaAPIError as e:
+            raise HTTPException(status_code=502, detail=str(e))
+
+        data = (resp or {}).get("Data") or {}
+
+        fields = {
+            "ride_id": id,
+            "user_id": user.id,
+            "amount": amount,
+            "currency": "RUB",
+            "status": data.get("status") or "CREATED",
+            "tochka_operation_id": data.get("operationId"),
+            "payment_link": data.get("paymentLink"),
+            "purpose": data.get("purpose") or purpose,
+            "payment_mode": data.get("paymentMode") or list(body.payment_mode),
+            "raw_request": raw_request,
+            "raw_response": resp,
+            "updated_at": datetime.now(timezone.utc),
+        }
+
+        if existing:
+            updated = await commission_payment_crud.update(session, existing.id, fields)
+            if not updated:
+                raise HTTPException(status_code=500, detail="Failed to update commission payment")
+            return updated
+
+        created = await commission_payment_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
+        return created
+
+    async def get_commission_payment(self, request: Request, id: int) -> CommissionPaymentSchema:
+        session = request.state.session
+        item = await commission_payment_crud.get_by_id(session, id)
+        if not item:
+            raise HTTPException(status_code=404, detail="Commission payment not found")
+        return item
 
 
-def _parse_dt(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        v = value
-        if v.endswith("Z"):
-            v = v[:-1] + "+00:00"
-        return datetime.fromisoformat(v)
-    except Exception:
-        return None
-
-
-def _to_float(v: float | Decimal | None) -> float:
-    if v is None:
-        return 0.0
-    return float(v)
-
-
-@commission_payment_router.post(
-    "/commissions/{id}/payment-link",
-    status_code=201,
-    response_model=CommissionPaymentSchema,
-    dependencies=[Depends(require_owner(Ride, "client_id"))],
-)
-async def create_commission_payment_link(request: Request, id: int, body: CommissionPaymentCreateRequest, user=Depends(require_role(["user", "driver", "admin"]))) -> CommissionPaymentSchema:
-    session = request.state.session
-
-    ride = await ride_crud.get_by_id(session, id)
-    if not ride:
-        raise HTTPException(status_code=404, detail="Ride not found")
-
-    existing = await commission_payment_crud.get_by_ride_and_user(session, id, user.id, is_refund=False)
-    if existing and existing.payment_link:
-        return existing
-
-    base_fare = getattr(ride, "actual_fare", None) or getattr(ride, "expected_fare", None)
-    if base_fare is None:
-        raise HTTPException(status_code=400, detail="Ride fare is not available")
-
-    commission = await commission_crud.get_by_id(session, int(getattr(ride, "commission_id", 0) or 0))
-    if not commission:
-        raise HTTPException(status_code=400, detail="Ride commission is not configured")
-
-    percentage = _to_float(getattr(commission, "percentage", 0))
-    fixed_amount = _to_float(getattr(commission, "fixed_amount", 0))
-    amount = _to_float(base_fare) * (percentage / 100.0) + fixed_amount
-    if amount <= 0:
-        raise HTTPException(status_code=400, detail="Commission amount must be positive")
-
-    purpose = f"Commission for ride #{id}"
-
-    redirect_url = body.redirect_url or TOCHKA_ACQUIRING_REDIRECT_URL
-    fail_redirect_url = body.fail_redirect_url or TOCHKA_ACQUIRING_FAIL_REDIRECT_URL
-
-    raw_request = {
-        "amount": float(amount),
-        "purpose": purpose,
-        "paymentMode": body.payment_mode,
-        "redirectUrl": redirect_url,
-        "failRedirectUrl": fail_redirect_url,
-    }
-
-    try:
-        resp = await tochka_acquiring_client.create_payment_link(
-            amount=float(amount),
-            purpose=purpose,
-            payment_mode=list(body.payment_mode),
-            redirect_url=redirect_url,
-            fail_redirect_url=fail_redirect_url,
-        )
-    except TochkaAPIError as e:
-        raise HTTPException(status_code=502, detail=str(e))
-
-    data = (resp or {}).get("Data") or {}
-
-    fields = {
-        "ride_id": id,
-        "user_id": user.id,
-        "amount": amount,
-        "currency": "RUB",
-        "status": data.get("status") or "CREATED",
-        "tochka_operation_id": data.get("operationId"),
-        "payment_link": data.get("paymentLink"),
-        "purpose": data.get("purpose") or purpose,
-        "payment_mode": data.get("paymentMode") or list(body.payment_mode),
-        "raw_request": raw_request,
-        "raw_response": resp,
-        "updated_at": datetime.now(timezone.utc),
-    }
-
-    if existing:
-        updated = await commission_payment_crud.update_fields(session, existing.id, fields)
-        if not updated:
-            raise HTTPException(status_code=500, detail="Failed to update commission payment")
-        return updated
-
-    created = await commission_payment_crud.create_row(session, {**fields, "created_at": datetime.now(timezone.utc)})
-    return created
-
-
-@commission_payment_router.get(
-    "/commissions/payments/{id}",
-    status_code=200,
-    response_model=CommissionPaymentSchema,
-    dependencies=[Depends(require_owner(CommissionPayment, "user_id"))]
-)
-async def get_commission_payment(request: Request, id: int, refresh: bool = False, user=Depends(require_role(["user", "driver", "admin"]))) -> CommissionPaymentSchema:
-    session = request.state.session
-    item = await commission_payment_crud.get_by_id(session, id)
-    if not item:
-        raise HTTPException(status_code=404, detail="Commission payment not found")
-
-    return item
+commission_payment_router = CommissionPaymentRouter().router

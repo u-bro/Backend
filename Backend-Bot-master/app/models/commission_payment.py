@@ -22,7 +22,7 @@ class CommissionPayment(Base):
 
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="CREATED")
 
-    tochka_operation_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    tochka_operation_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     payment_link: Mapped[str | None] = mapped_column(String(2048), nullable=True)
 
     purpose: Mapped[str | None] = mapped_column(String(255), nullable=True)
