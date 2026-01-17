@@ -6,7 +6,7 @@ from app.config import TOCHKA_ACQUIRING_FAIL_REDIRECT_URL, TOCHKA_ACQUIRING_REDI
 from app.crud import ride_crud, commission_crud, commission_payment_crud
 from app.schemas.commission_payment import CommissionPaymentCreateRequest, CommissionPaymentSchema
 from app.services.tochka_acquiring import TochkaAPIError, tochka_acquiring_client
-from app.models import Ride
+from app.models import Ride, CommissionPayment
 
 
 commission_payment_router = APIRouter()
@@ -47,7 +47,6 @@ async def create_commission_payment_link(request: Request, id: int, body: Commis
     if existing and existing.payment_link:
         return existing
 
-    # Base amount for commission calculation
     base_fare = getattr(ride, "actual_fare", None) or getattr(ride, "expected_fare", None)
     if base_fare is None:
         raise HTTPException(status_code=400, detail="Ride fare is not available")
@@ -114,46 +113,15 @@ async def create_commission_payment_link(request: Request, id: int, body: Commis
 
 
 @commission_payment_router.get(
-    "/commissions/payments/{payment_id}",
+    "/commissions/payments/{id}",
     status_code=200,
     response_model=CommissionPaymentSchema,
+    dependencies=[Depends(require_owner(CommissionPayment, "user_id"))]
 )
-async def get_commission_payment(request: Request, payment_id: int, refresh: bool = False, user=Depends(require_role(["user", "admin"]))) -> CommissionPaymentSchema:
+async def get_commission_payment(request: Request, id: int, refresh: bool = False, user=Depends(require_role(["user", "driver", "admin"]))) -> CommissionPaymentSchema:
     session = request.state.session
-    item = await commission_payment_crud.get_by_id(session, payment_id)
+    item = await commission_payment_crud.get_by_id(session, id)
     if not item:
         raise HTTPException(status_code=404, detail="Commission payment not found")
 
-    if getattr(item, "user_id", None) != getattr(user, "id", None) and getattr(user, "role", None) and getattr(user.role, "code", None) != "admin":
-        raise HTTPException(status_code=403, detail="Forbidden")
-
-    if not refresh or not item.tochka_operation_id:
-        return item
-
-    try:
-        resp = await tochka_acquiring_client.get_payment_operation_info(item.tochka_operation_id)
-    except TochkaAPIError as e:
-        raise HTTPException(status_code=502, detail=str(e))
-
-    operations = (((resp or {}).get("Data") or {}).get("Operation")) or []
-    op = operations[0] if operations else {}
-
-    fields: dict = {
-        "raw_response": resp,
-        "updated_at": datetime.now(timezone.utc),
-    }
-
-    if isinstance(op, dict):
-        if op.get("status"):
-            fields["status"] = op.get("status")
-        if op.get("paidAt"):
-            parsed = _parse_dt(op.get("paidAt"))
-            if parsed:
-                fields["paid_at"] = parsed
-        if op.get("paymentId"):
-            fields["payment_id"] = op.get("paymentId")
-        if op.get("transactionId"):
-            fields["transaction_id"] = op.get("transactionId")
-
-    updated = await commission_payment_crud.update_fields(session, item.id, fields)
-    return updated or item
+    return item
