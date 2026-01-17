@@ -40,6 +40,10 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         return self.schema.model_validate(ride_drivers_request) if ride_drivers_request else None
 
     async def create(self, session: AsyncSession, create_obj: RideDriversRequestCreate) -> RideDriversRequestSchema | None:
+        existing_ride_drivers_request = await self.get_by_ride_id_and_driver_profile_id(session, create_obj.ride_id, create_obj.driver_profile_id)
+        if existing_ride_drivers_request:
+            raise HTTPException(status_code=400, detail="Ride request on this ride already exists")
+
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
         result = await self.execute_get_one(session, stmt)
         if not result:
