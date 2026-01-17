@@ -1,7 +1,5 @@
 from datetime import datetime, timezone
-
 from fastapi import APIRouter, Request
-
 from app.crud.commission_payment import commission_payment_crud
 from app.logger import logger
 
@@ -67,5 +65,5 @@ async def tochka_webhook(request: Request, payload: dict):
         if parsed is not None:
             fields["paid_at"] = parsed
 
-    await commission_payment_crud.update_fields(session, existing.id, fields)
+    await commission_payment_crud.update(session, existing.id, fields)
     return {"ok": True}

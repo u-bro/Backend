@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from .in_app_notification import in_app_notification_crud
 from .driver_profile import driver_profile_crud
 from .ride import ride_crud
-from .driver_tracker import driver_tracker
+from .driver_tracker import driver_tracker, DriverStatus
 from app.schemas.in_app_notification import InAppNotificationCreate
 from app.services import fcm_service
 from app.schemas.push import PushNotificationData
@@ -54,6 +54,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             raise HTTPException(status_code=404, detail="Ride not found")
         
         result_validated = self.schema.model_validate(result)
+        await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.WAITING_RIDE)
+
         await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_offer", title="New ride offer", message="New ride offer from driver", data={"offer_id": result.id, "ride_id": result.ride_id, "driver_profile_id": result.driver_profile_id}, dedup_key=str(result.id)))
         await fcm_service.send_to_user(session, ride.client_id, PushNotificationData(title="New ride offer", body="New ride offer from driver"))
         return result_validated
@@ -89,6 +91,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
                 if request.id != id:
                     await self.update(session, request.id, RideDriversRequestUpdate(status='rejected'))
         if result.status == 'rejected':
+            await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
+
             await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=driver_profile.user_id, type="ride_offer_rejected", title="Ride offer rejected", message="Your ride offer is rejected", dedup_key=str(result.id)))
             await fcm_service.send_to_user(session, driver_profile.user_id, PushNotificationData(title="Ride offer rejected", body="Your ride offer is rejected"))
         return self.schema.model_validate(result)

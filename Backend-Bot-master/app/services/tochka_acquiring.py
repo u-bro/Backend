@@ -39,6 +39,9 @@ class TochkaAcquiringClient:
         return url if url.endswith("/") else (url + "/")
 
     async def _get_access_token(self) -> str:
+        if TOCHKA_USE_SANDBOX:
+            return "sandbox.jwt.token"
+
         if self._token and time.time() < (self._token_expires_at - 30):
             return self._token
 
@@ -83,19 +86,13 @@ class TochkaAcquiringClient:
         async with aiohttp.ClientSession() as session:
             async with session.request(method, url, json=json_body, params=params, headers=headers) as resp:
                 payload = await resp.json(content_type=None)
+                print(json_body)
+                print(payload)
                 if resp.status >= 400:
                     raise TochkaAPIError(resp.status, f"Tochka API error {resp.status}", payload)
                 return payload
 
-    async def create_payment_link(
-        self,
-        *,
-        amount: float,
-        purpose: str,
-        payment_mode: list[str],
-        redirect_url: str | None = None,
-        fail_redirect_url: str | None = None,
-    ) -> dict:
+    async def create_payment_link(self, *, amount: float, purpose: str, payment_mode: list[str], redirect_url: str | None = None, fail_redirect_url: str | None = None) -> dict:
         if not TOCHKA_ACQUIRING_CUSTOMER_CODE:
             raise TochkaAPIError(500, "Missing TOCHKA_ACQUIRING_CUSTOMER_CODE")
 

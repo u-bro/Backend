@@ -10,7 +10,7 @@ class DriverLocationCreate(BaseSchema):
     longitude: Optional[float] = None
     accuracy_m: Optional[int] = None
     provider: Optional[str] = None
-    status: Literal["offline", "online", "busy"] = "offline"
+    status: Literal["offline", "online", "busy", "waiting_ride"] = "offline"
     last_seen_at: Optional[datetime] = None
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -20,7 +20,7 @@ class DriverLocationUpdate(BaseSchema):
     longitude: Optional[float] = None
     accuracy_m: Optional[int] = None
     provider: Optional[str] = None
-    status: Optional[Literal["offline", "online", "busy"]] = None
+    status: Optional[Literal["offline", "online", "busy", "waiting_ride"]] = None
     last_seen_at: Optional[datetime] = None
 
 
