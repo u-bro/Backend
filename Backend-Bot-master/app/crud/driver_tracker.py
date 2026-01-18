@@ -8,15 +8,15 @@ from .driver_location import driver_location_crud
 from .driver_profile import driver_profile_crud
 from app.schemas.driver_location import DriverLocationUpdateMe, DriverLocationUpdate
 from app.schemas.driver_profile import DriverProfileSchema
+from app.schemas.ride_drivers_request import RideDriversRequestSchema
 from app.services.websocket_manager import manager_driver_feed
 from app.db import async_session_maker
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import MAX_DISTANCE_KM, FEED_PUSH_INTERVAL_SECONDS, FEED_LIMIT
-from app.models import Ride
+from app.models import Ride, RideDriversRequest
 from app.schemas.ride import RideSchema
-from sqlalchemy import and_
-from sqlalchemy import select
+from sqlalchemy import and_, select
 
 logger = logging.getLogger(__name__)
 
@@ -297,5 +297,16 @@ class DriverTracker:
         result = await session.execute(stmt)
         rides = result.scalars().all()
         return [RideSchema.model_validate(ride) for ride in rides]
+
+    async def get_active_ride(self, session: AsyncSession, driver_profile_id: int) -> RideSchema | None:
+        state = self._drivers[driver_profile_id]
+        result = await session.execute(select(Ride).where(Ride.id == state.current_ride_id))
+        ride = result.scalar_one_or_none()
+        return RideSchema.model_validate(ride) if ride else None
+
+    async def get_waiting_ride(self, session: AsyncSession, driver_profile_id: int):
+        result = await session.execute(select(RideDriversRequest).where(and_(RideDriversRequest.driver_profile_id == driver_profile_id, RideDriversRequest.status == "requested")))
+        ride_drivers_requests = result.scalars().all()
+        return RideDriversRequestSchema.model_validate(ride_drivers_requests[0]) if ride_drivers_requests else None
 
 driver_tracker = DriverTracker()

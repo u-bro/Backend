@@ -105,7 +105,12 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
     async def reject_by_ride_id(self, session: AsyncSession, ride_id: int):
         result = await session.execute(select(self.model).where(self.model.ride_id == ride_id))
         ride_drivers_requests = result.scalars().all()
+        
         ids = [ride_drivers_request.id for ride_drivers_request in ride_drivers_requests]
+        driver_profile_ids = [ride_drivers_request.driver_profile_id for ride_drivers_request in ride_drivers_requests]
+
         await session.execute(update(self.model).where(self.model.id.in_(ids)).values({"status": "rejected"}))
+        for driver_profile_id in driver_profile_ids:
+            await driver_tracker.set_status_by_driver(session, driver_profile_id, DriverStatus.ONLINE)
 
 ride_drivers_request_crud = RideDriversRequestCrud()
