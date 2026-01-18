@@ -8,7 +8,7 @@ from app.models import Ride
 from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver
 from app.schemas.push import PushNotificationData
 from app.schemas.in_app_notification import InAppNotificationCreate
-from app.schemas.ride_drivers_request import RideDriversRequestCreate, RideDriversRequestSchema
+from app.schemas.ride_drivers_request import RideDriversRequestCreate, RideDriversRequestSchema, RideDriversRequestUpdate
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile
 from app.models import Ride
 from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud, ride_drivers_request_crud
@@ -31,6 +31,7 @@ class RideRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{id}}/client", self.update_by_client, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"])), Depends(require_owner(Ride, 'client_id'))])
         self.router.add_api_route(f"{self.prefix}/{{id}}/driver", self.update_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"])), Depends(require_driver_profile(Ride))])
         self.router.add_api_route(f"{self.prefix}/{{id}}/accept", self.accept_ride, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/cancel-request", self.cancel_ride_request, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}/finish", self.finish_ride_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[RideSchema]:
@@ -74,6 +75,13 @@ class RideRouter(BaseRouter):
         ride = await ride_crud.get_by_id(session, id)
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_request_sent", "data": ride.model_dump(mode="json")})
         return request
+
+    async def cancel_ride_request(self, request: Request, id: int, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> RideDriversRequestSchema:
+        session = request.state.session
+        existing = await ride_drivers_request_crud.get_requested_by_ride_id_and_driver_profile_id(session, id, driver_profile_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Ride request not found")
+        return await ride_drivers_request_crud.update(session, existing.id, RideDriversRequestUpdate(status="canceled"))
 
     async def update_by_driver(self, request: Request, id: int, update_obj: RideSchemaUpdateByDriver, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         session = request.state.session

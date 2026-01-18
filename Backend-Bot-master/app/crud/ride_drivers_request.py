@@ -39,8 +39,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         ride_drivers_requests = result.scalars().all()
         return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
 
-    async def get_by_ride_id_and_driver_profile_id(self, session: AsyncSession, ride_id: int, driver_profile_id: int):
-        result = await session.execute(select(self.model).where(self.model.ride_id == ride_id, self.model.driver_profile_id == driver_profile_id))
+    async def get_requested_by_ride_id_and_driver_profile_id(self, session: AsyncSession, ride_id: int, driver_profile_id: int):
+        result = await session.execute(select(self.model).where(and_(self.model.ride_id == ride_id, self.model.driver_profile_id == driver_profile_id, self.model.status == "requested")))
         ride_drivers_request = result.scalar_one_or_none()
         return self.schema.model_validate(ride_drivers_request) if ride_drivers_request else None
 
@@ -100,6 +100,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
 
             await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=driver_profile.user_id, type="ride_offer_rejected", title="Ride offer rejected", message="Your ride offer is rejected", dedup_key=str(result.id)))
             await fcm_service.send_to_user(session, driver_profile.user_id, PushNotificationData(title="Ride offer rejected", body="Your ride offer is rejected"))
+        if result.status == 'canceled':
+            await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
         return self.schema.model_validate(result)
             
     async def reject_by_ride_id(self, session: AsyncSession, ride_id: int):
