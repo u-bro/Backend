@@ -97,7 +97,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             await fcm_service.send_to_user(session, driver_profile.user_id, PushNotificationData(title="Ride offer rejected", body="Your ride offer is rejected"))
         return self.schema.model_validate(result)
             
-    async def rejected_by_ride_id(self, session: AsyncSession, ride_id: int):
+    async def reject_by_ride_id(self, session: AsyncSession, ride_id: int):
         result = await session.execute(select(self.model).where(self.model.ride_id == ride_id))
         ride_drivers_requests = result.scalars().all()
         ids = [ride_drivers_request.id for ride_drivers_request in ride_drivers_requests]
