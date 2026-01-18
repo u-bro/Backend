@@ -2,7 +2,7 @@ from app.crud.base import CrudBase
 from app.models import RideDriversRequest
 from app.schemas.ride_drivers_request import RideDriversRequestSchema, RideDriversRequestUpdate, RideDriversRequestCreate, RideDriversRequestSchemaWithDriverProfile
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import select, update, insert
+from sqlalchemy.sql import select, update, insert, and_
 from sqlalchemy.orm import selectinload
 from .in_app_notification import in_app_notification_crud
 from .driver_profile import driver_profile_crud
@@ -34,15 +34,20 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         ride_drivers_requests = result.scalars().all()
         return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
 
+    async def get_requested_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
+        result = await session.execute(select(self.model).where(and_(self.model.driver_profile_id == driver_profile_id, self.model.status == "requested")))
+        ride_drivers_requests = result.scalars().all()
+        return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
+
     async def get_by_ride_id_and_driver_profile_id(self, session: AsyncSession, ride_id: int, driver_profile_id: int):
         result = await session.execute(select(self.model).where(self.model.ride_id == ride_id, self.model.driver_profile_id == driver_profile_id))
         ride_drivers_request = result.scalar_one_or_none()
         return self.schema.model_validate(ride_drivers_request) if ride_drivers_request else None
 
     async def create(self, session: AsyncSession, create_obj: RideDriversRequestCreate) -> RideDriversRequestSchema | None:
-        existing_ride_drivers_request = await self.get_by_ride_id_and_driver_profile_id(session, create_obj.ride_id, create_obj.driver_profile_id)
-        if existing_ride_drivers_request:
-            raise HTTPException(status_code=400, detail="Ride request on this ride already exists")
+        existing_ride_drivers_requests = await self.get_requested_by_driver_profile_id(session, create_obj.driver_profile_id)
+        if existing_ride_drivers_requests and len(existing_ride_drivers_requests) > 0:
+            raise HTTPException(status_code=400, detail="Ride request for this driver already exists")
 
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
         result = await self.execute_get_one(session, stmt)
