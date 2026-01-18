@@ -42,10 +42,19 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
 
         await matching_engine.register_connected_driver(session, driver_profile)
         await manager_driver_feed.connect(websocket, int(user_id))
-
         await websocket.send_json({"type": "connected", "user_id": user_id})
+        
+        state = driver_tracker.get_driver(driver_profile.id)
+        if state.status == DriverStatus.ONLINE:
+            await driver_tracker.start_feed_task(user_id=int(user_id), driver_profile_id=int(driver_profile.id))
 
-        await driver_tracker.start_feed_task(user_id=int(user_id), driver_profile_id=int(driver_profile.id))
+        if state.status == DriverStatus.BUSY:
+            ride = await driver_tracker.get_active_ride(session, driver_profile.id)
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "active_ride", "data": ride.model_dump(mode="json") if ride else None})
+
+        if state.status == DriverStatus.WAITING_RIDE:
+            ride = await driver_tracker.get_waiting_ride(session, driver_profile.id)
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "waiting_ride", "data": ride.model_dump(mode="json") if ride else None})
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = context["user_id"]
