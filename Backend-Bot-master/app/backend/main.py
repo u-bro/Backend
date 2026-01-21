@@ -31,6 +31,7 @@ from app.backend.routers.push_notification import push_notification_router
 from app.backend.routers.commission_payment import commission_payment_router
 from app.backend.routers.tochka_webhook import tochka_webhook_router
 from app.backend.routers.ride_drivers_request import ride_drivers_request_router
+from app.backend.routers.car import car_router
 
 
 app = FastAPI()
@@ -71,6 +72,7 @@ app.include_router(push_notification_router, tags=['PushNotifications'], prefix=
 app.include_router(commission_payment_router, tags=['CommissionPayments'], prefix=API_PREFIX)
 app.include_router(tochka_webhook_router, tags=['Tochka(Webhooks)'], prefix=API_PREFIX)
 app.include_router(ride_drivers_request_router, tags=['RideDriversRequests'], prefix=API_PREFIX)
+app.include_router(car_router, tags=['Cars'], prefix=API_PREFIX)
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request: Request, exc: ResponseValidationError):

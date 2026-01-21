@@ -74,6 +74,7 @@ class RideSchemaAcceptByDriver(BaseSchema):
     driver_profile_id: int | None = Field(None, gt=0)
     status_reason: str | None = Field(None, max_length=255)
     eta: str | None = Field(None, max_length=50)
+    car_id: int | None = Field(None)
     started_at: datetime | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 

@@ -11,7 +11,7 @@ from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.ride_drivers_request import RideDriversRequestCreate, RideDriversRequestSchema, RideDriversRequestUpdate
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile
 from app.models import Ride
-from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud, ride_drivers_request_crud
+from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud, ride_drivers_request_crud, car_crud
 from app.services.chat_service import chat_service
 from app.services import pdf_generator, fcm_service
 from app.crud.driver_tracker import driver_tracker, manager_driver_feed
@@ -71,6 +71,12 @@ class RideRouter(BaseRouter):
 
     async def accept_ride(self, request: Request, id: int, update_obj: RideSchemaAcceptByDriver, driver_profile_id: int = Depends(get_current_driver_profile_id), user_id: int = Depends(get_current_user_id)) -> RideDriversRequestSchema:
         session = request.state.session
+        if update_obj.car_id:
+            cars = await car_crud.get_by_driver_profile_id(session, driver_profile_id)
+            car_ids = [car.id for car in cars]
+            if update_obj.car_id not in car_ids:
+                raise HTTPException(status_code=400, detail="Car is not assigned to this driver")
+        
         request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, eta=update_obj.eta,status="requested"))
         ride = await ride_crud.get_by_id(session, id)
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_request_sent", "data": ride.model_dump(mode="json")})
