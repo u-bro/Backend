@@ -17,3 +17,4 @@ from .in_app_notification import InAppNotification
 from .device_token import DeviceToken
 from .commission_payment import CommissionPayment
 from .ride_drivers_request import RideDriversRequest
+from .car import Car

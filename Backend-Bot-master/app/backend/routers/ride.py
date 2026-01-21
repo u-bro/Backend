@@ -11,7 +11,7 @@ from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.ride_drivers_request import RideDriversRequestCreate, RideDriversRequestSchema, RideDriversRequestUpdate
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile
 from app.models import Ride
-from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud, ride_drivers_request_crud
+from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud, ride_drivers_request_crud, car_crud
 from app.services.chat_service import chat_service
 from app.services import pdf_generator, fcm_service
 from app.crud.driver_tracker import driver_tracker, manager_driver_feed
@@ -61,7 +61,7 @@ class RideRouter(BaseRouter):
 
         driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
         if driver_profile:
-            await self.send_notifications(session, driver_profile.user_id, "ride_status_changed", f"Ride status is changed from \"{old_ride.status}\" to \"{ride.status}\" by client", "Check ride info, driver", ride.model_dump(mode="json"), ride.id)
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_changed", "message": f"Ride is changed by client", "data": ride.model_dump(mode="json")})
 
         if update_obj.status == 'canceled':
             await ride_drivers_request_crud.reject_by_ride_id(session, id)
@@ -71,7 +71,13 @@ class RideRouter(BaseRouter):
 
     async def accept_ride(self, request: Request, id: int, update_obj: RideSchemaAcceptByDriver, driver_profile_id: int = Depends(get_current_driver_profile_id), user_id: int = Depends(get_current_user_id)) -> RideDriversRequestSchema:
         session = request.state.session
-        request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, eta=update_obj.eta,status="requested"))
+        if update_obj.car_id:
+            cars = await car_crud.get_by_driver_profile_id(session, driver_profile_id)
+            car = await car_crud.get_by_id(session, update_obj.car_id)
+            if car not in cars:
+                raise HTTPException(status_code=400, detail="Car is not assigned to this driver")
+        
+        request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, car_id=update_obj.car_id, eta=update_obj.eta,status="requested"))
         ride = await ride_crud.get_by_id(session, id)
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_request_sent", "data": ride.model_dump(mode="json")})
         return request
@@ -108,7 +114,8 @@ class RideRouter(BaseRouter):
             client = await user_crud.get_by_id(session, ride.client_id)
             driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
             client_full_name = [word for word in [client.first_name, client.last_name, client.middle_name] if word]
-            pdf_check = await pdf_generator.generate_ride_receipt(id, " ".join(client_full_name), driver_profile.display_name, ride.pickup_address, ride.dropoff_address, update_obj.actual_fare, ride.distance_meters / 1000, ride.duration_seconds / 60)
+            driver_full_name = [word for word in [driver_profile.first_name, driver_profile.last_name, driver_profile.middle_name] if word]
+            pdf_check = await pdf_generator.generate_ride_receipt(id, " ".join(client_full_name), " ".join(driver_full_name), ride.pickup_address, ride.dropoff_address, update_obj.actual_fare, ride.distance_meters / 1000, ride.duration_seconds / 60)
             await document_crud.upload_pdf_bytes(key, pdf_check)
         
         return ride
