@@ -8,6 +8,7 @@ from .in_app_notification import in_app_notification_crud
 from .driver_profile import driver_profile_crud
 from .ride import ride_crud
 from .driver_tracker import driver_tracker, DriverStatus
+from app.services.websocket_manager import manager_driver_feed
 from app.schemas.in_app_notification import InAppNotificationCreate
 from app.services import fcm_service
 from app.schemas.push import PushNotificationData
@@ -79,7 +80,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         result = await self.execute_get_one(session, stmt)
         if not result:
             return None
-
+        
+        result_validated = self.schema.model_validate(result)
         driver_profile = await driver_profile_crud.get_by_id(session, result.driver_profile_id)
 
         if result.status == 'accepted':
@@ -88,8 +90,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
                 raise HTTPException(status_code=400, detail="Ride request is not accepted. Perhaps, ride is already accepted")
             await driver_tracker.assign_ride(session, driver_profile.id, accepted.id)
 
-            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=driver_profile.user_id, type="ride_offer_accepted", title="Ride offer accepted", message="Your ride offer is accepted", dedup_key=str(result.id)))
-            await fcm_service.send_to_user(session, driver_profile.user_id, PushNotificationData(title="Ride offer accepted", body="Your ride offer is accepted"))
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_accepted", "message": "Your ride offer is accepted", "data": result_validated.model_dump(mode='json')})
 
             other_requests = await self.get_by_ride_id(session, result.ride_id)
             for request in other_requests:
@@ -98,21 +99,20 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         if result.status == 'rejected':
             await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
 
-            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=driver_profile.user_id, type="ride_offer_rejected", title="Ride offer rejected", message="Your ride offer is rejected", dedup_key=str(result.id)))
-            await fcm_service.send_to_user(session, driver_profile.user_id, PushNotificationData(title="Ride offer rejected", body="Your ride offer is rejected"))
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": result_validated.model_dump(mode='json')})
         if result.status == 'canceled':
             await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
-        return self.schema.model_validate(result)
+        return result_validated
             
     async def reject_by_ride_id(self, session: AsyncSession, ride_id: int):
         result = await session.execute(select(self.model).where(self.model.ride_id == ride_id))
         ride_drivers_requests = result.scalars().all()
         
         ids = [ride_drivers_request.id for ride_drivers_request in ride_drivers_requests]
-        driver_profile_ids = [ride_drivers_request.driver_profile_id for ride_drivers_request in ride_drivers_requests]
 
         await session.execute(update(self.model).where(self.model.id.in_(ids)).values({"status": "rejected"}))
-        for driver_profile_id in driver_profile_ids:
-            await driver_tracker.set_status_by_driver(session, driver_profile_id, DriverStatus.ONLINE)
+        for request in ride_drivers_requests:
+            await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
+            await manager_driver_feed.send_personal_message(request.driver_profile_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": self.schema.model_validate(request).model_dump(mode='json')})
 
 ride_drivers_request_crud = RideDriversRequestCrud()

@@ -86,6 +86,11 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
     async def handle_go_online(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         session = context["session"]
         user_id = int(context["user_id"])
+        old_state = driver_tracker.get_driver_by_user(user_id)
+        if old_state.status != DriverStatus.ONLINE and old_state.status != DriverStatus.OFFLINE:
+            await manager_driver_feed.send_personal_message(old_state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
+            return None
+
         state = await driver_tracker.set_status_by_user(session, user_id, DriverStatus.ONLINE)
         if state  and state.status == DriverStatus.ONLINE:
             await websocket.send_json({"type": "status_changed", "status": "online"})
@@ -93,6 +98,11 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
     async def handle_go_offline(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         session = context["session"]
         user_id = int(context["user_id"])
+        old_state = driver_tracker.get_driver_by_user(user_id)
+        if old_state.status != DriverStatus.ONLINE and old_state.status != DriverStatus.OFFLINE:
+            await manager_driver_feed.send_personal_message(old_state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
+            return None
+
         state = await driver_tracker.set_status_by_user(session, user_id, DriverStatus.OFFLINE)
         if state and state.status == DriverStatus.OFFLINE:
             await websocket.send_json({"type": "status_changed", "status": "offline"})
