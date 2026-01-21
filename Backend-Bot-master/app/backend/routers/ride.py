@@ -61,7 +61,7 @@ class RideRouter(BaseRouter):
 
         driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
         if driver_profile:
-            await self.send_notifications(session, driver_profile.user_id, "ride_status_changed", f"Ride status is changed from \"{old_ride.status}\" to \"{ride.status}\" by client", "Check ride info, driver", ride.model_dump(mode="json"), ride.id)
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_changed", "message": f"Ride is changed by client", "data": ride.model_dump(mode="json")})
 
         if update_obj.status == 'canceled':
             await ride_drivers_request_crud.reject_by_ride_id(session, id)
