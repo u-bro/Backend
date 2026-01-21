@@ -108,7 +108,8 @@ class RideRouter(BaseRouter):
             client = await user_crud.get_by_id(session, ride.client_id)
             driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
             client_full_name = [word for word in [client.first_name, client.last_name, client.middle_name] if word]
-            pdf_check = await pdf_generator.generate_ride_receipt(id, " ".join(client_full_name), driver_profile.display_name, ride.pickup_address, ride.dropoff_address, update_obj.actual_fare, ride.distance_meters / 1000, ride.duration_seconds / 60)
+            driver_full_name = [word for word in [driver_profile.first_name, driver_profile.last_name, driver_profile.middle_name] if word]
+            pdf_check = await pdf_generator.generate_ride_receipt(id, " ".join(client_full_name), " ".join(driver_full_name), ride.pickup_address, ride.dropoff_address, update_obj.actual_fare, ride.distance_meters / 1000, ride.duration_seconds / 60)
             await document_crud.upload_pdf_bytes(key, pdf_check)
         
         return ride

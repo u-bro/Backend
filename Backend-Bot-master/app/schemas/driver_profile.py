@@ -8,7 +8,7 @@ class DriverProfileCreate(BaseSchema):
     user_id: int
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    display_name: Optional[str] = None
+    middle_name: Optional[str] = None
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = None
@@ -30,7 +30,7 @@ class DriverProfileCreate(BaseSchema):
 class DriverProfileUpdateMe(BaseSchema):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    display_name: Optional[str] = None
+    middle_name: Optional[str] = None
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = None

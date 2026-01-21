@@ -11,7 +11,7 @@ class DriverProfile(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False, unique=True)
     first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    display_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    middle_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     birth_date = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String, nullable=True)
     license_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
