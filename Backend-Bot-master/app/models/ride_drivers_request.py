@@ -9,6 +9,7 @@ class RideDriversRequest(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     ride_id: Mapped[int] = mapped_column(Integer, ForeignKey('rides.id'), nullable=False)
     driver_profile_id: Mapped[int] = mapped_column(Integer, ForeignKey('driver_profiles.id'), nullable=False)
+    car_id: Mapped[int] = mapped_column(Integer, ForeignKey('cars.id'), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     eta: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
@@ -16,3 +17,4 @@ class RideDriversRequest(Base):
 
     ride = relationship('Ride', foreign_keys=[ride_id])
     driver_profile = relationship("DriverProfile", foreign_keys=[driver_profile_id])
+    car = relationship("Car", foreign_keys=[car_id])

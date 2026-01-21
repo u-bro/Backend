@@ -73,11 +73,11 @@ class RideRouter(BaseRouter):
         session = request.state.session
         if update_obj.car_id:
             cars = await car_crud.get_by_driver_profile_id(session, driver_profile_id)
-            car_ids = [car.id for car in cars]
-            if update_obj.car_id not in car_ids:
+            car = await car_crud.get_by_id(session, update_obj.car_id)
+            if car not in cars:
                 raise HTTPException(status_code=400, detail="Car is not assigned to this driver")
         
-        request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, eta=update_obj.eta,status="requested"))
+        request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, car_id=update_obj.car_id, eta=update_obj.eta,status="requested"))
         ride = await ride_crud.get_by_id(session, id)
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_request_sent", "data": ride.model_dump(mode="json")})
         return request
