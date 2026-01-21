@@ -117,6 +117,10 @@ class DriverTracker:
 
         state = self._drivers[driver_profile_id]
         old_status = state.status
+
+        if old_status != DriverStatus.ONLINE and old_status != DriverStatus.OFFLINE:
+            await manager_driver_feed.send_personal_message(state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
+
         state.status = status
         state.updated_at = datetime.now(timezone.utc)
 
@@ -299,8 +303,7 @@ class DriverTracker:
         return [RideSchema.model_validate(ride) for ride in rides]
 
     async def get_active_ride(self, session: AsyncSession, driver_profile_id: int) -> RideSchema | None:
-        state = self._drivers[driver_profile_id]
-        result = await session.execute(select(Ride).where(Ride.id == state.current_ride_id))
+        result = await session.execute(select(Ride).where(and_(Ride.status.in_(["accepted", "started"]), Ride.driver_profile_id == driver_profile_id)))
         ride = result.scalar_one_or_none()
         return RideSchema.model_validate(ride) if ride else None
 
