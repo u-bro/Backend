@@ -111,16 +111,12 @@ class DriverTracker:
             return self.update_location(driver_id, latitude, longitude, **kwargs)
         return None
 
-    async def set_status(self, driver_profile_id: int, status: DriverStatus) -> Optional[DriverState]:
+    async def _set_status(self, driver_profile_id: int, status: DriverStatus) -> Optional[DriverState]:
         if driver_profile_id not in self._drivers:
             return None
 
         state = self._drivers[driver_profile_id]
         old_status = state.status
-
-        if old_status != DriverStatus.ONLINE and old_status != DriverStatus.OFFLINE:
-            await manager_driver_feed.send_personal_message(state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
-
         state.status = status
         state.updated_at = datetime.now(timezone.utc)
 
@@ -136,13 +132,21 @@ class DriverTracker:
     async def set_status_by_user(self, session: AsyncSession, user_id: int, status: DriverStatus) -> Optional[DriverState]:
         driver_id = self._user_to_driver.get(user_id)
         if driver_id:
+            state = self._drivers[driver_id]
+            if state.status != DriverStatus.ONLINE and state.status != DriverStatus.OFFLINE:
+                await manager_driver_feed.send_personal_message(state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
+                return None
             await driver_location_crud.update_by_driver_profile_id(session, driver_id, DriverLocationUpdate(status=status))
-            return await self.set_status(driver_id, status)
+            return await self._set_status(driver_id, status)
         return None
 
     async def set_status_by_driver(self, session: AsyncSession, driver_profile_id: int, status: DriverStatus) -> Optional[DriverState]:
+        state = self._drivers[driver_profile_id]
+        if state.status != DriverStatus.ONLINE and state.status != DriverStatus.OFFLINE:
+            await manager_driver_feed.send_personal_message(state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
+            return None
         await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdate(status=status))
-        return await self.set_status(driver_profile_id, status)
+        return await self._set_status(driver_profile_id, status)
 
     async def assign_ride(self, session: AsyncSession, driver_profile_id: int, ride_id: int) -> Optional[DriverState]:
         await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdate(status='busy'))

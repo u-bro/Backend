@@ -87,14 +87,14 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         session = context["session"]
         user_id = int(context["user_id"])
         state = await driver_tracker.set_status_by_user(session, user_id, DriverStatus.ONLINE)
-        if state:
+        if state  and state.status == DriverStatus.ONLINE:
             await websocket.send_json({"type": "status_changed", "status": "online"})
 
     async def handle_go_offline(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         session = context["session"]
         user_id = int(context["user_id"])
         state = await driver_tracker.set_status_by_user(session, user_id, DriverStatus.OFFLINE)
-        if state:
+        if state and state.status == DriverStatus.OFFLINE:
             await websocket.send_json({"type": "status_changed", "status": "offline"})
 
 matching_ws_router = MatchingWebsocketRouter().router
