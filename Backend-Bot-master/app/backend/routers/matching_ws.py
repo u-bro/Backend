@@ -8,6 +8,7 @@ from app.logger import logger
 from app.backend.deps import get_current_user_id_ws
 from app.db import async_session_maker
 from app.crud.driver_profile import driver_profile_crud
+from app.crud.ride_drivers_request import ride_drivers_request_crud
 from starlette.status import WS_1008_POLICY_VIOLATION
 
 
@@ -87,9 +88,12 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         session = context["session"]
         user_id = int(context["user_id"])
         old_state = driver_tracker.get_driver_by_user(user_id)
-        if old_state.status != DriverStatus.ONLINE and old_state.status != DriverStatus.OFFLINE:
+        if old_state.status != DriverStatus.ONLINE and old_state.status != DriverStatus.OFFLINE and old_state.status != DriverStatus.WAITING_RIDE:
             await manager_driver_feed.send_personal_message(old_state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
             return None
+
+        if old_state.status == DriverStatus.WAITING_RIDE:
+            await ride_drivers_request_crud.cancel_by_driver_profile_id(session, old_state.driver_profile_id)
 
         state = await driver_tracker.set_status_by_user(session, user_id, DriverStatus.ONLINE)
         if state  and state.status == DriverStatus.ONLINE:
@@ -99,9 +103,12 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         session = context["session"]
         user_id = int(context["user_id"])
         old_state = driver_tracker.get_driver_by_user(user_id)
-        if old_state.status != DriverStatus.ONLINE and old_state.status != DriverStatus.OFFLINE:
+        if old_state.status != DriverStatus.ONLINE and old_state.status != DriverStatus.OFFLINE and old_state.status != DriverStatus.WAITING_RIDE:
             await manager_driver_feed.send_personal_message(old_state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
             return None
+
+        if old_state.status == DriverStatus.WAITING_RIDE:
+            await ride_drivers_request_crud.cancel_by_driver_profile_id(session, old_state.driver_profile_id)
 
         state = await driver_tracker.set_status_by_user(session, user_id, DriverStatus.OFFLINE)
         if state and state.status == DriverStatus.OFFLINE:

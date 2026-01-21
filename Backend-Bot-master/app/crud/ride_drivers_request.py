@@ -115,4 +115,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
             await manager_driver_feed.send_personal_message(request.driver_profile_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": self.schema.model_validate(request).model_dump(mode='json')})
 
+    async def cancel_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
+        await session.execute(update(self.model).where(and_(self.model.driver_profile_id == driver_profile_id, self.model.status == 'requested')).values({"status": "canceled"}))
+
 ride_drivers_request_crud = RideDriversRequestCrud()
