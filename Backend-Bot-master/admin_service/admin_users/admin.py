@@ -14,6 +14,9 @@ class UserAdmin(admin.ModelAdmin):
         "phone",
         "first_name",
         "last_name",
+        "middle_name",
+        "email",
+        "city",
         "is_active",
         "role_id",
         "created_at",
@@ -42,8 +45,8 @@ class UserAdmin(admin.ModelAdmin):
             return qs.only(*actual_fields)
         except Exception:
             return qs
-    list_filter = ("is_active", "role_id")
-    search_fields = ("phone", "first_name", "last_name")
+    list_filter = ("is_active", "role_id", "city")
+    search_fields = ("phone", "email", "first_name", "last_name", "middle_name")
     actions = ["block_users", "unblock_users"]
 
     def has_add_permission(self, request):  

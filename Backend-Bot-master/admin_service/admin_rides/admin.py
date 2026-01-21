@@ -26,17 +26,19 @@ class RideAdmin(admin.ModelAdmin):
         "client_id",
         "driver_profile_id",
         "status",
+        "ride_class",
         "pickup_address",
         "dropoff_address",
         "expected_fare",
+        "commission_amount",
         "actual_fare",
         "is_anomaly",
         "created_at",
         "updated_at",
     )
-    list_editable = tuple([f for f in list_display if f != 'id' and f not in ['pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'distance_meters', 'duration_seconds', 'status', 'cancellation_reason']])
-    list_filter = ("status", "is_anomaly", "created_at")
-    search_fields = ("pickup_address", "dropoff_address")
+    list_editable = tuple([f for f in list_display if f != 'id' and f not in ['ride_class', 'pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'commission_amount', 'distance_meters', 'distance_str', 'duration_seconds', 'duration_str', 'status', 'cancellation_reason']])
+    list_filter = ("status", "ride_class", "is_anomaly", "created_at")
+    search_fields = ("pickup_address", "dropoff_address", "comment")
     actions = ["cancel_rides", "mark_anomaly_resolved"]
 
 
@@ -45,7 +47,7 @@ class RideAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)
         if obj and obj.status in ['completed', 'canceled']:
-            readonly.extend(['pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'distance_meters', 'duration_seconds', 'status', 'cancellation_reason'])
+            readonly.extend(['ride_class', 'pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'commission_amount', 'distance_meters', 'distance_str', 'duration_seconds', 'duration_str', 'status', 'cancellation_reason'])
         return readonly
 
     def has_add_permission(self, request): 

@@ -31,6 +31,14 @@ INSTALLED_APPS = [
     'admin_commissions.apps.AdminCommissionsConfig',
     'admin_transactions.apps.AdminTransactionsConfig',
     'admin_ride_status_history.apps.AdminRideStatusHistoryConfig',
+    'admin_in_app_notifications.apps.AdminInAppNotificationsConfig',
+    'admin_device_tokens.apps.AdminDeviceTokensConfig',
+    'admin_refresh_tokens.apps.AdminRefreshTokensConfig',
+    'admin_commission_payments.apps.AdminCommissionPaymentsConfig',
+    'admin_ride_drivers_requests.apps.AdminRideDriversRequestsConfig',
+    'admin_cars.apps.AdminCarsConfig',
+    'admin_phone_verifications.apps.AdminPhoneVerificationsConfig',
+    'admin_driver_locations.apps.AdminDriverLocationsConfig',
 ]
 
 MIDDLEWARE = [

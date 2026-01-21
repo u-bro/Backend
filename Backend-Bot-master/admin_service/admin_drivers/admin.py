@@ -14,13 +14,15 @@ class DriverProfileAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "user_id",
-        "display_name",
         "first_name",
         "last_name",
+        "middle_name",
         "approved",
         "documents_status",
         "user_is_active",
         "rating_avg",
+        "ride_count",
+        "current_class",
         "created_at",
         "updated_at",
     )
@@ -28,7 +30,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
         [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'qualification_level', 'classes_allowed']]
     )
     list_filter = ("approved", "documents_status")
-    search_fields = ("display_name", "first_name", "last_name")
+    search_fields = ("first_name", "last_name", "middle_name")
     actions = ["approve_drivers", "reject_drivers", "block_drivers", "unblock_drivers"]
 
     readonly_fields = ('id', 'created_at', 'updated_at', 'approved_at')

@@ -92,7 +92,7 @@ class FastAPIClient:
                 'items': [
                     {
                         'id': d.id,
-                        'display_name': d.display_name,
+                        'display_name': " ".join([part for part in [d.last_name, d.first_name, d.middle_name] if part]),
                         'rating_avg': d.rating_avg,
                         'user_id': d.user_id
                     }
