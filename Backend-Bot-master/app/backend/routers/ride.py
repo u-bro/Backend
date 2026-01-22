@@ -87,7 +87,10 @@ class RideRouter(BaseRouter):
         existing = await ride_drivers_request_crud.get_requested_by_ride_id_and_driver_profile_id(session, id, driver_profile_id)
         if not existing:
             raise HTTPException(status_code=404, detail="Ride request not found")
-        return await ride_drivers_request_crud.update(session, existing.id, RideDriversRequestUpdate(status="canceled"))
+        request = await ride_drivers_request_crud.update(session, existing.id, RideDriversRequestUpdate(status="canceled"))
+        ride = await ride_crud.get_by_id(session, id)
+        await self.send_notifications(session, ride.client_id, "ride_request_canceled", "Ride request is canceled", "Ride request is canceled by driver", request.model_dump(mode="json"), request.id)
+        return request
 
     async def update_by_driver(self, request: Request, id: int, update_obj: RideSchemaUpdateByDriver, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         session = request.state.session
