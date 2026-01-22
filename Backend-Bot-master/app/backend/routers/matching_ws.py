@@ -1,14 +1,13 @@
 from typing import Any, Dict
 from fastapi import WebSocket, Depends, WebSocketException
 from app.backend.routers.websocket_base import BaseWebsocketRouter
-from app.services.websocket_manager import manager_driver_feed
+from app.services import manager_driver_feed, driver_state_storage
 from app.crud.driver_tracker import driver_tracker, DriverStatus
-from app.services.matching_engine import matching_engine
+from app.crud import driver_feed
 from app.logger import logger
 from app.backend.deps import get_current_user_id_ws
 from app.db import async_session_maker
-from app.crud.driver_profile import driver_profile_crud
-from app.crud.ride_drivers_request import ride_drivers_request_crud
+from app.crud import driver_profile_crud, ride_drivers_request_crud, ride_crud
 from starlette.status import WS_1008_POLICY_VIOLATION
 
 
@@ -28,7 +27,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         if manager_driver_feed.is_connected(user_id):
             return
 
-        await driver_tracker.stop_feed(user_id)
+        await driver_feed.stop_feed(user_id)
 
     async def websocket_endpoint(self, websocket: WebSocket, user_id: int = Depends(get_current_user_id_ws)) -> None:
         async with async_session_maker() as session:
@@ -41,29 +40,29 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         if driver_profile is None or not getattr(driver_profile, "approved", False):
             raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason="Not a driver")
 
-        await matching_engine.register_connected_driver(session, driver_profile)
+        await driver_state_storage.register_driver(session, driver_profile)
         await manager_driver_feed.connect(websocket, int(user_id))
         await websocket.send_json({"type": "connected", "user_id": user_id})
         
-        state = driver_tracker.get_driver(driver_profile.id)
+        state = driver_state_storage.get_driver(driver_profile.id)
+        if not state:
+            return
+        
         if state.status == DriverStatus.ONLINE:
-            await driver_tracker.start_feed_task(user_id=int(user_id), driver_profile_id=int(driver_profile.id))
+            await driver_feed.start_feed_task(user_id=int(user_id), driver_profile_id=int(driver_profile.id))
 
         if state.status == DriverStatus.BUSY:
-            ride = await driver_tracker.get_active_ride(session, driver_profile.id)
+            ride = await ride_crud.get_active_ride_by_driver_profile_id(session, driver_profile.id)
             await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "active_ride", "data": ride.model_dump(mode="json") if ride else None})
 
         if state.status == DriverStatus.WAITING_RIDE:
-            ride = await driver_tracker.get_waiting_ride(session, driver_profile.id)
-            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "waiting_ride", "data": ride.model_dump(mode="json") if ride else None})
+            rides = await ride_drivers_request_crud.get_requested_by_driver_profile_id(session, driver_profile.id)
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "waiting_ride", "data": rides[0].model_dump(mode="json") if len(rides) else None})
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = context["user_id"]
         manager_driver_feed.disconnect(websocket, user_id)
         await self._stop_feed_task_if_last_connection(int(user_id))
-
-        if not manager_driver_feed.is_connected(int(user_id)):
-            matching_engine.unregister_connected_driver(int(user_id))
         logger.info(f"User {user_id} disconnected")
 
     async def on_error(self, websocket: WebSocket, exc: Exception, **context: Any) -> None:
@@ -87,7 +86,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
     async def handle_go_online(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         session = context["session"]
         user_id = int(context["user_id"])
-        old_state = driver_tracker.get_driver_by_user(user_id)
+        old_state = driver_state_storage.get_driver_by_user(user_id)
         if old_state.status != DriverStatus.ONLINE and old_state.status != DriverStatus.OFFLINE and old_state.status != DriverStatus.WAITING_RIDE:
             await manager_driver_feed.send_personal_message(old_state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
             return None
@@ -102,7 +101,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
     async def handle_go_offline(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         session = context["session"]
         user_id = int(context["user_id"])
-        old_state = driver_tracker.get_driver_by_user(user_id)
+        old_state = driver_state_storage.get_driver_by_user(user_id)
         if old_state.status != DriverStatus.ONLINE and old_state.status != DriverStatus.OFFLINE and old_state.status != DriverStatus.WAITING_RIDE:
             await manager_driver_feed.send_personal_message(old_state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
             return None

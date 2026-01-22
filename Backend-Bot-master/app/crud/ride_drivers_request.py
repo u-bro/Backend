@@ -10,7 +10,7 @@ from .ride import ride_crud
 from .driver_tracker import driver_tracker, DriverStatus
 from app.services.websocket_manager import manager_driver_feed
 from app.schemas.in_app_notification import InAppNotificationCreate
-from app.services import fcm_service
+from app.services import fcm_service, driver_state_storage
 from app.schemas.push import PushNotificationData
 from app.schemas.ride import RideSchemaAcceptByDriver
 from fastapi import HTTPException
@@ -94,7 +94,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
 
             other_requests = await self.get_by_ride_id(session, result.ride_id)
             for request in other_requests:
-                if request.id != id:
+                if request.id != id and request.status == 'requested':
                     await self.update(session, request.id, RideDriversRequestUpdate(status='rejected'))
         if result.status == 'rejected':
             await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
@@ -113,7 +113,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         await session.execute(update(self.model).where(self.model.id.in_(ids)).values({"status": "rejected"}))
         for request in ride_drivers_requests:
             await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
-            await manager_driver_feed.send_personal_message(request.driver_profile_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": self.schema.model_validate(request).model_dump(mode='json')})
+            state = driver_state_storage.get_driver(request.driver_profile_id)
+            await manager_driver_feed.send_personal_message(state.user_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": self.schema.model_validate(request).model_dump(mode='json')})
 
     async def cancel_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
         await session.execute(update(self.model).where(and_(self.model.driver_profile_id == driver_profile_id, self.model.status == 'requested')).values({"status": "canceled"}))
