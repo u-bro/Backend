@@ -94,7 +94,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
 
             other_requests = await self.get_by_ride_id(session, result.ride_id)
             for request in other_requests:
-                if request.id != id:
+                if request.id != id and request.status == 'requested':
                     await self.update(session, request.id, RideDriversRequestUpdate(status='rejected'))
         if result.status == 'rejected':
             await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
