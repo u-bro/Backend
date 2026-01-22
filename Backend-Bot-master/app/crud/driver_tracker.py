@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from enum import Enum
+from app.enum import DriverStatus
 from typing import Dict, Optional, Set
 from dataclasses import dataclass, field
 import math, logging, asyncio
@@ -19,15 +19,6 @@ from app.schemas.ride import RideSchema
 from sqlalchemy import and_, select
 
 logger = logging.getLogger(__name__)
-
-
-class DriverStatus(str, Enum):
-    OFFLINE = "offline"
-    ONLINE = "online"
-    BUSY = "busy"
-    WAITING_RIDE = "waiting_ride"
-    NOT_CONNECTED = "not_connected"
-
 
 @dataclass
 class DriverState:
