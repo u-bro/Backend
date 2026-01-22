@@ -1,9 +1,8 @@
 from typing import Any, Dict, List
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.crud import driver_profile_crud, driver_location_crud
-from app.crud.driver_tracker import driver_tracker
-from app.services.websocket_manager import manager_driver_feed
+from app.crud import driver_profile_crud, driver_location_crud, driver_feed, driver_tracker
+from app.services import manager_driver_feed, driver_state_storage
 from app.backend.deps import get_current_driver_profile_id, require_role
 from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate, DriverLocationUpdateMe
 
@@ -30,16 +29,16 @@ class MatchingHttpRouter(BaseRouter):
         if not profile:
             raise HTTPException(status_code=404, detail="Driver profile not found")
 
-        state = await driver_tracker.register_driver(request.state.session, profile)
+        state = await driver_state_storage.register_driver(request.state.session, profile)
 
         return {"status": "registered", "driver_profile_id": state.driver_profile_id, "classes_allowed": list(state.classes_allowed)}
 
     async def get_ride_feed(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id), limit: int = Query(20, ge=1, le=100)) -> Dict[str, Any]:
-        driver = driver_tracker.get_driver(driver_profile_id)
+        driver = driver_state_storage.get_driver(driver_profile_id)
         if not driver:
             return {"driver_profile_id": driver_profile_id, "driver_status": "not_connected", "count": 0, "rides": []}
         
-        feed = await driver_tracker.get_driver_feed(request.state.session, driver_profile_id, limit)
+        feed = await driver_feed.get_driver_feed(request.state.session, driver_profile_id, limit)
         return {"driver_profile_id": driver_profile_id, "driver_status": driver.status.value, "count": len(feed), "rides": feed}
 
     async def send_notification(self, user_id: int, message: Dict[str, Any]) -> Dict[str, Any]:
@@ -78,6 +77,6 @@ class MatchingHttpRouter(BaseRouter):
         return driver_location
 
     async def get_drivers_stats(self) -> Dict[str, Any]:
-        return {**driver_tracker.get_stats(), "ws_connections": manager_driver_feed.get_connection_count()}
+        return {**driver_state_storage.get_stats(), "ws_connections": manager_driver_feed.get_connection_count()}
 
 matching_http_router = MatchingHttpRouter().router
