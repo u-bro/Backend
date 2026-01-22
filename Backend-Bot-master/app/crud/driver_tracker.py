@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from app.enum import DriverStatus
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, List
 from app.dataclass import DriverState
 import math, logging, asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +11,6 @@ from app.schemas.driver_profile import DriverProfileSchema
 from app.schemas.ride_drivers_request import RideDriversRequestSchema
 from app.services.websocket_manager import manager_driver_feed
 from app.db import async_session_maker
-from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import MAX_DISTANCE_KM, FEED_PUSH_INTERVAL_SECONDS, FEED_LIMIT
 from app.models import Ride, RideDriversRequest
@@ -26,7 +25,6 @@ class DriverTracker:
     def __init__(self):
         self._drivers: Dict[int, DriverState] = {}
         self._user_to_driver: Dict[int, int] = {}
-        self._class_index: Dict[str, Set[int]] = {}
         self._feed_tasks: Dict[int, asyncio.Task[None]] = {}
 
     async def register_driver(self, session: AsyncSession, driver_profile: DriverProfileSchema) -> DriverState:
@@ -39,7 +37,6 @@ class DriverTracker:
         if driver_profile_id in self._drivers:
             state = self._drivers[driver_profile_id]
             state.classes_allowed = classes_set
-            state.rating = driver_profile.rating_avg
             state.status=DriverStatus(driver_location.status)
             state.latitude=driver_location.latitude
             state.longitude=driver_location.longitude
@@ -48,15 +45,12 @@ class DriverTracker:
                 driver_profile_id=driver_profile_id,
                 user_id=driver_profile.user_id,
                 classes_allowed=classes_set,
-                rating=driver_profile.rating_avg,
                 status=DriverStatus(driver_location.status),
                 latitude=driver_location.latitude,
                 longitude=driver_location.longitude
             )
             self._drivers[driver_profile_id] = state
             self._user_to_driver[driver_profile.user_id] = driver_profile_id
-
-        self._update_class_index(driver_profile_id, classes_set)
 
         logger.info(f"Driver {driver_profile_id} registered with classes: {classes_set}")
         return state
@@ -74,21 +68,19 @@ class DriverTracker:
         return state
 
     async def update_location_by_user_id(self, session: AsyncSession, user_id: int, latitude: float, longitude: float, **kwargs) -> Optional[DriverState]:
-        driver_id = self._user_to_driver.get(user_id)
-        if driver_id:
-            await driver_location_crud.update_by_driver_profile_id(session, driver_id, DriverLocationUpdateMe(latitude=latitude, longitude=longitude))
-            return self.update_location(driver_id, latitude, longitude, **kwargs)
-        return None
+        driver_id = self._user_to_driver.get(user_id, 0)
+        await driver_location_crud.update_by_driver_profile_id(session, driver_id, DriverLocationUpdateMe(latitude=latitude, longitude=longitude))
+        return self.update_location(driver_id, latitude, longitude, **kwargs)
 
     async def _set_status(self, driver_profile_id: int, status: DriverStatus) -> Optional[DriverState]:
         if driver_profile_id not in self._drivers:
+            logger.warning(f"Driver {driver_profile_id} not registered")
             return None
 
         state = self._drivers[driver_profile_id]
         old_status = state.status
         state.status = status
         state.updated_at = datetime.now(timezone.utc)
-
         logger.info(f"Driver {driver_profile_id} status: {old_status} -> {status}")
 
         if state.is_available():
@@ -99,11 +91,9 @@ class DriverTracker:
         return state
 
     async def set_status_by_user(self, session: AsyncSession, user_id: int, status: DriverStatus) -> Optional[DriverState]:
-        driver_id = self._user_to_driver.get(user_id)
-        if driver_id:
-            await driver_location_crud.update_by_driver_profile_id(session, driver_id, DriverLocationUpdate(status=status))
-            return await self._set_status(driver_id, status)
-        return None
+        driver_id = self._user_to_driver.get(user_id, 0)
+        await driver_location_crud.update_by_driver_profile_id(session, driver_id, DriverLocationUpdate(status=status))
+        return await self._set_status(driver_id, status)
 
     async def set_status_by_driver(self, session: AsyncSession, driver_profile_id: int, status: DriverStatus) -> Optional[DriverState]:
         await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdate(status=status))
@@ -113,13 +103,13 @@ class DriverTracker:
         await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdate(status='busy'))
 
         if driver_profile_id not in self._drivers:
+            logger.warning(f"Driver {driver_profile_id} not registered")
             return None
 
         state = self._drivers[driver_profile_id]
         state.current_ride_id = ride_id
         state.status = DriverStatus.BUSY
         state.updated_at = datetime.now(timezone.utc)
-
         logger.info(f"Driver {driver_profile_id} assigned to ride {ride_id}")
 
         await self.stop_feed(state.user_id)
@@ -131,6 +121,7 @@ class DriverTracker:
             await driver_location_crud.update_by_driver_profile_id(session, driver_profile_id, DriverLocationUpdate(status='online'))
 
         if driver_profile_id not in self._drivers:
+            logger.warning(f"Driver {driver_profile_id} not registered")
             return None
 
         state = self._drivers[driver_profile_id]
@@ -138,7 +129,6 @@ class DriverTracker:
         state.current_ride_id = None
         state.status = DriverStatus.ONLINE
         state.updated_at = datetime.now(timezone.utc)
-
         logger.info(f"Driver {driver_profile_id} released from ride {old_ride}")
 
         await self.start_feed_task(state.user_id, driver_profile_id)
@@ -149,32 +139,15 @@ class DriverTracker:
 
     def get_driver_by_user(self, user_id: int) -> Optional[DriverState]:
         driver_id = self._user_to_driver.get(user_id)
-        if driver_id:
-            return self._drivers.get(driver_id)
-        return None
-
-    def get_online_count(self) -> int:
-        return sum(1 for d in self._drivers.values() if d.status == DriverStatus.ONLINE)
-
-    def get_busy_count(self) -> int:
-        return sum(1 for d in self._drivers.values() if d.status == DriverStatus.BUSY)
+        return self._drivers.get(driver_id)
 
     def get_stats(self) -> dict:
         return {
             "total_registered": len(self._drivers),
-            "online": self.get_online_count(),
-            "busy": self.get_busy_count(),
+            "online": sum(1 for d in self._drivers.values() if d.status == DriverStatus.ONLINE),
+            "busy": sum(1 for d in self._drivers.values() if d.status == DriverStatus.BUSY),
             "offline": sum(1 for d in self._drivers.values() if d.status == DriverStatus.OFFLINE),
         }
-
-    def _update_class_index(self, driver_id: int, classes: Set[str]):
-        for class_drivers in self._class_index.values():
-            class_drivers.discard(driver_id)
-
-        for cls in classes:
-            if cls not in self._class_index:
-                self._class_index[cls] = set()
-            self._class_index[cls].add(driver_id)
 
     @staticmethod
     def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -212,16 +185,7 @@ class DriverTracker:
             while manager_driver_feed.is_connected(user_id):
                 async with async_session_maker() as session:
                     feed = await self.get_driver_feed(session, driver_profile_id, FEED_LIMIT)
-
-                    await manager_driver_feed.send_personal_message(
-                        user_id,
-                        {
-                            "type": "ride_feed",
-                            "driver_profile_id": driver_profile_id,
-                            "count": len(feed),
-                            "rides": feed,
-                        },
-                    )
+                    await manager_driver_feed.send_personal_message(user_id, {"type": "ride_feed", "driver_profile_id": driver_profile_id, "count": len(feed), "rides": feed})
 
                 await asyncio.sleep(FEED_PUSH_INTERVAL_SECONDS)
         except asyncio.CancelledError:
@@ -230,7 +194,7 @@ class DriverTracker:
             logger.error(f"Ride feed loop error for user {user_id}: {exc}")
 
     async def get_driver_feed(self, session: AsyncSession, driver_profile_id: int, limit: int = 20) -> List[dict]:
-        driver = driver_tracker.get_driver(driver_profile_id)
+        driver = self.get_driver(driver_profile_id)
         if not driver or not driver.is_available() or driver.latitude is None or driver.longitude is None :
             return []
 
@@ -243,22 +207,17 @@ class DriverTracker:
 
             pickup_lat = ride.pickup_lat
             pickup_lng = ride.pickup_lng
-
-            distance = driver_tracker._haversine_distance(
+            distance = self._haversine_distance(
                 driver.latitude, driver.longitude,
                 float(pickup_lat), float(pickup_lng)
             )
             if distance > MAX_DISTANCE_KM:
                 continue
 
-            ride_with_distance = {
-                **ride.model_dump(),
-                'distance_to_pickup_km': round(distance, 2)
-            }
+            ride_with_distance = {**ride.model_dump(), 'distance_to_pickup_km': round(distance, 2)}
             relevant_rides.append((distance, ride_with_distance))
 
         relevant_rides.sort(key=lambda x: x[0])
-
         return [r[1] for r in relevant_rides[:limit]]
 
     async def get_requested_rides(self, session: AsyncSession, limit: int = 1) -> list[RideSchema]:

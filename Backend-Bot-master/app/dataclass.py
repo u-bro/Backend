@@ -13,7 +13,6 @@ class DriverState:
     longitude: Optional[float] = None
     classes_allowed: Set[str] = field(default_factory=set)
     current_ride_id: Optional[int] = None
-    rating: float = 5.0
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_available(self) -> bool:
