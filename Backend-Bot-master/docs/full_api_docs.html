@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master API Documentation | Taxi & Logistics System</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --border: #e2e8f0;
+        }
+        body { font-family: 'Inter', -apple-system, sans-serif; margin: 0; background: var(--bg); color: #1e293b; display: flex; }
+        
+        /* Navigation */
+        .sidebar { width: 320px; height: 100vh; background: var(--primary); color: white; position: fixed; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        .sidebar h1 { font-size: 1.2rem; color: var(--accent); margin-bottom: 30px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .nav-group { margin-bottom: 25px; }
+        .nav-group-title { font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-bottom: 10px; display: block; }
+        .nav-link { display: block; color: #cbd5e1; text-decoration: none; padding: 8px 12px; border-radius: 6px; font-size: 0.9rem; transition: 0.2s; }
+        .nav-link:hover { background: #1e293b; color: white; }
+        .nav-link.active { background: var(--accent); color: white; }
+
+        /* Content */
+        .main-content { margin-left: 320px; padding: 40px; max-width: 1100px; width: 100%; }
+        .section-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 30px; margin-bottom: 40px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        /* Compatibility (старые классы в разметке) */
+        .card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 30px; margin-bottom: 40px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .logic-block { background: #f0f9ff; border-left: 4px solid var(--accent); padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 16px 0; }
+        .muted { color: #64748b; font-size: 0.95rem; }
+        .small { font-size: 0.85rem; }
+        .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #f1f5f9; color: #0f172a; font-size: 0.75rem; font-weight: 700; }
+        .danger { background: #fee2e2; color: #991b1b; }
+        .ok { background: #dcfce7; color: #166534; }
+        .warn { background: #fef9c3; color: #854d0e; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .sticky-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0 18px; }
+        input[type="text"], select { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: white; min-width: 280px; }
+        button { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: #0f172a; color: white; cursor: pointer; }
+        button.secondary { background: white; color: #0f172a; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        h2 { font-size: 1.75rem; margin-top: 0; border-bottom: 2px solid var(--bg); padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        h3 { font-size: 1.25rem; color: var(--primary); margin-top: 30px; }
+        
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 0.9rem; }
+        th { background: #f1f5f9; text-align: left; padding: 12px; font-weight: 600; border-bottom: 2px solid var(--border); }
+        td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        
+        /* Badges */
+        .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
+        .badge-req { background: #fee2e2; color: #991b1b; }
+        .badge-opt { background: #f1f5f9; color: #475569; }
+        .badge-fk { background: #e0f2fe; color: #075985; }
+        
+        .method { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; margin-right: 8px; }
+        .get { background: #dcfce7; color: #166534; }
+        .post { background: #e0f2fe; color: #075985; }
+        .put { background: #fef9c3; color: #854d0e; }
+        .patch { background: #ede9fe; color: #5b21b6; }
+        .delete { background: #fee2e2; color: #991b1b; }
+
+        .workflow { background: #f0f9ff; border-left: 4px solid var(--accent); padding: 20px; border-radius: 0 8px 8px 0; margin: 20px 0; }
+        code { font-family: 'Fira Code', monospace; background: #f1f5f9; padding: 2px 4px; border-radius: 4px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <h1>Taxi API Source of Truth</h1>
+    
+    <div class="nav-group">
+        <span class="nav-group-title">Core Flows</span>
+        <a href="#auth-flow" class="nav-link">Auth & Verification</a>
+        <a href="#ride-lifecycle" class="nav-link">Ride Lifecycle</a>
+    </div>
+
+    <div class="nav-group">
+        <span class="nav-group-title">Swagger Reference</span>
+        <a href="#swagger-meta" class="nav-link">OpenAPI Meta</a>
+        <a href="#swagger-endpoints" class="nav-link">Endpoints</a>
+        <a href="#swagger-schemas" class="nav-link">Schemas</a>
+        <a href="#swagger-relations" class="nav-link">Relations</a>
+    </div>
+
+    <div class="nav-group">
+        <span class="nav-group-title">Entities</span>
+        <a href="#users" class="nav-link">Users & Roles</a>
+        <a href="#drivers" class="nav-link">Driver Profiles & Docs</a>
+        <a href="#finance" class="nav-link">Finance & Tariffs</a>
+        <a href="#matching" class="nav-link">Matching & Location</a>
+        <a href="#chat" class="nav-link">Chat & History</a>
+        <a href="#notifications" class="nav-link">In-App Notifications</a>
+    </div>
+</nav>
+
+<main class="main-content">
+    
+    <section id="auth-flow" class="card">
+        <a id="auth"></a>
+        <h2>🔑 Блок: Auth (Авторизация)</h2>
+        <div class="logic-block">
+            <strong>Процесс:</strong> Отправка SMS &rarr; Верификация кода &rarr; Получение JWT-пары.
+        </div>
+
+        <div class="logic-block">
+            <strong>Swagger security:</strong> по OpenAPI глобально включена схема <code>APIKeyHeader</code>.
+            Для запросов требуется заголовок <code>Authorization</code> (в Swagger UI — кнопка Authorize).
+        </div>
+
+        <h3>1.1 Отправка кода (/auth/send)</h3>
+        <p><span class="method post">POST</span> <code>/api/v1/auth/send</code></p>
+        <table>
+            <tr><th>Контекст</th><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+            <tr><td><strong>Request</strong></td><td>phone</td><td>str</td><td>Номер в формате +7999...</td></tr>
+            <tr><td rowspan="9"><strong>Response</strong></td><td>id</td><td>int</td><td>ID верификации (использовать для отладки)</td></tr>
+            <tr><td>user_id</td><td>int</td><td>ID пользователя (может быть новым)</td></tr>
+            <tr><td>phone</td><td>str</td><td>Номер телефона</td></tr>
+            <tr><td>code</td><td>str</td><td>Сгенерированный код (служебное поле)</td></tr>
+            <tr><td>status</td><td>str|null</td><td>Статус записи</td></tr>
+            <tr><td>created_at</td><td>iso8601|null</td><td>Время создания</td></tr>
+            <tr><td>is_registred</td><td>bool|null</td><td><span class="badge-req">Важно</span> Опечатка в ключе (как в БД)</td></tr>
+            <tr><td>expires_at</td><td>iso8601|null</td><td>Срок жизни кода (обычно 5-10 мин)</td></tr>
+            <tr><td>attempts</td><td>int|null</td><td>Оставшиеся попытки ввода</td></tr>
+        </table>
+
+        <h3>1.2 Верификация (/auth/verify)</h3>
+        <p><span class="method post">POST</span> <code>/api/v1/auth/verify</code></p>
+        <table>
+            <tr><th>Контекст</th><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+            <tr><td><strong>Request</strong></td><td>code</td><td>str</td><td>Код подтверждения</td></tr>
+            <tr><td><strong>Request</strong></td><td>phone</td><td>str|null</td><td>Номер телефона (опционально)</td></tr>
+        </table>
+        <div class="logic-block">
+            <strong>Результат:</strong> Ответ включает <code>access_token</code>, <code>refresh_token</code> и <code>is_registred</code>.
+            Если <code>is_registred: true</code>, значит пользователя с таким телефоном не было — он создан заново и выдана JWT‑пара.
+            Если <code>false</code>, запись с таким телефоном уже была — создается только запись с OTP, токены выдаются для существующего пользователя.
+        </div>
+
+        <h3>1.3 Обновление токена (/auth/refresh)</h3>
+        <p><span class="method post">POST</span> <code>/api/v1/auth/refresh</code></p>
+        <table>
+            <tr><th>Контекст</th><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+            <tr><td><strong>Request</strong></td><td>refresh_token</td><td>str</td><td>Токен обновления</td></tr>
+            <tr><td rowspan="2"><strong>Response</strong></td><td>access_token</td><td>str</td><td>Новый access token</td></tr>
+            <tr><td>refresh_token</td><td>str</td><td>Новый refresh token</td></tr>
+        </table>
+    </section>
+
+    <section id="ride-lifecycle" class="section-card">
+        <h2>🚕 Ride Lifecycle (Сердце системы)</h2>
+        <div class="workflow">
+            <strong>Цепочка статусов:</strong><br>
+            <code>requested</code> (Клиент) &rarr; <code>accepted</code> (Водитель) &rarr; <code>started</code> (В пути) &rarr; <code>completed/canceled</code>.
+        </div>
+
+        <h3>RideSchema (Основные поля)</h3>
+        <table>
+            <tr><th>Поле</th><th>Тип</th><th>Схема</th><th>Описание</th></tr>
+            <tr><td>status</td><td>Literal</td><td>-</td><td>requested, accepted, started, completed, canceled</td></tr>
+            <tr><td>ride_class</td><td>Literal</td><td>-</td><td>light, pro, vip, elite</td></tr>
+            <tr><td>pickup_lat/lng</td><td>float</td><td>Required</td><td>Координаты подачи.</td></tr>
+            <tr><td>dropoff_lat/lng</td><td>float</td><td>Required</td><td>Координаты назначения.</td></tr>
+            <tr><td>distance_meters</td><td>int</td><td>Required</td><td>Длина маршрута в метрах.</td></tr>
+            <tr><td>commission_id</td><td>int</td><td>Required <span class="badge badge-fk">FK</span></td><td>ID комиссии.</td></tr>
+            <tr><td>client_id</td><td>int</td><td><span class="badge badge-fk">FK</span></td><td>ID клиента.</td></tr>
+            <tr><td>expected_fare</td><td>float</td><td>-</td><td>Предварительная цена.</td></tr>
+            <tr><td>tariff_plan_id</td><td>int</td><td><span class="badge badge-fk">FK</span></td><td>ID тарифа на момент создания.</td></tr>
+        </table>
+
+        <div class="workflow" style="background: #fff7ed; border-color: var(--warning);">
+            <strong>Валидация при завершении (Finish Ride):</strong><br>
+            При вызове <code>PUT /rides/{id}/finish</code> водитель передаёт <code>actual_fare</code> (в схеме допускается значение по умолчанию).
+            Поле <code>distance_meters</code> не требуется в этом запросе. Система сверяет <code>actual_fare</code> с <code>expected_fare_snapshot</code>.
+        </div>
+    </section>
+
+    <section id="users" class="card">
+        <h2>👥 Блок: Users (Пользователи)</h2>
+        
+        <div class="logic-block">
+            <strong>Ролевая модель:</strong> <code>role_id</code> связывает пользователя с таблицей <code>Roles</code>. 
+            При получении <code>/me</code> система возвращает <code>role_name</code> (например, "driver" или "client") для настройки интерфейса.
+        </div>
+
+        <h3>2.1 Личный профиль (Me)</h3>
+        <p><span class="method get">GET</span> <code>/api/v1/users/me</code></p>
+        <table>
+            <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+            <tr><td>is_active</td><td>bool|null</td><td><span class="badge-req">UI Sync</span> Активен ли пользователь</td></tr>
+            <tr><td>is_active_ride</td><td>bool</td><td><span class="badge-req">UI Sync</span> Есть ли у юзера незавершенный заказ</td></tr>
+            <tr><td>role_name</td><td>str</td><td>Человекочитаемое название роли</td></tr>
+        </table>
+
+        <p><span class="method put">PUT</span> <code>/api/v1/users/me</code></p>
+        <p>Используется для редактирования профиля (имя, фото, email). <strong>Важно:</strong> <code>role_id</code> через этот эндпоинт изменить нельзя.</p>
+
+        <h3>2.2 Администрирование</h3>
+        <ul>
+            <li><span class="method post">POST</span> <code>/api/v1/users</code> — Прямое создание пользователя (через админ-панель).</li>
+            <li><span class="method delete">DELETE</span> <code>/api/v1/users/{id}</code> — Мягкое или полное удаление. Возвращает код <code>202 Accepted</code>.</li>
+        </ul>
+    </section>
+
+    <section id="drivers" class="section-card">
+        <h2>🆔 Driver Ecosystem</h2>
+        <h3>DriverProfile</h3>
+        <p>Связана с User через <code>user_id</code>. Содержит профессиональные атрибуты.</p>
+        <table>
+            <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+            <tr><td>license_number</td><td>str</td><td>Номер В/У.</td></tr>
+            <tr><td>experience_years</td><td>int</td><td>Стаж (используется в скоринге).</td></tr>
+            <tr><td>classes_allowed</td><td>list[str]|null</td><td>Список разрешенных классов обслуживания.</td></tr>
+            <tr><td>approved</td><td>bool</td><td>Меняется через <code>PUT /driver-profiles/{id}/approve</code> (поле <code>approved</code>).</td></tr>
+        </table>
+        
+        <h3>DriverDocument</h3>
+        <p>Хранилище сканов (лицензия, техпаспорт). Поле <code>status</code> — строка (nullable), фиксированные значения не заданы в схеме.</p>
+    </section>
+
+    <section id="finance" class="section-card">
+        <h2>💰 Finance & Tariffs</h2>
+        
+        <h3>TariffPlanSchema</h3>
+        <table>
+            <tr><th>Поле</th><th>Тип</th><th>Валидация</th><th>Описание</th></tr>
+            <tr><td>base_fare</td><td>float</td><td>gt: 0</td><td>Стоимость подачи.</td></tr>
+            <tr><td>rate_per_meter</td><td>float</td><td>gt: 0</td><td>Цена за 1 метр пути.</td></tr>
+            <tr><td>multiplier</td><td>float</td><td>gt: 0</td><td>Коэффициент (например, 1.5 в дождь).</td></tr>
+            <tr><td>commission_percentage</td><td>float</td><td>gt: 0</td><td>Доля системы от поездки.</td></tr>
+        </table>
+
+        <h3>TransactionSchema</h3>
+        <p>Лог всех финансовых движений.</p>
+        <ul>
+            <li><code>is_withdraw: true</code> — Списание (вывод средств или оплата комиссии).</li>
+            <li><code>is_withdraw: false</code> — Пополнение (оплата поездки клиентом).</li>
+        </ul>
+    </section>
+
+    <section id="matching" class="section-card">
+        <h2>📍 Matching & Real-time Location</h2>
+        <h3>DriverLocation (Live-статус)</h3>
+        <table>
+            <tr><th>Статус</th><th>Описание</th></tr>
+            <tr><td><code>online</code></td><td>Виден в поиске, готов принимать заказы.</td></tr>
+            <tr><td><code>busy</code></td><td>Находится в процессе выполнения <code>Ride</code>.</td></tr>
+            <tr><td><code>offline</code></td><td>Не активен.</td></tr>
+        </table>
+        
+        <div class="workflow">
+            <strong>Алгоритм поиска:</strong><br>
+            В Swagger payload описан как обобщённый <code>object</code>. Детали логики поиска описываются в коде matching.
+        </div>
+    </section>
+
+    <section id="chat" class="section-card">
+        <h2>💬 Operations: Chat & History</h2>
+        <h3>SendMessage (Request/Response)</h3>
+        <ul>
+            <li><strong>Attachments:</strong> Поле типа <code>dict</code> есть в <code>SendMessageRequest</code>; в <code>SendMessageResponse</code> его нет.</li>
+            <li><strong>is_moderated:</strong> Флаг для системы безопасности.</li>
+        </ul>
+
+        <h3>RideStatusHistory</h3>
+        <p>Автоматически фиксирует <code>from_status</code> &rarr; <code>to_status</code>.<br>
+        Поле <code>actor_role</code> (client/driver) критично для разбора конфликтов, аудита и разбирательств.</p>
+    </section>
+
+    <section id="notifications" class="section-card">
+        <h2>🔔 In-App Notifications</h2>
+        <p class="muted">Группа эндпоинтов для получения и управления уведомлениями в приложении.</p>
+        <h3>InAppNotificationSchema (ключевые поля)</h3>
+        <table>
+            <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+            <tr><td>user_id</td><td>int</td><td>ID пользователя</td></tr>
+            <tr><td>type</td><td>str</td><td>Тип уведомления</td></tr>
+            <tr><td>title</td><td>str</td><td>Заголовок</td></tr>
+            <tr><td>message</td><td>str</td><td>Текст уведомления</td></tr>
+            <tr><td>data</td><td>object|null</td><td>Произвольные данные</td></tr>
+            <tr><td>dedup_key</td><td>str|null</td><td>Ключ дедупликации</td></tr>
+            <tr><td>read_at</td><td>iso8601|null</td><td>Дата прочтения</td></tr>
+        </table>
+        <div class="logic-block">
+            <strong>Основные эндпоинты:</strong> <code>/api/v1/notifications/in-app/me</code>,
+            <code>/api/v1/notifications/in-app/me/unread</code>, <code>/api/v1/notifications/in-app/me/read-all</code>,
+            <code>/api/v1/notifications/in-app/me/read/{id}</code>, а также CRUD по <code>/api/v1/notifications/in-app</code>.
+        </div>
+    </section>
+
+    <section id="swagger-meta" class="section-card">
+        <h2>🧾 OpenAPI Meta (из Swagger)</h2>
+        <p class="muted">Данные ниже строятся строго из OpenAPI. По умолчанию берём снапшот (docs/openapi.snapshot.json), но можно переключиться на живой сервер (dev или localhost).</p>
+
+        <div class="sticky-actions">
+            <select id="openapiSource">
+                <option value="snapshot">Snapshot: docs/openapi.snapshot.json</option>
+                <option value="dev">Server: https://api.dev.u-bro.ru/openapi.json</option>
+                <option value="local">Server: http://localhost:6666/openapi.json</option>
+            </select>
+            <button id="reloadOpenApi">Reload</button>
+            <span id="openapiStatus" class="pill warn">not loaded</span>
+        </div>
+
+        <div id="openapiMeta" class="grid-2"></div>
+        <div class="logic-block">
+            <strong>Важно:</strong> если загрузка с сервера падает — это почти всегда CORS. В этом случае используйте снапшот.
+        </div>
+    </section>
+
+    <section id="swagger-endpoints" class="section-card">
+        <h2>🧭 Endpoints (все пути из Swagger)</h2>
+        <div class="sticky-actions">
+            <input id="endpointFilter" type="text" placeholder="Фильтр: tag, path, method, summary…" />
+            <span id="endpointCount" class="pill">0</span>
+        </div>
+        <div id="openapiEndpoints"></div>
+    </section>
+
+    <section id="swagger-schemas" class="section-card">
+        <h2>📦 Schemas (все сущности/DTO из Swagger)</h2>
+        <div class="sticky-actions">
+            <input id="schemaFilter" type="text" placeholder="Фильтр по названию/полям/описанию…" />
+            <span id="schemaCount" class="pill">0</span>
+        </div>
+        <div id="openapiSchemaIndex"></div>
+        <div id="openapiSchemas"></div>
+    </section>
+
+    <section id="swagger-relations" class="section-card">
+        <h2>🔗 Relations (связи между сущностями)</h2>
+        <p class="muted">Связи строятся эвристикой: <code>$ref</code> и поля вида <code>*_id</code>/<code>*Id</code> внутри Swagger-схем.</p>
+        <div id="openapiRelations"></div>
+    </section>
+
+</main>
+
+<script>
+(() => {
+    const SNAPSHOT_URL = 'openapi.snapshot.json';
+    const SERVER_URLS = {
+        snapshot: 'openapi.snapshot.json',
+        dev: 'https://api.dev.u-bro.ru/openapi.json',
+        local: 'http://localhost:6666/openapi.json',
+    };
+
+    const el = (id) => document.getElementById(id);
+    const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    const refName = (ref) => {
+        if (!ref) return null;
+        const parts = String(ref).split('/');
+        return parts[parts.length - 1] || null;
+    };
+
+    const typeToString = (schema) => {
+        if (!schema) return 'unknown';
+        if (schema.$ref) return refName(schema.$ref);
+        if (schema.oneOf) return 'oneOf(' + schema.oneOf.map(typeToString).join(' | ') + ')';
+        if (schema.anyOf) return 'anyOf(' + schema.anyOf.map(typeToString).join(' | ') + ')';
+        if (schema.allOf) return 'allOf(' + schema.allOf.map(typeToString).join(' & ') + ')';
+        const t = schema.type;
+        if (t === 'array') return 'array<' + typeToString(schema.items) + '>';
+        if (t === 'object') return 'object';
+        if (t) return t;
+        return 'unknown';
+    };
+
+    const schemaToConstraints = (schema) => {
+        if (!schema || typeof schema !== 'object') return '';
+        const parts = [];
+        if (schema.format) parts.push('format=' + schema.format);
+        if (schema.nullable) parts.push('nullable');
+        if (schema.minimum !== undefined) parts.push('min=' + schema.minimum);
+        if (schema.maximum !== undefined) parts.push('max=' + schema.maximum);
+        if (schema.minLength !== undefined) parts.push('minLen=' + schema.minLength);
+        if (schema.maxLength !== undefined) parts.push('maxLen=' + schema.maxLength);
+        if (schema.pattern) parts.push('pattern');
+        if (Array.isArray(schema.enum)) parts.push('enum[' + schema.enum.length + ']');
+        return parts.join(', ');
+    };
+
+    const schemaLink = (name) => `<a href="#schema-${encodeURIComponent(name)}"><code>${escapeHtml(name)}</code></a>`;
+
+    const formatRequestBodySchema = (op) => {
+        const rb = op?.requestBody?.content || {};
+        const json = rb['application/json'] || rb['application/json; charset=utf-8'];
+        const schema = json?.schema;
+        if (!schema) return '';
+        const name = schema.$ref ? refName(schema.$ref) : null;
+        return name ? schemaLink(name) : `<code>${escapeHtml(typeToString(schema))}</code>`;
+    };
+
+    const formatResponses = (op) => {
+        const responses = op?.responses || {};
+        const codes = Object.keys(responses).sort();
+        const out = [];
+        for (const code of codes) {
+            const r = responses[code] || {};
+            const c = r.content || {};
+            const json = c['application/json'] || c['application/json; charset=utf-8'];
+            const schema = json?.schema;
+            let schemaCell = '';
+            if (schema) {
+                const name = schema.$ref ? refName(schema.$ref) : null;
+                schemaCell = name ? schemaLink(name) : `<code>${escapeHtml(typeToString(schema))}</code>`;
+            } else {
+                schemaCell = '<span class="muted">(no body)</span>';
+            }
+            out.push(`<div><span class="pill">${escapeHtml(code)}</span> ${schemaCell}</div>`);
+        }
+        return out.join('');
+    };
+
+    const hasAuth = (spec, op) => {
+        const globalSec = spec?.security;
+        const opSec = op?.security;
+        const sec = (opSec !== undefined ? opSec : globalSec);
+        if (!sec) return false;
+        if (Array.isArray(sec) && sec.length === 0) return false;
+        return true;
+    };
+
+    const renderMeta = (spec) => {
+        const info = spec.info || {};
+        const servers = spec.servers || [];
+        const secSchemes = (spec.components && spec.components.securitySchemes) ? Object.keys(spec.components.securitySchemes) : [];
+        const paths = spec.paths || {};
+        let opCount = 0;
+        for (const p of Object.keys(paths)) {
+            const item = paths[p] || {};
+            for (const m of Object.keys(item)) {
+                if (['get','post','put','patch','delete'].includes(m)) opCount++;
+            }
+        }
+        const schemaCount = Object.keys((spec.components && spec.components.schemas) || {}).length;
+
+        el('openapiMeta').innerHTML = `
+            <div class="card">
+                <h3 style="margin-top:0">Spec</h3>
+                <p><strong>Title:</strong> ${escapeHtml(info.title || '—')}</p>
+                <p><strong>Version:</strong> ${escapeHtml(info.version || '—')}</p>
+                <p><strong>Operations:</strong> ${opCount}</p>
+                <p><strong>Schemas:</strong> ${schemaCount}</p>
+            </div>
+            <div class="card">
+                <h3 style="margin-top:0">Security/Servers</h3>
+                <p><strong>Security schemes:</strong> ${secSchemes.map(s => `<code>${escapeHtml(s)}</code>`).join(' ') || '—'}</p>
+                <p><strong>Global security:</strong> ${Array.isArray(spec.security) ? '<code>enabled</code>' : '<code>none</code>'}</p>
+                <p><strong>Servers:</strong><br>${servers.map(s => `<code>${escapeHtml(s.url || '')}</code>`).join('<br>') || '—'}</p>
+            </div>
+        `;
+    };
+
+    const renderEndpoints = (spec) => {
+        const paths = spec.paths || {};
+        const byTag = new Map();
+
+        for (const path of Object.keys(paths).sort()) {
+            const item = paths[path] || {};
+            for (const method of ['get','post','put','patch','delete']) {
+                const op = item[method];
+                if (!op) continue;
+                const tags = op.tags && op.tags.length ? op.tags : ['(no tag)'];
+                for (const tag of tags) {
+                    if (!byTag.has(tag)) byTag.set(tag, []);
+                    byTag.get(tag).push({ path, method, op });
+                }
+            }
+        }
+
+        const tagsSorted = Array.from(byTag.keys()).sort((a,b)=>a.localeCompare(b,'ru'));
+        let total = 0;
+        const blocks = tagsSorted.map(tag => {
+            const rows = byTag.get(tag);
+            total += rows.length;
+            const body = rows.map(({path, method, op}) => {
+                const summary = op.summary || op.operationId || '';
+                const auth = hasAuth(spec, op) ? '<span class="pill ok">auth</span>' : '<span class="pill">public</span>';
+                const req = formatRequestBodySchema(op) || '<span class="muted">—</span>';
+                const res = formatResponses(op) || '<span class="muted">—</span>';
+                return `
+                    <tr data-filter="${escapeHtml((tag+' '+path+' '+method+' '+summary).toLowerCase())}">
+                        <td><span class="method ${method}">${method.toUpperCase()}</span> <code>${escapeHtml(path)}</code></td>
+                        <td>${escapeHtml(summary)}</td>
+                        <td>${auth}</td>
+                        <td>${req}</td>
+                        <td>${res}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            return `
+                <div class="card" style="margin-bottom:18px">
+                    <h3 style="margin-top:0">${escapeHtml(tag)} <span class="pill">${rows.length}</span></h3>
+                    <table>
+                        <tr>
+                            <th>Path</th>
+                            <th>Summary</th>
+                            <th>Auth</th>
+                            <th>Request</th>
+                            <th>Responses</th>
+                        </tr>
+                        ${body}
+                    </table>
+                </div>
+            `;
+        }).join('');
+
+        el('openapiEndpoints').innerHTML = blocks || '<p class="muted">Нет данных.</p>';
+        el('endpointCount').textContent = String(total);
+    };
+
+    const renderSchemas = (spec) => {
+        const schemas = (spec.components && spec.components.schemas) || {};
+        const names = Object.keys(schemas).sort((a,b)=>a.localeCompare(b,'ru'));
+        el('schemaCount').textContent = String(names.length);
+
+        el('openapiSchemaIndex').innerHTML = `
+            <div class="card">
+                <h3 style="margin-top:0">Index</h3>
+                <p class="muted small">Клик по схеме ведёт к подробной таблице полей.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    ${names.map(n => `<a class="pill" href="#schema-${encodeURIComponent(n)}">${escapeHtml(n)}</a>`).join('')}
+                </div>
+            </div>
+        `;
+
+        const cards = names.map(name => {
+            const sch = schemas[name] || {};
+            const props = sch.properties || {};
+            const required = new Set(sch.required || []);
+            const desc = sch.description || '';
+
+            const rows = Object.keys(props).sort((a,b)=>a.localeCompare(b,'ru')).map(pn => {
+                const ps = props[pn] || {};
+                const isReq = required.has(pn);
+                const t = typeToString(ps);
+                const c = schemaToConstraints(ps);
+                const d = ps.description || '';
+
+                let typeHtml = '';
+                if (ps.$ref) {
+                    const rn = refName(ps.$ref);
+                    typeHtml = rn ? schemaLink(rn) : `<code>${escapeHtml(t)}</code>`;
+                } else if (ps.type === 'array' && ps.items && ps.items.$ref) {
+                    const rn = refName(ps.items.$ref);
+                    typeHtml = `array&lt;${rn ? schemaLink(rn) : `<code>${escapeHtml(typeToString(ps.items))}</code>`}&gt;`;
+                } else {
+                    typeHtml = `<code>${escapeHtml(t)}</code>`;
+                }
+
+                const reqBadge = isReq ? '<span class="badge badge-req">req</span>' : '<span class="badge badge-opt">opt</span>';
+                const constraints = c ? `<span class="muted small">${escapeHtml(c)}</span>` : '<span class="muted small">—</span>';
+                const enumHtml = Array.isArray(ps.enum) ? `<div class="muted small">enum: <code>${escapeHtml(ps.enum.join(' | '))}</code></div>` : '';
+                return `
+                    <tr>
+                        <td><code>${escapeHtml(pn)}</code> ${reqBadge}</td>
+                        <td>${typeHtml}${enumHtml}</td>
+                        <td>${constraints}</td>
+                        <td>${escapeHtml(d) || '<span class="muted">—</span>'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const propCount = Object.keys(props).length;
+            return `
+                <div class="card" id="schema-${encodeURIComponent(name)}">
+                    <h3 style="margin-top:0">${escapeHtml(name)} <span class="pill">${propCount} fields</span></h3>
+                    ${desc ? `<p class="muted">${escapeHtml(desc)}</p>` : ''}
+                    ${propCount ? `
+                        <table>
+                            <tr><th>Field</th><th>Type</th><th>Constraints</th><th>Description</th></tr>
+                            ${rows}
+                        </table>
+                    ` : '<p class="muted">Нет properties (возможно, alias/primitive).</p>'}
+                </div>
+            `;
+        }).join('');
+
+        el('openapiSchemas').innerHTML = cards;
+    };
+
+    const renderRelations = (spec) => {
+        const schemas = (spec.components && spec.components.schemas) || {};
+        const names = Object.keys(schemas);
+        const edges = [];
+
+        const guessTarget = (field) => {
+            const base = field.replace(/_id$/,'').replace(/Id$/,'');
+            if (!base || base === field) return null;
+            const baseLow = base.toLowerCase();
+            const candidates = names.filter(n => n.toLowerCase().includes(baseLow));
+            if (!candidates.length) return null;
+            const schemaCand = candidates.find(c => c.toLowerCase() === (baseLow + 'schema'));
+            return schemaCand || candidates[0];
+        };
+
+        for (const srcName of names) {
+            const sch = schemas[srcName] || {};
+            const props = sch.properties || {};
+            for (const [pn, ps] of Object.entries(props)) {
+                if (ps && ps.$ref) {
+                    const dst = refName(ps.$ref);
+                    if (dst) edges.push({src: srcName, field: pn, dst, kind: '$ref'});
+                    continue;
+                }
+                if (ps && ps.type === 'array' && ps.items && ps.items.$ref) {
+                    const dst = refName(ps.items.$ref);
+                    if (dst) edges.push({src: srcName, field: pn, dst, kind: 'array<$ref>'});
+                    continue;
+                }
+                if (pn.endsWith('_id') || pn.endsWith('Id')) {
+                    const dst = guessTarget(pn);
+                    if (dst) edges.push({src: srcName, field: pn, dst, kind: 'id'});
+                }
+            }
+        }
+
+        const seen = new Set();
+        const uniq = [];
+        for (const e of edges) {
+            const key = `${e.src}|${e.field}|${e.dst}|${e.kind}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            uniq.push(e);
+        }
+
+        uniq.sort((a,b) => (a.src+a.field).localeCompare(b.src+b.field,'ru'));
+
+        const rows = uniq.map(e => `
+            <tr>
+                <td>${schemaLink(e.src)}</td>
+                <td><code>${escapeHtml(e.field)}</code></td>
+                <td>${schemaLink(e.dst)}</td>
+                <td><span class="pill">${escapeHtml(e.kind)}</span></td>
+            </tr>
+        `).join('');
+
+        el('openapiRelations').innerHTML = uniq.length ? `
+            <table>
+                <tr><th>From</th><th>Field</th><th>To</th><th>Kind</th></tr>
+                ${rows}
+            </table>
+        ` : '<p class="muted">Связи не найдены.</p>';
+    };
+
+    const applyFilters = () => {
+        const ef = (el('endpointFilter')?.value || '').trim().toLowerCase();
+        const sf = (el('schemaFilter')?.value || '').trim().toLowerCase();
+
+        const endpointRows = document.querySelectorAll('#openapiEndpoints tr[data-filter]');
+        let visibleEndpoints = 0;
+        endpointRows.forEach(tr => {
+            const hay = tr.getAttribute('data-filter') || '';
+            const show = !ef || hay.includes(ef);
+            tr.style.display = show ? '' : 'none';
+            if (show) visibleEndpoints++;
+        });
+        if (el('endpointCount')) el('endpointCount').textContent = String(visibleEndpoints);
+
+        const schemaCards = document.querySelectorAll('#openapiSchemas .card[id^="schema-"]');
+        let visibleSchemas = 0;
+        schemaCards.forEach(card => {
+            const txt = (card.textContent || '').toLowerCase();
+            const show = !sf || txt.includes(sf);
+            card.style.display = show ? '' : 'none';
+            if (show) visibleSchemas++;
+        });
+        if (el('schemaCount')) el('schemaCount').textContent = String(visibleSchemas);
+    };
+
+    const setStatus = (text, kind) => {
+        const s = el('openapiStatus');
+        if (!s) return;
+        s.textContent = text;
+        s.className = 'pill ' + (kind || 'warn');
+    };
+
+    const loadAndRender = async () => {
+        const source = el('openapiSource')?.value || 'snapshot';
+        const url = SERVER_URLS[source] || SNAPSHOT_URL;
+        setStatus('loading…', 'warn');
+        try {
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const spec = await res.json();
+            renderMeta(spec);
+            renderEndpoints(spec);
+            renderSchemas(spec);
+            renderRelations(spec);
+            applyFilters();
+            setStatus('loaded', 'ok');
+        } catch (e) {
+            console.error(e);
+            setStatus('failed: ' + String(e.message || e), 'danger');
+            el('openapiMeta').innerHTML = `<p class="muted">Не удалось загрузить OpenAPI из <code>${escapeHtml(url)}</code>. Используйте snapshot или проверьте CORS.</p>`;
+            el('openapiEndpoints').innerHTML = '';
+            el('openapiSchemas').innerHTML = '';
+            el('openapiRelations').innerHTML = '';
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        el('reloadOpenApi')?.addEventListener('click', loadAndRender);
+        el('openapiSource')?.addEventListener('change', loadAndRender);
+        el('endpointFilter')?.addEventListener('input', applyFilters);
+        el('schemaFilter')?.addEventListener('input', applyFilters);
+        loadAndRender();
+    });
+})();
+</script>
+
+</body>
+</html>
