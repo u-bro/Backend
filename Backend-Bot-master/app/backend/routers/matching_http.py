@@ -2,7 +2,8 @@ from typing import Any, Dict, List
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
 from app.crud import driver_profile_crud, driver_location_crud, driver_feed, driver_tracker
-from app.services import manager_driver_feed, driver_state_storage
+from app.services import manager_driver_feed
+from app.services.driver_state_storage import driver_state_storage
 from app.backend.deps import get_current_driver_profile_id, require_role
 from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate, DriverLocationUpdateMe
 
