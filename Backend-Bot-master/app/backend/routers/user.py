@@ -43,7 +43,7 @@ class UserRouter(BaseRouter):
             driver_location = await driver_location_crud.get_by_driver_profile_id(request.state.session, user.driver_profile.id)
             if not driver_location:
                 raise HTTPException(status_code=404, detail="Driver location not found")
-            return UserSchemaMe(**user.__dict__, role_name=role_name, is_active_ride=driver_location.status=='busy')
+            return UserSchemaMe(**user.__dict__, role_name=role_name, is_active_ride=driver_location.status in ['busy', 'waiting_ride'])
 
         rides = await ride_crud.get_by_client_id(request.state.session, user.id)
         statuses = [ride.status for ride in rides if ride.status in ['requested', 'accepted', 'started']]
