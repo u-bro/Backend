@@ -7,10 +7,12 @@ from sqlalchemy.orm import selectinload
 from .in_app_notification import in_app_notification_crud
 from .driver_profile import driver_profile_crud
 from .ride import ride_crud
+from .in_app_notification import in_app_notification_crud
 from .driver_tracker import driver_tracker, DriverStatus
 from app.services.websocket_manager import manager_driver_feed
 from app.schemas.in_app_notification import InAppNotificationCreate
-from app.services import fcm_service, driver_state_storage
+from app.services import fcm_service
+from app.services.driver_state_storage import driver_state_storage
 from app.schemas.push import PushNotificationData
 from app.schemas.ride import RideSchemaAcceptByDriver
 from fastapi import HTTPException
@@ -86,6 +88,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         
         result_validated = self.schema.model_validate(result)
         driver_profile = await driver_profile_crud.get_by_id(session, result.driver_profile_id)
+        ride = await ride_crud.get_by_id(session, result.ride_id)
 
         if result.status == 'accepted':
             accepted = await ride_crud.accept(session, result.ride_id, RideSchemaAcceptByDriver(driver_profile_id=result.driver_profile_id), driver_profile.user_id)
@@ -105,6 +108,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": result_validated.model_dump(mode='json')})
         if result.status == 'canceled':
             await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
+            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Ride request is canceled", message="Ride request is canceled by driver", data=result_validated.model_dump(mode="json"), dedup_key=str(result_validated.id)))
         return result_validated
             
     async def reject_by_ride_id(self, session: AsyncSession, ride_id: int):
@@ -120,6 +124,11 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             await manager_driver_feed.send_personal_message(state.user_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": self.schema.model_validate(request).model_dump(mode='json')})
 
     async def cancel_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
-        await session.execute(update(self.model).where(and_(self.model.driver_profile_id == driver_profile_id, self.model.status == 'requested')).values({"status": "canceled"}))
+        requests = await self.get_requested_by_driver_profile_id(session, driver_profile_id)
+        request_ids = [request.id for request in requests]
+        await session.execute(update(self.model).where(self.model.id.in_(request_ids)).values({"status": "canceled"}))
+        for request in requests:
+            ride = await ride_crud.get_by_id(session, request.ride_id)
+            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Ride request is canceled", message="Ride request is canceled by driver", data=request.model_dump(mode="json"), dedup_key=str(request.id)))
 
 ride_drivers_request_crud = RideDriversRequestCrud()

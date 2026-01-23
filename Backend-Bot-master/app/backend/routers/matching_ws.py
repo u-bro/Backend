@@ -1,7 +1,8 @@
 from typing import Any, Dict
 from fastapi import WebSocket, Depends, WebSocketException
 from app.backend.routers.websocket_base import BaseWebsocketRouter
-from app.services import manager_driver_feed, driver_state_storage
+from app.services import manager_driver_feed
+from app.services.driver_state_storage import driver_state_storage
 from app.crud.driver_tracker import driver_tracker, DriverStatus
 from app.crud import driver_feed
 from app.logger import logger
