@@ -49,15 +49,18 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         existing_ride_drivers_requests = await self.get_requested_by_driver_profile_id(session, create_obj.driver_profile_id)
         if existing_ride_drivers_requests and len(existing_ride_drivers_requests) > 0:
             raise HTTPException(status_code=400, detail="Ride request for this driver already exists")
+        
+        ride = await ride_crud.get_by_id(session, create_obj.ride_id)
+        if not ride:
+            raise HTTPException(status_code=404, detail="Ride not found")
+        
+        if ride.status != "requested":
+            raise HTTPException(status_code=400, detail="Ride is not in \"requested\" status")
 
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
         result = await self.execute_get_one(session, stmt)
         if not result:
             return None
-        
-        ride = await ride_crud.get_by_id(session, result.ride_id)
-        if not ride:
-            raise HTTPException(status_code=404, detail="Ride not found")
         
         result_validated = self.schema.model_validate(result)
         await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.WAITING_RIDE)
