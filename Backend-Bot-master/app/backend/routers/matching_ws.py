@@ -61,7 +61,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
             await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "waiting_ride", "data": rides[0].model_dump(mode="json") if len(rides) else None})
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:
-        user_id = context["user_id"]
+        user_id = int(context["user_id"])
         manager_driver_feed.disconnect(websocket, user_id)
         await self._stop_feed_task_if_last_connection(int(user_id))
         logger.info(f"User {user_id} disconnected")

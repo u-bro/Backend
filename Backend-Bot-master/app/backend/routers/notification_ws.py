@@ -25,7 +25,7 @@ class NotificationWebsocketRouter(BaseWebsocketRouter):
         session = context["session"]
         await manager_notifications.connect(websocket, int(user_id))
         await websocket.send_json({"type": "connected", "user_id": user_id})
-        ride = await ride_crud.get_requested_by_client_id(session, user_id)
+        ride = await ride_crud.get_active_ride_by_client_id(session, user_id)
         if ride:
             await websocket.send_json({"type": "active_ride", "data": ride.model_dump(mode="json")})
         

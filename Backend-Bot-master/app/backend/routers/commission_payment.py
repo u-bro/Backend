@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, Request
 from app.backend.deps import require_role, require_owner
-from app.config import TOCHKA_ACQUIRING_FAIL_REDIRECT_URL, TOCHKA_ACQUIRING_REDIRECT_URL
+from app.config import TOCHKA_ACQUIRING_FAIL_REDIRECT_URL, TOCHKA_ACQUIRING_REDIRECT_URL, TOCHKA_USE_SANDBOX, TOCHKA_WEBHOOK_EXAMPLE
 from app.crud import ride_crud, commission_payment_crud
 from app.schemas.commission_payment import CommissionPaymentCreateRequest, CommissionPaymentSchema
 from app.services.tochka_acquiring import TochkaAPIError, tochka_acquiring_client
+from app.services.webhook_dispatcher import webhook_dispatcher
 from app.models import Ride, CommissionPayment
 from app.backend.routers.base import BaseRouter
 
@@ -59,7 +60,7 @@ class CommissionPaymentRouter(BaseRouter):
             "amount": amount,
             "currency": "RUB",
             "status": data.get("status") or "CREATED",
-            "tochka_operation_id": data.get("operationId"),
+            "tochka_operation_id": data.get("operationId") if not TOCHKA_USE_SANDBOX else 'beeac8a4-6047-3f38-8922-a664e6b5c43b',
             "payment_link": data.get("paymentLink"),
             "purpose": data.get("purpose") or purpose,
             "payment_mode": data.get("paymentMode") or list(body.payment_mode),
@@ -72,9 +73,13 @@ class CommissionPaymentRouter(BaseRouter):
             updated = await commission_payment_crud.update(session, existing.id, fields)
             if not updated:
                 raise HTTPException(status_code=500, detail="Failed to update commission payment")
+            if TOCHKA_USE_SANDBOX:
+                await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
             return updated
 
         created = await commission_payment_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
+        if TOCHKA_USE_SANDBOX:
+            await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
         return created
 
     async def get_commission_payment(self, request: Request, id: int) -> CommissionPaymentSchema:

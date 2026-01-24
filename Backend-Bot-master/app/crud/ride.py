@@ -18,6 +18,7 @@ from fastapi import HTTPException
 
 STATUSES = {
     "requested",
+    "waiting_commission",
     "accepted",
     "started",
     "completed",
@@ -25,7 +26,8 @@ STATUSES = {
 }
 
 ALLOWED_TRANSITIONS = {
-    "requested": { "canceled"},
+    "requested": {"canceled"},
+    'waiting_commission': {"accepted", "canceled"},
     "accepted": {"started", "canceled"},
     "started": {"completed", "canceled"},
 }
@@ -162,7 +164,7 @@ class CrudRide(CrudBase):
         if not driver_location:
             raise HTTPException(status_code=404, detail="Driver location not found")
         if driver_location.status == 'busy':
-            raise HTTPException(status_code=409, detail="You already have accepted ride")
+            raise HTTPException(status_code=409, detail="Driver already have accepted ride")
         stmt = (
             update(self.model)
             .where(and_(self.model.id == id, self.model.driver_profile_id.is_(None)))
@@ -185,7 +187,7 @@ class CrudRide(CrudBase):
         return self.schema.model_validate(result)
     
     async def cancel_rides_by_user_id(self, session: AsyncSession, user_id: int):
-        stmt = select(self.model).where(and_(self.model.status.in_(["requested", "accepted", "started"]), self.model.client_id == user_id))
+        stmt = select(self.model).where(and_(self.model.status.in_(["requested", "waiting_commission", "accepted", "started"]), self.model.client_id == user_id))
         result = await session.execute(stmt)
         existing_rides = result.scalars().all()
         if not existing_rides or not len(existing_rides):
@@ -209,8 +211,8 @@ class CrudRide(CrudBase):
         rides = result.scalars().all()
         return [self.schema.model_validate(ride) for ride in rides]
 
-    async def get_requested_by_client_id(self, session: AsyncSession, client_id: int) -> RideSchema | None:
-        stmt = select(self.model).where(and_(self.model.client_id == client_id, self.model.status == "requested"))
+    async def get_active_ride_by_client_id(self, session: AsyncSession, client_id: int) -> RideSchema | None:
+        stmt = select(self.model).where(and_(self.model.client_id == client_id, self.model.status.in_(["requested", "waiting_commission", "accepted", "started"])))
         result = await session.execute(stmt)
         ride = result.scalar_one_or_none()
         return self.schema.model_validate(ride) if ride else None

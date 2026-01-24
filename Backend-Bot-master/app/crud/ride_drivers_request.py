@@ -1,3 +1,4 @@
+import asyncio
 from app.crud.base import CrudBase
 from app.models import RideDriversRequest
 from app.schemas.ride_drivers_request import RideDriversRequestSchema, RideDriversRequestUpdate, RideDriversRequestCreate, RideDriversRequestSchemaDetailed
@@ -8,6 +9,7 @@ from .in_app_notification import in_app_notification_crud
 from .driver_profile import driver_profile_crud
 from .ride import ride_crud
 from .in_app_notification import in_app_notification_crud
+from .commission_payment import commission_payment_crud
 from .driver_tracker import driver_tracker, DriverStatus
 from app.services.websocket_manager import manager_driver_feed
 from app.schemas.in_app_notification import InAppNotificationCreate
@@ -76,12 +78,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         if not update_data:
             return await self.get_by_id(session, id)
         
-        stmt = (
-            update(self.model)
-            .where(self.model.id == id)
-            .values(update_data)
-            .returning(self.model)
-        )
+        stmt = (update(self.model).where(self.model.id == id).values(update_data).returning(self.model))
         result = await self.execute_get_one(session, stmt)
         if not result:
             return None
@@ -96,12 +93,14 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
                 raise HTTPException(status_code=400, detail="Ride request is not accepted. Perhaps, ride is already accepted")
             await driver_tracker.assign_ride(session, driver_profile.id, accepted.id)
 
-            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_accepted", "message": "Your ride offer is accepted", "data": result_validated.model_dump(mode='json')})
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_accepted", "message": "Your ride offer is accepted, wait until client pay ride commission", "data": result_validated.model_dump(mode='json')})
 
             other_requests = await self.get_by_ride_id(session, result.ride_id)
             for request in other_requests:
                 if request.id != id and request.status == 'requested':
                     await self.update(session, request.id, RideDriversRequestUpdate(status='rejected'))
+            
+            asyncio.create_task(commission_payment_crud.cancel_commission_payment_if_timeout(result.ride_id, ride.client_id))
         if result.status == 'rejected':
             await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
 

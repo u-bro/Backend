@@ -86,8 +86,6 @@ class TochkaAcquiringClient:
         async with aiohttp.ClientSession() as session:
             async with session.request(method, url, json=json_body, params=params, headers=headers) as resp:
                 payload = await resp.json(content_type=None)
-                print(json_body)
-                print(payload)
                 if resp.status >= 400:
                     raise TochkaAPIError(resp.status, f"Tochka API error {resp.status}", payload)
                 return payload

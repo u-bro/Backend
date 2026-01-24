@@ -1,9 +1,16 @@
-from sqlalchemy import insert, select, update
+import asyncio
+from sqlalchemy import and_, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.crud.base import CrudBase
 from app.models.commission_payment import CommissionPayment
 from app.schemas.commission_payment import CommissionPaymentSchema
+from app.schemas.ride import RideSchemaUpdateByClient
+from app.config import COMMISSION_PAY_SECONDS_LIMIT
+from .ride import ride_crud
+from app.services import chat_service, manager_driver_feed
+from .driver_tracker import driver_tracker
+from app.db import async_session_maker
+from .driver_profile import driver_profile_crud
 
 
 class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]):
@@ -15,6 +22,11 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
         item = result.scalar_one_or_none()
         return self.schema.model_validate(item) if item else None
 
+    async def get_by_operation_id_sandbox(self, session: AsyncSession, operation_id: str) -> list[CommissionPaymentSchema]:
+        result = await session.execute(select(self.model).where(and_(self.model.tochka_operation_id == operation_id, self.model.status == 'CREATED')))
+        items = result.scalars().all()
+        return [self.schema.model_validate(item) for item in items]
+
     async def get_by_ride_and_user(self, session: AsyncSession, ride_id: int, user_id: int, *, is_refund: bool = False) -> CommissionPaymentSchema | None:
         result = await session.execute(
             select(self.model).where(
@@ -25,6 +37,16 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
         )
         item = result.scalar_one_or_none()
         return self.schema.model_validate(item) if item else None
+
+    async def update_by_operation_id(self, session: AsyncSession, operation_id: str, fields: dict) -> CommissionPaymentSchema | None:
+        existing = await self.get_by_operation_id(session, operation_id)
+        if not existing:
+            return None
+
+        if not fields:
+            return existing
+
+        return await self.update(session, existing.id, fields)
 
     async def update(self, session: AsyncSession, id: int, fields: dict) -> CommissionPaymentSchema | None:
         if not fields:
@@ -39,5 +61,16 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
         result = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(result)
 
+    async def cancel_commission_payment_if_timeout(self, ride_id: int, user_id: int) -> None:
+        await asyncio.sleep(COMMISSION_PAY_SECONDS_LIMIT)
+        async with async_session_maker() as session:
+            payment = await self.get_by_ride_and_user(session, ride_id, user_id)
+            if not payment or payment.status != 'APPROVED':
+                updated_ride = await ride_crud.update(session, ride_id, RideSchemaUpdateByClient(status='canceled'), user_id)
+                driver_profile = await driver_profile_crud.get_by_id(session, updated_ride.driver_profile_id)
+                await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride_id, text="Commission payment timeout", message_type="system")
+                await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_canceled", "message": "Client didn't pay for commission in time"})
+                await driver_tracker.release_ride(session, updated_ride.driver_profile_id)
+            await session.commit()
 
 commission_payment_crud = CommissionPaymentCrud()
