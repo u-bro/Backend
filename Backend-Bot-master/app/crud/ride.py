@@ -187,7 +187,7 @@ class CrudRide(CrudBase):
         return self.schema.model_validate(result)
     
     async def cancel_rides_by_user_id(self, session: AsyncSession, user_id: int):
-        stmt = select(self.model).where(and_(self.model.status.in_(["requested", "accepted", "started"]), self.model.client_id == user_id))
+        stmt = select(self.model).where(and_(self.model.status.in_(["requested", "waiting_commission", "accepted", "started"]), self.model.client_id == user_id))
         result = await session.execute(stmt)
         existing_rides = result.scalars().all()
         if not existing_rides or not len(existing_rides):

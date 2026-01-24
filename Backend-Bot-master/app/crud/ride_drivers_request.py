@@ -1,3 +1,4 @@
+import asyncio
 from app.crud.base import CrudBase
 from app.models import RideDriversRequest
 from app.schemas.ride_drivers_request import RideDriversRequestSchema, RideDriversRequestUpdate, RideDriversRequestCreate, RideDriversRequestSchemaDetailed
@@ -8,6 +9,7 @@ from .in_app_notification import in_app_notification_crud
 from .driver_profile import driver_profile_crud
 from .ride import ride_crud
 from .in_app_notification import in_app_notification_crud
+from .commission_payment import commission_payment_crud
 from .driver_tracker import driver_tracker, DriverStatus
 from app.services.websocket_manager import manager_driver_feed
 from app.schemas.in_app_notification import InAppNotificationCreate
@@ -97,6 +99,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             for request in other_requests:
                 if request.id != id and request.status == 'requested':
                     await self.update(session, request.id, RideDriversRequestUpdate(status='rejected'))
+            
+            asyncio.create_task(commission_payment_crud.cancel_commission_payment_if_timeout(result.ride_id, ride.client_id))
         if result.status == 'rejected':
             await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
 
