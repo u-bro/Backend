@@ -4,9 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from app.logger import logger
 from app.config import TOCHKA_WEBHOOK_OPEN_KEY, TOCHKA_USE_SANDBOX
-from app.crud.commission_payment import commission_payment_crud
+from app.crud import commission_payment_crud, ride_crud, in_app_notification_crud, driver_profile_crud
 from app.schemas.in_app_notification import InAppNotificationCreate
-from app.crud.in_app_notification import in_app_notification_crud
+from app.schemas.ride import RideschemaUpdateAfterCommission
+from .websocket_manager import manager_driver_feed
 
 
 class WebhookDispatcher:
@@ -57,6 +58,12 @@ class WebhookDispatcher:
                     data=updated.model_dump(mode='json'),
                     dedup_key=str(commission_payment.id)
                 ))
+            ride = await ride_crud.get_by_id(session, commission_payment.ride_id)
+            if ride:
+                await ride_crud.update(session, ride.id, RideschemaUpdateAfterCommission(), updated.user_id)
+                driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
+                driver_id = driver_profile.user_id if driver_profile else 0
+                await manager_driver_feed.send_personal_message(driver_id, {"type": "ride_commission_paid", "message": "Client has paid the commission for ride", "data": ride.model_dump(mode="json")})
         else:
             logger.warning(f"Acquiring internet payment failed: {webhook}")
             raise HTTPException(status_code=400, detail="Payment failed")

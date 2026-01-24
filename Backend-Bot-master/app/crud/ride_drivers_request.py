@@ -76,12 +76,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         if not update_data:
             return await self.get_by_id(session, id)
         
-        stmt = (
-            update(self.model)
-            .where(self.model.id == id)
-            .values(update_data)
-            .returning(self.model)
-        )
+        stmt = (update(self.model).where(self.model.id == id).values(update_data).returning(self.model))
         result = await self.execute_get_one(session, stmt)
         if not result:
             return None
@@ -96,7 +91,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
                 raise HTTPException(status_code=400, detail="Ride request is not accepted. Perhaps, ride is already accepted")
             await driver_tracker.assign_ride(session, driver_profile.id, accepted.id)
 
-            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_accepted", "message": "Your ride offer is accepted", "data": result_validated.model_dump(mode='json')})
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_accepted", "message": "Your ride offer is accepted, wait until client pay ride commission", "data": result_validated.model_dump(mode='json')})
 
             other_requests = await self.get_by_ride_id(session, result.ride_id)
             for request in other_requests:

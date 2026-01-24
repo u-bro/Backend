@@ -29,7 +29,7 @@ class RideSchemaCreate(RideSchemaIn):
 
 class RideSchema(RideSchemaCreate):
     id: int = Field(..., gt=0)
-    status: Literal["requested", "canceled", "accepted", "started", "completed"] = Field("requested", max_length=50)
+    status: Literal["requested", "canceled", "waiting_commission", "accepted", "started", "completed"] = Field("requested", max_length=50)
     driver_profile_id: int | None = Field(None, gt=0)
     started_at: datetime | None = Field(None)
     completed_at: datetime | None = Field(None)
@@ -45,7 +45,7 @@ class RideSchema(RideSchemaCreate):
 
 
 class RideSchemaUpdateByClient(BaseSchema):
-    status: Literal["requested", "canceled"] | None = Field(None, max_length=50)
+    status: Literal["canceled"] | None = Field(None, max_length=50)
     status_reason: str | None = Field(None, max_length=255)
     pickup_address: str | None = Field(None, max_length=500)
     pickup_lat: float | None = Field(None)
@@ -62,15 +62,20 @@ class RideSchemaUpdateByClient(BaseSchema):
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class RideschemaUpdateAfterCommission(BaseSchema):
+    status: Literal["accepted"] = Field("accepted", max_length=50)
+    updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class RideSchemaUpdateByDriver(BaseSchema):
-    status: Literal["accepted", "started", "canceled"] | None = Field(None, max_length=50)
+    status: Literal["started", "canceled"] | None = Field(None, max_length=50)
     status_reason: str | None = Field(None, max_length=255)
     started_at: datetime | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaAcceptByDriver(BaseSchema):
-    status: Literal["accepted"] = Field("accepted", max_length=50)
+    status: Literal["waiting_commission"] = Field("waiting_commission", max_length=50)
     driver_profile_id: int | None = Field(None, gt=0)
     status_reason: str | None = Field(None, max_length=255)
     eta: str | None = Field(None, max_length=50)
