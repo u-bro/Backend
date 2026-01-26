@@ -33,20 +33,37 @@ class ConnectionManager:
 
     def is_connected(self, user_id: int) -> bool:
         return user_id in self.active_connections and len(self.active_connections[user_id]) > 0
-    
+
     async def send_personal_message(self, user_id: int, message: dict) -> bool:
-        if user_id not in self.active_connections:
+        connections = self.active_connections.get(user_id)
+        if not connections:
             logger.warning(f"User {user_id} is not connected")
             return False
-        
+
         message_with_timestamp = {
             **self.convert_datetime_to_str_in_dict(message),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-        for connection in self.active_connections[user_id]:
-            await connection.send_json(message_with_timestamp)
-        
-        return True
+
+        alive: list[WebSocket] = []
+        delivered = False
+
+        for ws in list(connections):
+            try:
+                await ws.send_json(message_with_timestamp)
+                alive.append(ws)
+                delivered = True
+            except (RuntimeError, WebSocketDisconnect) as exc:
+                logger.warning(f"WS send failed user_id={user_id}: {exc}")
+            except Exception as exc:
+                logger.warning(f"WS send failed user_id={user_id} unexpected: {exc}")
+
+        if alive:
+            self.active_connections[user_id] = alive
+        else:
+            self.active_connections.pop(user_id, None)
+
+        return delivered
     
     async def broadcast(self, message: dict, exclude_user_id: Optional[int] = None) -> None:
         message_with_timestamp = {
