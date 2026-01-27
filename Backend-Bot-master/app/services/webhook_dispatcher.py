@@ -72,7 +72,7 @@ class WebhookDispatcher:
                 ))
                 driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
                 driver_id = driver_profile.user_id if driver_profile else 0
-                await manager_driver_feed.send_personal_message(driver_id, {"type": "ride_commission_paid", "message": "Client has paid the commission for ride", "data": ride.model_dump(mode="json")})
+                await manager_driver_feed.send_personal_message(driver_id, {"type": "ride_commission_paid", "message": "Client has paid the commission for ride", "data": updated_ride.model_dump(mode="json")})
         else:
             logger.warning(f"Acquiring internet payment failed: {webhook}")
             await in_app_notification_crud.create(session, InAppNotificationCreate(
