@@ -29,7 +29,7 @@ class RideSchemaCreate(RideSchemaIn):
 
 class RideSchema(RideSchemaCreate):
     id: int = Field(..., gt=0)
-    status: Literal["requested", "canceled", "waiting_commission", "accepted", "started", "completed"] = Field("requested", max_length=50)
+    status: Literal["requested", "canceled", "waiting_commission", "accepted", "on_the_way", "arrived", "started", "completed"] = Field("requested", max_length=50)
     driver_profile_id: int | None = Field(None, gt=0)
     started_at: datetime | None = Field(None)
     completed_at: datetime | None = Field(None)
@@ -68,7 +68,7 @@ class RideschemaUpdateAfterCommission(BaseSchema):
 
 
 class RideSchemaUpdateByDriver(BaseSchema):
-    status: Literal["started", "canceled"] | None = Field(None, max_length=50)
+    status: Literal["on_the_way", "arrived", "started", "canceled"] | None = Field(None, max_length=50)
     status_reason: str | None = Field(None, max_length=255)
     started_at: datetime | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
