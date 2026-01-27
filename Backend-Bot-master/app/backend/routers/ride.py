@@ -61,7 +61,7 @@ class RideRouter(BaseRouter):
 
         driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
         if driver_profile:
-            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_changed", "message": f"Ride is changed by client", "data": ride.model_dump(mode="json")})
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_changed", "message": "Ride is changed by client", "data": ride.model_dump(mode="json")})
 
         if update_obj.status == 'canceled':
             await ride_drivers_request_crud.reject_by_ride_id(session, id)
@@ -96,7 +96,8 @@ class RideRouter(BaseRouter):
         if not old_ride:
             raise HTTPException(status_code=404, detail="Ride not found")
         ride = await self.model_crud.update(session, id, update_obj, user_id)
-        await self.send_notifications(session, ride.client_id, "ride_status_changed", f"Ride status is changed from \"{old_ride.status}\" to \"{ride.status}\" by driver", "Check ride info, client", ride.model_dump(mode="json"), None)
+        print(f"Ride status is changed from \"{old_ride.status}\" to \"{ride.status}\" by driver")
+        await self.send_notifications(session, ride.client_id, "ride_status_changed", f"Ride status is changed from \"{old_ride.status}\" to \"{ride.status}\" by driver", "Check ride info, client", ride.model_dump(mode="json"), f"{old_ride.status}_{ride.status}")
         
         if update_obj.status == 'canceled':
             await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride.id, text="Ride is canceled by driver", message_type="system")
@@ -122,7 +123,7 @@ class RideRouter(BaseRouter):
         return ride
 
     async def send_notifications(self, session: AsyncSession, client_id: int, type: str, title: str, message: str, data: dict, dedup_key: Any):
-        await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type=type, title=title, message=message, data=data, dedup_key=str(dedup_key)))
+        await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type=type, title=title, message=message, data=data, dedup_key=str(dedup_key) if dedup_key else None))
         await fcm_service.send_to_user(session, client_id, PushNotificationData(title=title, body=message))
     
 

@@ -64,8 +64,8 @@ class CommissionPaymentRouter(BaseRouter):
             "payment_link": data.get("paymentLink"),
             "purpose": data.get("purpose") or purpose,
             "payment_mode": data.get("paymentMode") or list(body.payment_mode),
-            "raw_request": raw_request,
-            "raw_response": resp,
+            "raw_request": None,
+            "raw_response": None,
             "updated_at": datetime.now(timezone.utc),
         }
 
