@@ -18,7 +18,7 @@ class CommissionPaymentRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{id}}/payment-link", self.create_payment_link, methods=["POST"], status_code=201, dependencies=[Depends(require_owner(Ride, "client_id"))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_owner(CommissionPayment, "user_id"))])
 
-    async def create_payment_link(self, request: Request, id: int, body: CommissionPaymentCreateRequest, user=Depends(require_role(["user", "driver", "admin"]))) -> CommissionPaymentSchema:
+    async def create_payment_link(self, request: Request, id: int, body: CommissionPaymentCreateRequest, user=Depends(require_role(["user", "driver", "admin"])), generate_check: bool = False) -> CommissionPaymentSchema:
         session = request.state.session
 
         ride = await ride_crud.get_by_id(session, id)
@@ -75,11 +75,15 @@ class CommissionPaymentRouter(BaseRouter):
                 raise HTTPException(status_code=500, detail="Failed to update commission payment")
             if TOCHKA_USE_SANDBOX:
                 await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
+            if generate_check:
+                pass
             return updated
 
         created = await commission_payment_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
         if TOCHKA_USE_SANDBOX:
             await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
+        if generate_check:
+            pass
         return created
 
     async def get_commission_payment(self, request: Request, id: int) -> CommissionPaymentSchema:
