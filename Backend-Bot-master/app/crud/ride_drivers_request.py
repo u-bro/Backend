@@ -16,12 +16,18 @@ from app.schemas.in_app_notification import InAppNotificationCreate
 from app.services import fcm_service
 from app.services.driver_state_storage import driver_state_storage
 from app.schemas.push import PushNotificationData
-from app.schemas.ride import RideSchemaAcceptByDriver
+from app.schemas.ride import RideSchemaAcceptByDriver, RideSchema
+from app.schemas.driver_profile import DriverProfileSchema
 from fastapi import HTTPException
 
 
 class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSchema]):
     def __init__(self) -> None:
+        self._update_dispatcher = {
+            "accepted": self._dispatch_accepted,
+            "rejected": self._dispatch_rejected,
+            "canceled": self._dispatch_canceled,
+        }
         super().__init__(RideDriversRequest, RideDriversRequestSchema)
 
     async def get_by_ride_id(self, session: AsyncSession, ride_id: int):
@@ -87,27 +93,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         driver_profile = await driver_profile_crud.get_by_id(session, result.driver_profile_id)
         ride = await ride_crud.get_by_id(session, result.ride_id)
 
-        if result.status == 'accepted':
-            accepted = await ride_crud.accept(session, result.ride_id, RideSchemaAcceptByDriver(driver_profile_id=result.driver_profile_id), driver_profile.user_id)
-            if not accepted:
-                raise HTTPException(status_code=400, detail="Ride request is not accepted. Perhaps, ride is already accepted")
-            await driver_tracker.assign_ride(session, driver_profile.id, accepted.id)
-
-            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_accepted", "message": "Your ride offer is accepted, wait until client pay ride commission", "data": result_validated.model_dump(mode='json')})
-
-            other_requests = await self.get_by_ride_id(session, result.ride_id)
-            for request in other_requests:
-                if request.id != id and request.status == 'requested':
-                    await self.update(session, request.id, RideDriversRequestUpdate(status='rejected'))
-            
-            asyncio.create_task(commission_payment_crud.cancel_commission_payment_if_timeout(result.ride_id, ride.client_id))
-        if result.status == 'rejected':
-            await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
-
-            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": result_validated.model_dump(mode='json')})
-        if result.status == 'canceled':
-            await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
-            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Ride request is canceled", message="Ride request is canceled by driver", data=result_validated.model_dump(mode="json"), dedup_key=str(result_validated.id)))
+        if result.status in self._update_dispatcher:
+            await self._update_dispatcher[result.status](session=session, result=result_validated, driver_profile=driver_profile, ride=ride)
         return result_validated
             
     async def reject_by_ride_id(self, session: AsyncSession, ride_id: int):
@@ -130,4 +117,27 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             ride = await ride_crud.get_by_id(session, request.ride_id)
             await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Ride request is canceled", message="Ride request is canceled by driver", data=request.model_dump(mode="json"), dedup_key=str(request.id)))
 
+    async def _dispatch_accepted(self, session: AsyncSession, result: RideDriversRequestSchema, driver_profile: DriverProfileSchema, ride: RideSchema, **kwargs):
+        accepted = await ride_crud.accept(session, result.ride_id, RideSchemaAcceptByDriver(driver_profile_id=result.driver_profile_id), driver_profile.user_id)
+        if not accepted:
+            raise HTTPException(status_code=400, detail="Ride request is not accepted. Perhaps, ride is already accepted")
+        await driver_tracker.assign_ride(session, driver_profile.id, accepted.id)
+
+        await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_accepted", "message": "Your ride offer is accepted, wait until client pay ride commission", "data": accepted.model_dump(mode='json')})
+
+        other_requests = await self.get_by_ride_id(session, result.ride_id)
+        for request in other_requests:
+            if request.id != id and request.status == 'requested':
+                await self.update(session, request.id, RideDriversRequestUpdate(status='rejected'))
+        
+        asyncio.create_task(commission_payment_crud.cancel_commission_payment_if_timeout(result.ride_id, ride.client_id))
+
+    async def _dispatch_rejected(self, session: AsyncSession, result: RideDriversRequestSchema, driver_profile: DriverProfileSchema, **kwargs):
+            await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": result.model_dump(mode='json')})
+
+    async def _dispatch_canceled(self, session: AsyncSession, result: RideDriversRequestSchema, ride: RideSchema, **kwargs):
+            await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
+            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Ride request is canceled", message="Ride request is canceled by driver", data=result.model_dump(mode="json"), dedup_key=str(result.id)))
+            
 ride_drivers_request_crud = RideDriversRequestCrud()

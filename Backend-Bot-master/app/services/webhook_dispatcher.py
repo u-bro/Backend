@@ -21,7 +21,6 @@ class WebhookDispatcher:
     
     def decode_webhook(self, payload: str):
         try:
-            print(payload)
             webhook_jwt = jwt.decode(payload, self.jwk_key.key, algorithms=["RS256"])
         except exceptions.DecodeError:
             raise HTTPException(status_code=403, detail="Forbidden")
