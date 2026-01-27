@@ -20,6 +20,8 @@ STATUSES = {
     "requested",
     "waiting_commission",
     "accepted",
+    "on_the_way",
+    "arrived",
     "started",
     "completed",
     "canceled",
@@ -28,7 +30,9 @@ STATUSES = {
 ALLOWED_TRANSITIONS = {
     "requested": {"canceled"},
     'waiting_commission': {"accepted", "canceled"},
-    "accepted": {"started", "canceled"},
+    "accepted": {"on_the_way", "canceled"},
+    'on_the_way': {"arrived", "canceled"},
+    'arrived': {"started", "canceled"},
     "started": {"completed", "canceled"},
 }
 
