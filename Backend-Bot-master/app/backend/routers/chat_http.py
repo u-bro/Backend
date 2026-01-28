@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.schemas.chat_message import ChatHistoryResponse, SendMessageRequest, ChatMessageSchema
+from app.schemas.chat_message import ChatHistoryResponse, SendMessageRequest, ChatMessageSchema, ChatMessageHistory
 from app.services.chat_service import chat_service
 from app.crud import ride_crud, driver_profile_crud
 from app.backend.deps import get_current_user_id
@@ -16,10 +16,15 @@ class ChatHttpRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/send", self.send_message, methods=["POST"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/message/{{message_id}}", self.delete_message, methods=["DELETE"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/message/{{message_id}}", self.edit_message, methods=["PUT"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/me", self.get_my_chats, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/stats", self.get_chat_stats, methods=["GET"], status_code=200)
 
     def __init__(self) -> None:
         super().__init__(chat_service, "/chat")
+
+    async def get_my_chats(self, request: Request, page: int = 1, page_size: int = 10, user_id: int = Depends(get_current_user_id)) -> list[ChatMessageHistory]:
+        session = request.state.session
+        return await chat_service.get_my_chats(session=session, user_id=user_id, page=page, page_size=page_size)
 
     async def get_chat_history(self, request: Request, ride_id: int, limit: int = Query(50, ge=1, le=100), before_id: Optional[int] = Query(None, description="message id")) -> ChatHistoryResponse:
         session = request.state.session

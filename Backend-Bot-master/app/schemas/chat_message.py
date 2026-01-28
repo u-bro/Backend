@@ -41,3 +41,8 @@ class ChatHistoryResponse(BaseModel):
     user_ids: List[int]
     count: int
     has_more: bool
+
+
+class ChatMessageHistory(BaseModel):
+    ride_id: int
+    messages: List[ChatMessageSchema]

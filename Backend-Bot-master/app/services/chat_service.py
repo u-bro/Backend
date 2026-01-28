@@ -8,10 +8,10 @@ from better_profanity import profanity
 from sqlalchemy.orm import selectinload
 from app.models.chat_message import ChatMessage
 from app.models.ride import Ride
-from app.schemas.chat_message import ChatMessageSchema
+from app.schemas.chat_message import ChatMessageSchema, ChatMessageHistory
 from app.logger import logger
 from .websocket_manager import manager
-
+from app.crud.ride import ride_crud
 
 
 BANNED_WORDS = {
@@ -157,6 +157,20 @@ class ChatService:
         }
         await manager.send_to_ride(ride_id, message)
         return await self.save_message(session, ChatMessage(**message))
+    
+    async def get_my_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10) -> List[ChatMessageHistory]:
+        offset = (page - 1) * page_size
+        rides = await ride_crud.get_by_client_id(session, user_id)
+        ride_ids = [ride.id for ride in rides[offset:offset + page_size]]
+        query = select(ChatMessage).where(ChatMessage.ride_id.in_(ride_ids))
+        result = await session.execute(query)
+        messages = result.scalars().all()
+        my_chats = []
+        for ride_id in ride_ids:
+            chat = ChatMessageHistory(ride_id=ride_id, messages=[ChatMessageSchema.model_validate(m).model_dump(mode='json') for m in messages if m.ride_id == ride_id])
+            my_chats.append(chat)            
+
+        return my_chats
     
     async def get_chat_history(self, session: AsyncSession, ride_id: int, limit: int = 50, before_id: Optional[int] = None, include_deleted: bool = False) -> List[ChatMessageSchema]:
         conditions = [ChatMessage.ride_id == ride_id]
