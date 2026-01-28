@@ -9,10 +9,12 @@ from .commission import commission_crud
 from .ride_status_history import ride_status_history_crud
 from .driver_profile import driver_profile_crud
 from .driver_location import driver_location_crud
+from .in_app_notification import in_app_notification_crud
 from .driver_tracker import driver_tracker, DriverStatus
 from app.models import Ride, TariffPlan, Commission, RideDriversRequest
 from app.schemas.ride import RideSchema
 from app.schemas.ride_status_history import RideStatusHistoryCreate
+from app.schemas.in_app_notification import InAppNotificationCreate
 from fastapi import HTTPException
 
 
@@ -191,7 +193,7 @@ class CrudRide(CrudBase):
         return self.schema.model_validate(result)
     
     async def cancel_rides_by_user_id(self, session: AsyncSession, user_id: int):
-        stmt = select(self.model).where(and_(self.model.status.in_(["requested", "waiting_commission", "accepted", "started"]), self.model.client_id == user_id))
+        stmt = select(self.model).where(and_(self.model.status.in_(["requested", "waiting_commission", "accepted", "on_the_way", "arrived", "started"]), self.model.client_id == user_id))
         result = await session.execute(stmt)
         existing_rides = result.scalars().all()
         if not existing_rides or not len(existing_rides):
@@ -208,6 +210,9 @@ class CrudRide(CrudBase):
         requests = await session.execute(update(RideDriversRequest).where(RideDriversRequest.ride_id.in_(ids)).values(status="rejected").returning(RideDriversRequest))
         for request in requests.scalars().all():
             await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
+        
+        ride = self.schema.model_validate(existing_rides[0])
+        await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Ride is canceled", message="Ride is canceled", data=ride.model_dump(mode='json'), dedup_key=f"{ride.id}_canceled"))
 
     async def get_by_client_id(self, session: AsyncSession, client_id: int) -> list[RideSchema]:
         stmt = select(self.model).where(self.model.client_id == client_id)
@@ -216,13 +221,13 @@ class CrudRide(CrudBase):
         return [self.schema.model_validate(ride) for ride in rides]
 
     async def get_active_ride_by_client_id(self, session: AsyncSession, client_id: int) -> RideSchema | None:
-        stmt = select(self.model).where(and_(self.model.client_id == client_id, self.model.status.in_(["requested", "waiting_commission", "accepted", "started"])))
+        stmt = select(self.model).where(and_(self.model.client_id == client_id, self.model.status.in_(["requested", "waiting_commission", "accepted", "on_the_way", "arrived", "started"])))
         result = await session.execute(stmt)
         ride = result.scalar_one_or_none()
         return self.schema.model_validate(ride) if ride else None
 
     async def get_active_ride_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int) -> RideSchema | None:
-        result = await session.execute(select(self.model).where(and_(self.model.status.in_(["accepted", "started"]), Ride.driver_profile_id == driver_profile_id)))
+        result = await session.execute(select(self.model).where(and_(self.model.status.in_(["accepted", "on_the_way", "arrived", "started"]), Ride.driver_profile_id == driver_profile_id)))
         ride = result.scalar_one_or_none()
         return self.schema.model_validate(ride) if ride else None
 
