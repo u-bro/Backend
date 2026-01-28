@@ -81,6 +81,7 @@ class RideRouter(BaseRouter):
         request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, car_id=update_obj.car_id, eta=update_obj.eta,status="requested"))
         ride = await ride_crud.get_by_id(session, id)
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_request_sent", "data": ride.model_dump(mode="json")})
+        await self.send_notifications(session, ride.client_id, "ride_request_accepted", "Ride request accepted", "Now yoe need to pay commission", ride.model_dump(mode="json"), ride.id)
         return request
 
     async def cancel_ride_request(self, request: Request, id: int, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> RideDriversRequestSchema:
@@ -98,7 +99,8 @@ class RideRouter(BaseRouter):
             raise HTTPException(status_code=404, detail="Ride not found")
         ride = await self.model_crud.update(session, id, update_obj, user_id)
         await self.send_notifications(session, ride.client_id, "ride_status_changed", f"Ride status is changed from \"{old_ride.status}\" to \"{ride.status}\" by driver", "Check ride info, client", ride.model_dump(mode="json"), f"{ride.id}_{old_ride.status}_{ride.status}")
-        
+        await manager_driver_feed.send_personal_message(user_id, {"type": "ride_changed", "message": "Ride is changed by you", "data": ride.model_dump(mode="json")})
+
         if update_obj.status == 'canceled':
             await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride.id, text="Ride is canceled by driver", message_type="system")
             await driver_tracker.release_ride(session, ride.driver_profile_id)
@@ -108,6 +110,7 @@ class RideRouter(BaseRouter):
         session = request.state.session
         update_obj = RideSchemaFinishWithAnomaly(is_anomaly=str(ride.expected_fare) != str(update_obj.actual_fare), **update_obj.model_dump())
         ride = await self.model_crud.update(session, id, update_obj, user_id)
+        await manager_driver_feed.send_personal_message(user_id, {"type": "ride_finished", "message": "Ride is finished", "data": ride.model_dump(mode="json")})
         await self.send_notifications(session, ride.client_id, "ride_finished", "Ride is finished", "Don't forget to rate the ride", ride.model_dump(mode="json"), ride.id)
         await driver_tracker.release_ride(session, ride.driver_profile_id)
 
