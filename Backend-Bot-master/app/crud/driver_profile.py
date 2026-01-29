@@ -1,9 +1,10 @@
 from app.crud.base import CrudBase
 from app.models.driver_profile import DriverProfile
-from app.schemas.driver_profile import DriverProfileSchema, DriverProfileApprove
+from app.schemas.driver_profile import DriverProfileSchema, DriverProfileApprove, DriverProfileWithCars
 from app.schemas.driver_location import DriverLocationCreate
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update, select
+from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from .driver_location import driver_location_crud
 
@@ -12,10 +13,21 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
     def __init__(self) -> None:
         super().__init__(DriverProfile, DriverProfileSchema)
 
+    async def get_paginated_with_cars(self, session: AsyncSession, page: int = 1, page_size: int = 10):
+        offset = (page - 1) * page_size
+        result = await session.execute(select(self.model).options(selectinload(self.model.cars)).offset(offset).limit(page_size))
+        items = result.scalars().all()
+        return [DriverProfileWithCars.model_validate(item) for item in items]
+
     async def get_by_user_id(self, session: AsyncSession, user_id: int):
         result = await session.execute(select(self.model).where(self.model.user_id == user_id))
         item = result.scalar_one_or_none()
         return self.schema.model_validate(item) if item else None
+
+    async def get_by_id_with_cars(self, session: AsyncSession, id: int):
+        result = await session.execute(select(self.model).options(selectinload(self.model.cars)).where(self.model.id == id).join(self.model.cars))
+        item = result.scalar_one_or_none()
+        return DriverProfileWithCars.model_validate(item) if item else None
 
     async def ride_count_increment(self, session: AsyncSession, id: int):
         stmt = update(self.model).where(self.model.id == id).values(ride_count=self.model.ride_count + 1).returning(self.model)

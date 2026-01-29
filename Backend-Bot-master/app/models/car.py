@@ -14,4 +14,4 @@ class Car(Base):
     created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
-    driver_profile = relationship('DriverProfile', foreign_keys=[driver_profile_id])
+    driver_profile = relationship('DriverProfile', foreign_keys=[driver_profile_id], back_populates="cars")
