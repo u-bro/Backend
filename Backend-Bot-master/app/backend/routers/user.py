@@ -46,7 +46,7 @@ class UserRouter(BaseRouter):
             return UserSchemaMe(**user.__dict__, role_name=role_name, is_active_ride=driver_location.status in ['busy', 'waiting_ride'])
 
         rides = await ride_crud.get_by_client_id(request.state.session, user.id)
-        statuses = [ride.status for ride in rides if ride.status in ['requested', 'accepted', 'on_the_way', 'arrived', 'started']]
+        statuses = [ride.status for ride in rides if ride.status in ['requested', 'waiting_commission', 'accepted', 'on_the_way', 'arrived', 'started']]
         return UserSchemaMe(**user.__dict__, role_name=role_name, is_active_ride=len(statuses) > 0)
 
     async def update_me(self, request: Request, update_obj: UserSchemaUpdateMe, user_id: int = Depends(get_current_user_id)) -> UserSchema:
