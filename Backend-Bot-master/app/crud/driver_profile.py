@@ -1,12 +1,19 @@
 from app.crud.base import CrudBase
 from app.models.driver_profile import DriverProfile
-from app.schemas.driver_profile import DriverProfileSchema, DriverProfileApprove, DriverProfileWithCars
+from app.schemas.driver_profile import DriverProfileSchema, DriverProfileApprove, DriverProfileWithCars, DriverProfileCreate
 from app.schemas.driver_location import DriverLocationCreate
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import update, select
+from sqlalchemy import update, select, insert
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from .driver_location import driver_location_crud
+
+CLASS_VALUE = {
+    'light': 1,
+    'pro': 2,
+    'vip': 3,
+    'elite': 4
+}
 
 
 class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
@@ -39,6 +46,15 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         result = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(result) if result else None
 
+    async def create(self, session: AsyncSession, create_obj: DriverProfileCreate) -> DriverProfileSchema | None:
+        if create_obj.classes_allowed and len(create_obj.classes_allowed):
+            create_obj.classes_allowed = sorted(create_obj.classes_allowed, key=lambda x: CLASS_VALUE[x])
+            create_obj.current_class = create_obj.classes_allowed[0]
+
+        stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
+        result = await self.execute_get_one(session, stmt)
+        return self.schema.model_validate(result) if result else None
+
     async def update(self, session: AsyncSession, id: int, update_obj):
         existing_result = await self.get_by_id(session, id)
         if not existing_result:
@@ -51,6 +67,10 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         if "current_class" in update_data:
             if update_data["current_class"] not in update_data.get("classes_allowed", existing_result.classes_allowed):
                 raise HTTPException(status_code=400, detail="Current class is not allowed")
+        
+        if "classes_allowed" in update_data and "current_class" not in update_data:
+            update_obj.classes_allowed = sorted(update_obj.classes_allowed, key=lambda x: CLASS_VALUE[x])
+            update_obj.current_class = update_obj.classes_allowed[-1]
         
         return await super().update(session, id, update_obj)
 

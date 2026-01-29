@@ -18,7 +18,7 @@ async def get_current_user(request: Request, user_id: int = Depends(get_current_
     user = result.scalar_one_or_none()
 
     if user is None:
-        raise HTTPException(status_code=401, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found")
 
     if getattr(user, "is_active", True) is False:
         raise HTTPException(status_code=403, detail="User is inactive")
