@@ -2,6 +2,7 @@ from typing import Optional
 from .base import BaseSchema
 from datetime import datetime, timezone
 from pydantic import Field
+from .car import CarSchema
 
 
 class DriverProfileCreate(BaseSchema):
@@ -22,7 +23,6 @@ class DriverProfileCreate(BaseSchema):
     documents_review_notes: Optional[str] = None
     current_class: Optional[str] = None
     ride_count: int = 0
-    rating_avg: int = 0
     rating_count: int = 0
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -43,7 +43,7 @@ class DriverProfileUpdateMe(BaseSchema):
 class DriverProfileUpdate(DriverProfileCreate):
     user_id: Optional[int] = None
     ride_count: Optional[int] = None
-    rating_avg: Optional[int] = None
+    rating_avg: Optional[float] = None
     rating_count: Optional[int] = None
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     classes_allowed: Optional[list[str]] = None
@@ -60,6 +60,11 @@ class DriverProfileApprove(DriverProfileApproveIn):
 
 class DriverProfileSchema(DriverProfileUpdate):
     id: int
+    rating_avg: float = 0.0
     approved: bool = False
     approved_by: Optional[int] = None
     approved_at: Optional[datetime] = None
+
+
+class DriverProfileWithCars(DriverProfileSchema):
+    cars: list[CarSchema]

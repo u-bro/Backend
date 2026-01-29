@@ -18,6 +18,6 @@ async def get_current_driver_profile_id(
     )
     driver_profile_id = result.scalar_one_or_none()
     if driver_profile_id is None:
-        raise HTTPException(status_code=403, detail="Driver profile not found")
+        raise HTTPException(status_code=404, detail="Driver profile not found")
 
     return int(driver_profile_id)

@@ -34,4 +34,5 @@ class DriverProfile(Base):
     updated_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     user = relationship('User', back_populates="driver_profile", foreign_keys=[user_id])
+    cars = relationship('Car', back_populates="driver_profile")
     approved_by_user = relationship('User', foreign_keys=[approved_by])
