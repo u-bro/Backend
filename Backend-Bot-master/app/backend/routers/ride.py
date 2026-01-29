@@ -24,6 +24,8 @@ class RideRouter(BaseRouter):
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
+        self.router.add_api_route(f"{self.prefix}/me/client", self.get_my_as_client, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
+        self.router.add_api_route(f"{self.prefix}/me/driver", self.get_my_as_driver, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
@@ -40,6 +42,12 @@ class RideRouter(BaseRouter):
 
     async def get_by_id(self, request: Request, id: int) -> RideSchema:
         return await super().get_by_id(request, id)
+
+    async def get_my_as_client(self, request: Request, user_id: int = Depends(get_current_user_id)):
+        return await self.model_crud.get_by_client_id(request.state.session, user_id)
+    
+    async def get_my_as_driver(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id)):
+        return await self.model_crud.get_by_driver_profile_id(request.state.session, driver_profile_id)
 
     async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
