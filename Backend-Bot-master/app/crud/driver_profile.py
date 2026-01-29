@@ -32,7 +32,7 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         return self.schema.model_validate(item) if item else None
 
     async def get_by_id_with_cars(self, session: AsyncSession, id: int):
-        result = await session.execute(select(self.model).options(selectinload(self.model.cars)).where(self.model.id == id).join(self.model.cars))
+        result = await session.execute(select(self.model).options(selectinload(self.model.cars)).where(self.model.id == id))
         item = result.scalar_one_or_none()
         return DriverProfileWithCars.model_validate(item) if item else None
 
