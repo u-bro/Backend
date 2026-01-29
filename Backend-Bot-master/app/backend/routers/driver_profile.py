@@ -12,6 +12,7 @@ class DriverProfileRouter(BaseRouter):
         super().__init__(driver_profile_crud, "/driver-profiles")
 
     def setup_routes(self) -> None:
+        self.router.add_api_route(f"{self.prefix}/me", self.get_me, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/me", self.update_me, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["admin"]))])
@@ -40,5 +41,8 @@ class DriverProfileRouter(BaseRouter):
 
     async def update_me(self, request: Request, body: DriverProfileUpdateMe, id = Depends(get_current_driver_profile_id)) -> DriverProfileSchema:
         return await self.model_crud.update(request.state.session, id, body)
+
+    async def get_me(self, request: Request, id: int = Depends(get_current_driver_profile_id)) -> DriverProfileSchema:
+        return await self.model_crud.get_by_id_with_cars(request.state.session, id)
 
 driver_profile_router = DriverProfileRouter().router
