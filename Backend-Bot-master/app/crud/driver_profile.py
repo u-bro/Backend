@@ -7,6 +7,7 @@ from sqlalchemy import update, select, insert
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from .driver_location import driver_location_crud
+from app.models import Car
 
 CLASS_VALUE = {
     'light': 1,
@@ -63,6 +64,14 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         update_data = update_obj.model_dump(exclude_none=True)
         if not update_data:
             return existing_result
+        
+        if "current_car_id" in update_data:
+            car = await session.execute(select(Car).where(Car.id == update_data["current_car_id"]))
+            car_result = car.scalar_one_or_none()
+            if not car_result:
+                raise HTTPException(status_code=404, detail="Car not found")
+            if car_result.driver_profile_id != id:
+                raise HTTPException(status_code=400, detail="Car does not belong to this driver profile")
 
         if "current_class" in update_data:
             if update_data["current_class"] not in update_data.get("classes_allowed", existing_result.classes_allowed):
