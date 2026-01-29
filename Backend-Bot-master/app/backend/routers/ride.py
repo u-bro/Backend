@@ -80,15 +80,10 @@ class RideRouter(BaseRouter):
 
     async def accept_ride(self, request: Request, id: int, update_obj: RideSchemaAcceptByDriver, driver_profile_id: int = Depends(get_current_driver_profile_id), user_id: int = Depends(get_current_user_id)) -> RideDriversRequestSchema:
         session = request.state.session
-        cars = await car_crud.get_by_driver_profile_id(session, driver_profile_id)
-        if update_obj.car_id:
-            car = await car_crud.get_by_id(session, update_obj.car_id)
-            if car not in cars:
-                raise HTTPException(status_code=400, detail="Car is not assigned to this driver")
-        elif len(cars):
-            car = cars[0]
-
-        request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, car_id=car.id if car else None, eta=update_obj.eta,status="requested"))
+        driver_profile = await driver_profile_crud.get_by_id(session, driver_profile_id)
+        if not driver_profile:
+            raise HTTPException(status_code=404, detail="Driver profile not found")
+        request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, car_id=driver_profile.current_car_id, eta=update_obj.eta,status="requested"))
         ride = await ride_crud.get_by_id(session, id)
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_request_sent", "data": ride.model_dump(mode="json")})
         await self.send_notifications(session, ride.client_id, "ride_request_accepted", "Ride request accepted", "Now yoe need to pay commission", ride.model_dump(mode="json"), ride.id)

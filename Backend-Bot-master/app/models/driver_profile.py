@@ -25,6 +25,7 @@ class DriverProfile(Base):
     qualification_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     classes_allowed = mapped_column(JSONB, nullable=False)
     current_class = mapped_column(String(50), nullable=True)
+    current_car_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('cars.id'), nullable=True)
     documents_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     documents_review_notes: Mapped[str | None] = mapped_column(String, nullable=True)
     rating_avg = mapped_column(Integer, nullable=True)
@@ -34,5 +35,5 @@ class DriverProfile(Base):
     updated_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     user = relationship('User', back_populates="driver_profile", foreign_keys=[user_id])
-    cars = relationship('Car', back_populates="driver_profile")
+    cars = relationship("Car", back_populates="driver_profile", foreign_keys="Car.driver_profile_id")
     approved_by_user = relationship('User', foreign_keys=[approved_by])

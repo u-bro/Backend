@@ -1,6 +1,4 @@
-from typing import List
 from fastapi import Request, Depends
-from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_profile import driver_profile_crud
 from app.schemas.driver_profile import DriverProfileSchema, DriverProfileCreate, DriverProfileUpdate, DriverProfileApprove, DriverProfileApproveIn, DriverProfileUpdateMe, DriverProfileWithCars
