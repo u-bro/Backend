@@ -57,7 +57,7 @@ class DriverLocationCrud(CrudBase[DriverLocation, DriverLocationSchema]):
             ride_result = ride.scalar_one_or_none()
             if not ride_result:
                 continue
-            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride_result.client_id, type="ride_request_canceled", title="Ride request is canceled", message="Ride request is canceled by driver", data=request.model_dump(mode="json"), dedup_key=str(request.id)))
+            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride_result.client_id, type="ride_request_canceled", title="Отклик на поездку отозван", message="Отклик на поездку отозван водителем", data=request.model_dump(mode="json"), dedup_key=str(request.id)))
 
         await session.execute(update(RideDriversRequest).where(and_(RideDriversRequest.driver_profile_id == driver_profile_id, RideDriversRequest.status == 'requested')).values({"status": "canceled"}))
 

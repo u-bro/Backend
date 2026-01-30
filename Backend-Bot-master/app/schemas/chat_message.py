@@ -45,4 +45,4 @@ class ChatHistoryResponse(BaseModel):
 
 class ChatMessageHistory(BaseModel):
     ride_id: int
-    messages: List[ChatMessageSchema]
+    last_message: Optional[ChatMessageSchema]

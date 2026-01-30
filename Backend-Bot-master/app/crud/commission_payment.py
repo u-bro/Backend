@@ -71,7 +71,7 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
                 driver_profile = await driver_profile_crud.get_by_id(session, updated_ride.driver_profile_id)
                 await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride_id, text="Commission payment timeout", message_type="system")
                 await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_canceled", "message": "Client didn't pay for commission in time"})
-                await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Ride is canceled", message="Ride is canceled due to commission payment timeout", data=updated_ride, dedup_key=f"{updated_ride.id}_canceled"))
+                await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за истечения срока оплаты комиссии", data=updated_ride, dedup_key=f"{updated_ride.id}_canceled"))
                 await driver_tracker.release_ride(session, updated_ride.driver_profile_id)
             await session.commit()
 
