@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from sqlalchemy import and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.sql import insert, update, delete
+from sqlalchemy.sql import insert, update, delete, text
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
 from .commission import commission_crud
@@ -214,8 +214,8 @@ class CrudRide(CrudBase):
         ride = self.schema.model_validate(existing_rides[0])
         await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена, т.к. была создана новая", data=ride.model_dump(mode='json'), dedup_key=f"{ride.id}_canceled"))
 
-    async def get_by_client_id(self, session: AsyncSession, client_id: int) -> list[RideSchema]:
-        stmt = select(self.model).where(self.model.client_id == client_id)
+    async def get_by_client_id(self, session: AsyncSession, client_id: int, order_by: str | None = None) -> list[RideSchema]:
+        stmt = select(self.model).where(self.model.client_id == client_id).order_by(text(order_by) if order_by else None)
         result = await session.execute(stmt)
         rides = result.scalars().all()
         return [self.schema.model_validate(ride) for ride in rides]

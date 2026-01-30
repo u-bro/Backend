@@ -160,14 +160,16 @@ class ChatService:
     
     async def get_my_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10) -> List[ChatMessageHistory]:
         offset = (page - 1) * page_size
-        rides = await ride_crud.get_by_client_id(session, user_id)
+        rides = await ride_crud.get_by_client_id(session, user_id, "updated_at desc")
         ride_ids = [ride.id for ride in rides[offset:offset + page_size]]
         query = select(ChatMessage).where(ChatMessage.ride_id.in_(ride_ids))
         result = await session.execute(query)
         messages = result.scalars().all()
         my_chats = []
         for ride_id in ride_ids:
-            chat = ChatMessageHistory(ride_id=ride_id, messages=[ChatMessageSchema.model_validate(m).model_dump(mode='json') for m in messages if m.ride_id == ride_id])
+            ride_messages = [m for m in messages if m.ride_id == ride_id]
+            ride_messages.sort(key=lambda x: x.edited_at or x.created_at)
+            chat = ChatMessageHistory(ride_id=ride_id, last_message=ChatMessageSchema.model_validate(ride_messages[0]).model_dump(mode='json') if len(ride_messages) else None)
             my_chats.append(chat)            
 
         return my_chats
