@@ -247,7 +247,7 @@ class CrudRide(CrudBase):
         return self.schema.model_validate(ride) if ride else None
 
     async def get_active_ride_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int) -> RideSchema | None:
-        result = await session.execute(select(self.model).where(and_(self.model.status.in_(["accepted", "on_the_way", "arrived", "started"]), Ride.driver_profile_id == driver_profile_id)))
+        result = await session.execute(select(self.model).where(and_(self.model.status.in_(["waiting_commission", "accepted", "on_the_way", "arrived", "started"]), Ride.driver_profile_id == driver_profile_id)))
         ride = result.scalar_one_or_none()
         return self.schema.model_validate(ride) if ride else None
 
