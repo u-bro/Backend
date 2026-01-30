@@ -46,3 +46,7 @@ class ChatHistoryResponse(BaseModel):
 class ChatMessageHistory(BaseModel):
     ride_id: int
     last_message: Optional[ChatMessageSchema]
+
+
+class ChatRidesDelete(BaseModel):
+    ride_ids: List[int]

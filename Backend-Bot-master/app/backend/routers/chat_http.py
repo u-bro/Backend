@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.schemas.chat_message import ChatHistoryResponse, SendMessageRequest, ChatMessageSchema, ChatMessageHistory
+from app.schemas.chat_message import ChatHistoryResponse, SendMessageRequest, ChatMessageSchema, ChatMessageHistory, ChatRidesDelete
 from app.services.chat_service import chat_service
 from app.crud import ride_crud, driver_profile_crud
 from app.backend.deps import get_current_user_id
@@ -18,6 +18,7 @@ class ChatHttpRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/message/{{message_id}}", self.edit_message, methods=["PUT"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/me", self.get_my_chats, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/stats", self.get_chat_stats, methods=["GET"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/me/delete", self.delete_messages_by_ride_ids, methods=["POST"], status_code=200)
 
     def __init__(self) -> None:
         super().__init__(chat_service, "/chat")
@@ -77,5 +78,13 @@ class ChatHttpRouter(BaseRouter):
     async def get_chat_stats(self) -> Dict[str, Any]:
         return chat_service.get_stats()
 
+    async def delete_messages_by_ride_ids(self, request: Request, body: ChatRidesDelete, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
+        session = request.state.session
+        my_rides = await ride_crud.get_by_client_id(session=session, client_id=user_id)
+        my_rides_ids = [ride.id for ride in my_rides]
+        if not set(body.ride_ids).issubset(my_rides_ids):
+            raise HTTPException(status_code=403, detail="You don't have permission to delete messages from these rides")
+        deleted = await chat_service.delete_messages_by_ride_ids(session=session, ride_ids=body.ride_ids)
+        return {"deleted": deleted}
 
 chat_http_router = ChatHttpRouter().router
