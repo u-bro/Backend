@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, update
 from better_profanity import profanity
 from sqlalchemy.orm import selectinload
 from app.models.chat_message import ChatMessage
@@ -161,8 +161,8 @@ class ChatService:
     async def get_my_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10) -> List[ChatMessageHistory]:
         offset = (page - 1) * page_size
         rides = await ride_crud.get_by_client_id(session, user_id, "updated_at desc")
-        ride_ids = [ride.id for ride in rides[offset:offset + page_size]]
-        query = select(ChatMessage).where(ChatMessage.ride_id.in_(ride_ids))
+        ride_ids = [ride.id for ride in rides[offset:offset + page_size] if ride.driver_profile_id]
+        query = select(ChatMessage).where(and_(ChatMessage.ride_id.in_(ride_ids), ChatMessage.deleted_at.is_(None)))
         result = await session.execute(query)
         messages = result.scalars().all()
         my_chats = []
@@ -240,6 +240,11 @@ class ChatService:
         
         return ChatMessageSchema.model_validate(message)
     
+    async def delete_messages_by_ride_ids(self, session: AsyncSession, ride_ids: List[int]):
+        now = datetime.now(timezone.utc)
+        deleted = await session.execute(update(ChatMessage).where(and_(ChatMessage.ride_id.in_(ride_ids), ChatMessage.deleted_at.is_(None))).values(deleted_at=now).returning(ChatMessage.id))
+        return deleted.scalars().all()
+
     def get_stats(self) -> Dict[str, Any]:
         return {
             "active_users_with_rate_limit": len(self._message_timestamps),
