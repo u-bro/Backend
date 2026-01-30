@@ -94,3 +94,14 @@ class RideSchemaFinishWithAnomaly(RideSchemaFinishByDriver):
     is_anomaly: bool | None = Field(False)
     anomaly_reason: str | None = Field(None, max_length=255)
     ride_metadata: dict | None = Field(None)
+
+class RideSchemaHistory(BaseSchema):
+    id: int = Field(..., gt=0)
+    status: Literal["requested", "canceled", "waiting_commission", "accepted", "on_the_way", "arrived", "started", "completed"] = Field("requested", max_length=50)
+    pickup_address: str | None = Field(None, max_length=500)
+    dropoff_address: str | None = Field(None, max_length=500)
+    expected_fare: float | None = Field(None, ge=0)
+    commission_amount: float | None = Field(None, ge=0)
+    actual_fare: float | None = Field(None, ge=0)
+    ride_class: Literal["light", "pro", "vip", "elite"] = Field(..., max_length=50)
+    created_at: datetime | None = Field(None)
