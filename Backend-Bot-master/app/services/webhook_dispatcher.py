@@ -51,34 +51,34 @@ class WebhookDispatcher:
         updated = await commission_payment_crud.update(session, commission_payment.id, {'status': status})
         if status == 'APPROVED':
             await in_app_notification_crud.create(session, InAppNotificationCreate(
-                    user_id=commission_payment.user_id,
-                    type='commission_payment',
-                    title='Commission payment approved',
-                    message='Your commission payment has been approved',
-                    data=updated.model_dump(mode='json'),
-                    dedup_key=str(commission_payment.id)
-                ))
+                user_id=commission_payment.user_id,
+                type='commission_payment',
+                title='Комиссия оплачена',
+                message='Ваша комиссия за поездку оплачена',
+                data=updated.model_dump(mode='json'),
+                dedup_key=str(commission_payment.id)
+            ))
             ride = await ride_crud.get_by_id(session, commission_payment.ride_id)
             if ride:
                 updated_ride = await ride_crud.update(session, ride.id, RideschemaUpdateAfterCommission(), updated.user_id)
                 await in_app_notification_crud.create(session, InAppNotificationCreate(
                     user_id=commission_payment.user_id,
                     type='ride_status_changed',
-                    title=f"Ride status is changed from \"{ride.status}\" to \"{updated_ride.status}\"",
-                    message="Check ride info, client",
+                    title=f"Статус поездки изменился с \"{ride.status}\" на \"{updated_ride.status}\"",
+                    message="Проверьте информацию о поездке",
                     data=updated_ride.model_dump(mode='json'),
                     dedup_key=None
                 ))
                 driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
                 driver_id = driver_profile.user_id if driver_profile else 0
-                await manager_driver_feed.send_personal_message(driver_id, {"type": "ride_commission_paid", "message": "Client has paid the commission for ride", "data": updated_ride.model_dump(mode="json")})
+                await manager_driver_feed.send_personal_message(driver_id, {"type": "ride_commission_paid", "message": "Клиент оплатил комиссию за поездку", "data": updated_ride.model_dump(mode="json")})
         else:
             logger.warning(f"Acquiring internet payment failed: {webhook}")
             await in_app_notification_crud.create(session, InAppNotificationCreate(
                     user_id=commission_payment.user_id,
                     type='commission_payment',
-                    title='Commission payment failed',
-                    message=f'Your commission payment has been failed. Current payment status: {status}',
+                    title='Комиссия не оплачена',
+                    message=f'Ваша комиссия за поездку не оплачена. Текущий статус платежа: {status}',
                     data=updated.model_dump(mode='json'),
                     dedup_key=None
                 ))

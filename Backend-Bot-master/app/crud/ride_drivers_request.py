@@ -107,7 +107,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         for request in ride_drivers_requests:
             await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
             state = driver_state_storage.get_driver(request.driver_profile_id)
-            await manager_driver_feed.send_personal_message(state.user_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": self.schema.model_validate(request).model_dump(mode='json')})
+            await manager_driver_feed.send_personal_message(state.user_id, {"type": "ride_offer_rejected", "message": "Отклик на поездку отклонен", "data": self.schema.model_validate(request).model_dump(mode='json')})
 
     async def cancel_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
         requests = await self.get_requested_by_driver_profile_id(session, driver_profile_id)
@@ -115,7 +115,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         await session.execute(update(self.model).where(self.model.id.in_(request_ids)).values({"status": "canceled"}))
         for request in requests:
             ride = await ride_crud.get_by_id(session, request.ride_id)
-            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Ride request is canceled", message="Ride request is canceled by driver", data=request.model_dump(mode="json"), dedup_key=str(request.id)))
+            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Отклик на поездку отменен", message="Отклик на поездку отменен водителем", data=request.model_dump(mode="json"), dedup_key=str(request.id)))
 
     async def _dispatch_accepted(self, session: AsyncSession, result: RideDriversRequestSchema, driver_profile: DriverProfileSchema, ride: RideSchema, **kwargs):
         accepted = await ride_crud.accept(session, result.ride_id, RideSchemaAcceptByDriver(driver_profile_id=result.driver_profile_id), driver_profile.user_id)
@@ -123,7 +123,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             raise HTTPException(status_code=400, detail="Ride request is not accepted. Perhaps, ride is already accepted")
         await driver_tracker.assign_ride(session, driver_profile.id, accepted.id)
 
-        await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_accepted", "message": "Your ride offer is accepted, wait until client pay ride commission", "data": accepted.model_dump(mode='json')})
+        await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_accepted", "message": "Ваш отклик принят, ждите, пока клиент оплатит комиссию за поездку", "data": accepted.model_dump(mode='json')})
 
         other_requests = await self.get_by_ride_id(session, result.ride_id)
         for request in other_requests:
@@ -134,10 +134,10 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
 
     async def _dispatch_rejected(self, session: AsyncSession, result: RideDriversRequestSchema, driver_profile: DriverProfileSchema, **kwargs):
             await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
-            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_rejected", "message": "Ride offer rejected", "data": result.model_dump(mode='json')})
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_offer_rejected", "message": "Отклик на поездку отклонен", "data": result.model_dump(mode='json')})
 
     async def _dispatch_canceled(self, session: AsyncSession, result: RideDriversRequestSchema, ride: RideSchema, **kwargs):
             await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.ONLINE)
-            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Ride request is canceled", message="Ride request is canceled by driver", data=result.model_dump(mode="json"), dedup_key=str(result.id)))
+            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Отклик на поездку отменен", message="Отклик на поездку отменен водителем", data=result.model_dump(mode="json"), dedup_key=str(result.id)))
             
 ride_drivers_request_crud = RideDriversRequestCrud()

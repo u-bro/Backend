@@ -212,7 +212,7 @@ class CrudRide(CrudBase):
             await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
         
         ride = self.schema.model_validate(existing_rides[0])
-        await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Ride is canceled", message="Ride is canceled", data=ride.model_dump(mode='json'), dedup_key=f"{ride.id}_canceled"))
+        await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена, т.к. была создана новая", data=ride.model_dump(mode='json'), dedup_key=f"{ride.id}_canceled"))
 
     async def get_by_client_id(self, session: AsyncSession, client_id: int) -> list[RideSchema]:
         stmt = select(self.model).where(self.model.client_id == client_id)
