@@ -168,7 +168,7 @@ class ChatService:
         my_chats = []
         for ride_id in ride_ids:
             ride_messages = [m for m in messages if m.ride_id == ride_id]
-            ride_messages.sort(key=lambda x: x.edited_at or x.created_at)
+            ride_messages.sort(key=lambda x: x.edited_at or x.created_at, reverse=True)
             chat = ChatMessageHistory(ride_id=ride_id, last_message=ChatMessageSchema.model_validate(ride_messages[0]).model_dump(mode='json') if len(ride_messages) else None)
             my_chats.append(chat)            
 
