@@ -159,9 +159,8 @@ class ChatService:
         return await self.save_message(session, ChatMessage(**message))
     
     async def get_my_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10) -> List[ChatMessageHistory]:
-        offset = (page - 1) * page_size
-        rides = await ride_crud.get_by_client_id(session, user_id, "updated_at desc")
-        ride_ids = [ride.id for ride in rides[offset:offset + page_size] if ride.driver_profile_id]
+        rides = await ride_crud.get_by_client_id_paginated_with_chats(session, user_id, page, page_size, "updated_at desc")
+        ride_ids = [ride.id for ride in rides if ride.driver_profile_id]
         query = select(ChatMessage).where(and_(ChatMessage.ride_id.in_(ride_ids), ChatMessage.deleted_at.is_(None)))
         result = await session.execute(query)
         messages = result.scalars().all()
@@ -169,7 +168,7 @@ class ChatService:
         for ride_id in ride_ids:
             ride_messages = [m for m in messages if m.ride_id == ride_id]
             ride_messages.sort(key=lambda x: x.edited_at or x.created_at, reverse=True)
-            chat = ChatMessageHistory(ride_id=ride_id, last_message=ChatMessageSchema.model_validate(ride_messages[0]).model_dump(mode='json') if len(ride_messages) else None)
+            chat = ChatMessageHistory(ride_id=ride_id, last_message=ChatMessageSchema.model_validate(ride_messages[0]).model_dump(mode='json'))
             my_chats.append(chat)            
 
         return my_chats
