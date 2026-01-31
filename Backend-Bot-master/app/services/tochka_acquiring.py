@@ -1,9 +1,5 @@
-import asyncio
-import time
+import asyncio, time, aiohttp
 from typing import Any
-
-import aiohttp
-
 from app.config import (
     TOCHKA_BASE_URL,
     TOCHKA_SANDBOX_URL,

@@ -33,13 +33,6 @@ class CommissionPaymentRouter(BaseRouter):
         purpose = f"Commission for ride #{id}"
         redirect_url = body.redirect_url or TOCHKA_ACQUIRING_REDIRECT_URL
         fail_redirect_url = body.fail_redirect_url or TOCHKA_ACQUIRING_FAIL_REDIRECT_URL
-        raw_request = {
-            "amount": float(amount),
-            "purpose": purpose,
-            "paymentMode": body.payment_mode,
-            "redirectUrl": redirect_url,
-            "failRedirectUrl": fail_redirect_url,
-        }
 
         try:
             resp = await tochka_acquiring_client.create_payment_link(
@@ -64,8 +57,6 @@ class CommissionPaymentRouter(BaseRouter):
             "payment_link": data.get("paymentLink"),
             "purpose": data.get("purpose") or purpose,
             "payment_mode": data.get("paymentMode") or list(body.payment_mode),
-            "raw_request": None,
-            "raw_response": None,
             "updated_at": datetime.now(timezone.utc),
         }
 

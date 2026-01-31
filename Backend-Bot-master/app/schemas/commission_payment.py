@@ -32,9 +32,6 @@ class CommissionPaymentSchema(BaseSchema):
     payment_id: str | None = None
     transaction_id: str | None = None
 
-    raw_request: Any | None = None
-    raw_response: Any | None = None
-
     is_refund: bool
 
     created_at: datetime | None = None
