@@ -15,5 +15,5 @@ class DriverRating(Base):
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     driver_profile = relationship('DriverProfile')
-    ride = relationship('Ride')
+    ride = relationship('Ride', foreign_keys=[ride_id], back_populates='driver_rating')
     client = relationship('User')
