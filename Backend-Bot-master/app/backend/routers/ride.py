@@ -44,10 +44,10 @@ class RideRouter(BaseRouter):
         return await super().get_by_id(request, id)
 
     async def get_my_as_client(self, request: Request, user_id: int = Depends(get_current_user_id), page: int = 1, page_size: int = 10):
-        return await self.model_crud.get_by_client_id_paginated(request.state.session, user_id, page, page_size)
+        return await self.model_crud.get_by_client_id_paginated(request.state.session, user_id, page, page_size, "created_at desc")
     
     async def get_my_as_driver(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id), page: int = 1, page_size: int = 10):
-        return await self.model_crud.get_by_driver_profile_id_paginated(request.state.session, driver_profile_id, page, page_size)
+        return await self.model_crud.get_by_driver_profile_id_paginated(request.state.session, driver_profile_id, page, page_size, "created_at desc")
 
     async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
