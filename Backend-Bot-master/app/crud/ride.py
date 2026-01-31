@@ -226,16 +226,16 @@ class CrudRide(CrudBase):
         rides = result.scalars().all()
         return [self.schema.model_validate(ride) for ride in rides]
 
-    async def get_by_client_id_paginated(self, session: AsyncSession, client_id: int, page: int = 1, page_size: int = 10) -> list[RideSchemaHistory]:
+    async def get_by_client_id_paginated(self, session: AsyncSession, client_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchemaHistory]:
         offset = (page - 1) * page_size
-        stmt = select(self.model).where(self.model.client_id == client_id).offset(offset).limit(page_size)
+        stmt = select(self.model).where(self.model.client_id == client_id).order_by(text(order_by) if order_by else None).offset(offset).limit(page_size)
         result = await session.execute(stmt)
         rides = result.scalars().all()
         return [RideSchemaHistory.model_validate(ride) for ride in rides]
 
-    async def get_by_driver_profile_id_paginated(self, session: AsyncSession, driver_profile_id: int, page: int = 1, page_size: int = 10) -> list[RideSchemaHistory]:
+    async def get_by_driver_profile_id_paginated(self, session: AsyncSession, driver_profile_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchemaHistory]:
         offset = (page - 1) * page_size
-        stmt = select(self.model).where(self.model.driver_profile_id == driver_profile_id).offset(offset).limit(page_size)
+        stmt = select(self.model).where(self.model.driver_profile_id == driver_profile_id).order_by(text(order_by) if order_by else None).offset(offset).limit(page_size)
         result = await session.execute(stmt)
         rides = result.scalars().all()
         return [RideSchemaHistory.model_validate(ride) for ride in rides]
