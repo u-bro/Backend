@@ -2,6 +2,7 @@ from typing import Literal
 from pydantic import Field
 from datetime import datetime, timezone
 from .base import BaseSchema
+from .driver_rating import DriverRatingSchema
 
 class RideSchemaIn(BaseSchema):
     status: Literal["requested"] = Field("requested", max_length=50)
@@ -104,4 +105,6 @@ class RideSchemaHistory(BaseSchema):
     commission_amount: float | None = Field(None, ge=0)
     actual_fare: float | None = Field(None, ge=0)
     ride_class: Literal["light", "pro", "vip", "elite"] = Field(..., max_length=50)
+    comment: str | None = Field(None)
+    driver_rating: DriverRatingSchema | None = None
     created_at: datetime | None = Field(None)

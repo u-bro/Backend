@@ -45,4 +45,5 @@ class Ride(Base):
 
     client = relationship('User', foreign_keys=[client_id])
     driver_profile = relationship('DriverProfile', foreign_keys=[driver_profile_id])
+    driver_rating = relationship('DriverRating', foreign_keys='DriverRating.ride_id', back_populates='ride', uselist=False)
     tariff_plan = relationship('TariffPlan', foreign_keys=[tariff_plan_id])
