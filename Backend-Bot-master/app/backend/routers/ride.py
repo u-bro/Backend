@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.routers.base import BaseRouter
 from app.crud.ride import ride_crud
 from app.models import Ride
-from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver
+from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver, RideSchemaWithRating
 from app.schemas.push import PushNotificationData
 from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.ride_drivers_request import RideDriversRequestCreate, RideDriversRequestSchema, RideDriversRequestUpdate
@@ -40,8 +40,11 @@ class RideRouter(BaseRouter):
         items = await super().get_paginated(request, page, page_size)
         return TypeAdapter(List[RideSchema]).validate_python(items)
 
-    async def get_by_id(self, request: Request, id: int) -> RideSchema:
-        return await super().get_by_id(request, id)
+    async def get_by_id(self, request: Request, id: int) -> RideSchemaWithRating:
+        item = await self.model_crud.get_by_id_with_rating(request.state.session, id)
+        if item is None:
+            raise HTTPException(status_code=404, detail="Item not found")
+        return item
 
     async def get_my_as_client(self, request: Request, user_id: int = Depends(get_current_user_id), page: int = 1, page_size: int = 10):
         return await self.model_crud.get_by_client_id_paginated(request.state.session, user_id, page, page_size, "created_at desc")

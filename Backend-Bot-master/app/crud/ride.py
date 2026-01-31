@@ -13,7 +13,7 @@ from .driver_location import driver_location_crud
 from .in_app_notification import in_app_notification_crud
 from .driver_tracker import driver_tracker, DriverStatus
 from app.models import Ride, TariffPlan, Commission, RideDriversRequest, ChatMessage
-from app.schemas.ride import RideSchema, RideSchemaHistory
+from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating
 from app.schemas.ride_status_history import RideStatusHistoryCreate
 from app.schemas.in_app_notification import InAppNotificationCreate
 from fastapi import HTTPException
@@ -229,7 +229,7 @@ class CrudRide(CrudBase):
 
     async def get_by_client_id_paginated(self, session: AsyncSession, client_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchemaHistory]:
         offset = (page - 1) * page_size
-        stmt = select(self.model).where(self.model.client_id == client_id).options(selectinload(self.model.driver_rating)).order_by(text(order_by) if order_by else None).offset(offset).limit(page_size)
+        stmt = select(self.model).where(self.model.client_id == client_id).order_by(text(order_by) if order_by else None).offset(offset).limit(page_size)
         result = await session.execute(stmt)
         rides = result.scalars().all()
         return [RideSchemaHistory.model_validate(ride) for ride in rides]
@@ -283,5 +283,10 @@ class CrudRide(CrudBase):
         result = await session.execute(select(self.model).where(and_(self.model.status.in_(["waiting_commission", "accepted", "on_the_way", "arrived", "started"]), Ride.driver_profile_id == driver_profile_id)))
         ride = result.scalar_one_or_none()
         return self.schema.model_validate(ride) if ride else None
+
+    async def get_by_id_with_rating(self, session: AsyncSession, id: int) -> RideSchemaWithRating | None:
+        result = await session.execute(select(self.model).options(selectinload(self.model.driver_rating)).where(self.model.id == id))
+        item = result.scalar_one_or_none()
+        return RideSchemaWithRating.model_validate(item) if item else None
 
 ride_crud = CrudRide(Ride, RideSchema)
