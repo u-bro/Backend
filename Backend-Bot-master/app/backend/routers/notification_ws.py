@@ -28,7 +28,6 @@ class NotificationWebsocketRouter(BaseWebsocketRouter):
         ride = await ride_crud.get_active_ride_by_client_id(session, user_id)
         if ride:
             await websocket.send_json({"type": "active_ride", "data": ride.model_dump(mode="json")})
-        
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = context["user_id"]
