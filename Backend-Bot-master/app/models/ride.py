@@ -42,6 +42,7 @@ class Ride(Base):
     tariff_plan_id: Mapped[int] = mapped_column(Integer, ForeignKey('tariff_plans.id'))
     ride_class: Mapped[str] = mapped_column(Text, nullable=False)
     comment = mapped_column(Text, nullable=True)
+    ride_type: Mapped[str] = mapped_column(Text, nullable=False)
 
     client = relationship('User', foreign_keys=[client_id])
     driver_profile = relationship('DriverProfile', foreign_keys=[driver_profile_id])
