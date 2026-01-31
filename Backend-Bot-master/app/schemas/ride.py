@@ -21,6 +21,7 @@ class RideSchemaIn(BaseSchema):
     commission_id: int = Field(..., gt=0)
     tariff_plan_id: int = Field(..., gt=0)
     ride_class: Literal["light", "pro", "vip", "elite"] = Field(..., max_length=50)
+    ride_type: Literal["with_car", "without_car"] = Field("with_car", max_length=50)
     comment: str | None = Field(None)
 
 
@@ -105,6 +106,8 @@ class RideSchemaHistory(BaseSchema):
     commission_amount: float | None = Field(None, ge=0)
     actual_fare: float | None = Field(None, ge=0)
     ride_class: Literal["light", "pro", "vip", "elite"] = Field(..., max_length=50)
-    comment: str | None = Field(None)
-    driver_rating: DriverRatingSchema | None = None
     created_at: datetime | None = Field(None)
+
+
+class RideSchemaWithRating(RideSchema):
+    driver_rating: DriverRatingSchema | None = None
