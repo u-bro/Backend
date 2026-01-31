@@ -21,6 +21,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
         self.register_handler("ping", self.handle_ping)
         self.register_handler("typing", self.handle_typing)
         self.register_handler("message", self.handle_message)
+        self.register_handler("mark_read", self.handle_mark_read)
 
     async def dispatch_message(self, websocket: WebSocket, data: Dict[str, Any], **context: Any) -> None:
         normalized = dict(data)
@@ -110,6 +111,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
                     "text": message.text,
                     "message_type": message.message_type,
                     "is_moderated": message.is_moderated,
+                    "is_read": message.is_read,
                     "created_at": message.created_at.isoformat() if message.created_at else None,
                     "censored": moderation.original != moderation.filtered,
                 },
@@ -117,5 +119,39 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
         )
 
         logger.info(f"Chat message in ride {ride_id} from user {user_id}")
+
+    async def handle_mark_read(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
+        ride_id = int(context["ride_id"])
+        user_id = int(context["user_id"])
+        session: AsyncSession = context["session"]
+
+        message_id = data.get("message_id")
+        up_to_id = data.get("up_to_id")
+
+        if message_id is None and up_to_id is None:
+            await websocket.send_json({"type": "error", "code": "invalid_payload", "message": "message_id or up_to_id is required"})
+            return
+
+        if message_id is not None:
+            updated = await chat_service.mark_message_read(session=session, ride_id=ride_id, message_id=int(message_id), user_id=user_id)
+            if not updated:
+                await websocket.send_json({"type": "error", "code": "not_found", "message": "Message not found"})
+                return
+
+            await manager.send_to_ride(
+                ride_id,
+                {"type": "message_read", "ride_id": ride_id, "message_id": updated.id, "read_by": user_id, "is_read": True},
+                exclude_user_id=user_id,
+            )
+            await websocket.send_json({"type": "read_ack", "ride_id": ride_id, "message_id": updated.id})
+            return
+
+        updated_count = await chat_service.mark_ride_messages_read(session=session, ride_id=ride_id, user_id=user_id, up_to_id=int(up_to_id))
+        await manager.send_to_ride(
+            ride_id,
+            {"type": "ride_messages_read", "ride_id": ride_id, "read_by": user_id, "up_to_id": int(up_to_id), "updated": updated_count},
+            exclude_user_id=user_id,
+        )
+        await websocket.send_json({"type": "read_ack", "ride_id": ride_id, "up_to_id": int(up_to_id), "updated": updated_count})
 
 chat_ws_router = ChatWebsocketRouter().router

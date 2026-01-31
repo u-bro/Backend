@@ -16,6 +16,8 @@ class ChatHttpRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/send", self.send_message, methods=["POST"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/message/{{message_id}}", self.delete_message, methods=["DELETE"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/message/{{message_id}}", self.edit_message, methods=["PUT"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/{{ride_id}}/message/{{message_id}}/read", self.mark_message_read, methods=["PUT"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/{{ride_id}}/read", self.mark_ride_messages_read, methods=["PUT"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/me", self.get_my_chats, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/stats", self.get_chat_stats, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/me/delete", self.delete_messages_by_ride_ids, methods=["POST"], status_code=200)
@@ -57,7 +59,7 @@ class ChatHttpRouter(BaseRouter):
             raise HTTPException(status_code=400, detail=moderation.reason)
 
         message = await chat_service.save_message(session, ChatMessage(ride_id=ride_id, sender_id=sender_id, text=moderation.filtered, message_type=body.message_type, attachments=body.attachments, is_moderated=True, created_at=datetime.now(timezone.utc)))
-        await manager.send_to_ride(ride_id, {"type": "new_message", "message": {"id": message.id, "ride_id": ride_id, "sender_id": sender_id, "text": message.text, "message_type": message.message_type, "created_at": message.created_at.isoformat() if message.created_at else None}})
+        await manager.send_to_ride(ride_id, {"type": "new_message", "message": {"id": message.id, "ride_id": ride_id, "sender_id": sender_id, "text": message.text, "message_type": message.message_type, "is_moderated": message.is_moderated, "is_read": message.is_read, "created_at": message.created_at.isoformat() if message.created_at else None}})
         return message
 
     async def delete_message(self, request: Request, ride_id: int, message_id: int, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
@@ -74,6 +76,21 @@ class ChatHttpRouter(BaseRouter):
 
         await manager.send_to_ride(ride_id, {"type": "message_edited", "message": {"id": message.id, "text": message.text, "edited_at": message.edited_at.isoformat() if message.edited_at else None}})
         return {"status": "edited", "message": {"id": message.id, "text": message.text, "edited_at": message.edited_at}}
+
+    async def mark_message_read(self, request: Request, ride_id: int, message_id: int, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
+        session = request.state.session
+        updated = await chat_service.mark_message_read(session=session, ride_id=ride_id, message_id=message_id, user_id=user_id)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Message not found")
+
+        await manager.send_to_ride(ride_id, {"type": "message_read", "ride_id": ride_id, "message_id": updated.id, "read_by": user_id, "is_read": True}, exclude_user_id=user_id)
+        return {"status": "ok", "message_id": updated.id, "is_read": True}
+
+    async def mark_ride_messages_read(self, request: Request, ride_id: int, up_to_id: Optional[int] = Query(None, description="mark messages with id <= up_to_id as read"), user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
+        session = request.state.session
+        updated_count = await chat_service.mark_ride_messages_read(session=session, ride_id=ride_id, user_id=user_id, up_to_id=up_to_id)
+        await manager.send_to_ride(ride_id, {"type": "ride_messages_read", "ride_id": ride_id, "read_by": user_id, "up_to_id": up_to_id, "updated": updated_count}, exclude_user_id=user_id)
+        return {"status": "ok", "ride_id": ride_id, "up_to_id": up_to_id, "updated": updated_count}
 
     async def get_chat_stats(self) -> Dict[str, Any]:
         return chat_service.get_stats()

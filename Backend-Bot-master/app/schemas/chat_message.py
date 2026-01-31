@@ -13,6 +13,7 @@ class ChatMessageSchema(BaseSchema):
     message_type: Optional[str] = None
     attachments: Optional[dict[str, Any]] = None
     is_moderated: bool
+    is_read: bool = False
     created_at: Optional[datetime] = None
     edited_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None

@@ -193,6 +193,58 @@ class ChatService:
         messages = result.scalars().all()
         
         return [ChatMessageSchema.model_validate(m) for m in reversed(messages)]
+
+    async def mark_message_read(self, session: AsyncSession, ride_id: int, message_id: int, user_id: int) -> Optional[ChatMessageSchema]:
+        is_ride_participant = await self.verify_ride_user(session=session, ride_id=ride_id, user_id=user_id)
+        if not is_ride_participant:
+            return None
+
+        query = select(ChatMessage).where(
+            and_(
+                ChatMessage.id == message_id,
+                ChatMessage.ride_id == ride_id,
+                ChatMessage.deleted_at.is_(None),
+            )
+        )
+        result = await session.execute(query)
+        message = result.scalar_one_or_none()
+        if not message:
+            return None
+
+        if message.sender_id == user_id:
+            return ChatMessageSchema.model_validate(message)
+
+        if message.is_read:
+            return ChatMessageSchema.model_validate(message)
+
+        message.is_read = True
+        await session.flush()
+        await session.refresh(message)
+        return ChatMessageSchema.model_validate(message)
+
+    async def mark_ride_messages_read(self, session: AsyncSession, ride_id: int, user_id: int, up_to_id: Optional[int] = None) -> int:
+        is_ride_participant = await self.verify_ride_user(session=session, ride_id=ride_id, user_id=user_id)
+        if not is_ride_participant:
+            return 0
+
+        conditions = [
+            ChatMessage.ride_id == ride_id,
+            ChatMessage.deleted_at.is_(None),
+            ChatMessage.sender_id.is_not(None),
+            ChatMessage.sender_id != user_id,
+            ChatMessage.is_read.is_(False),
+        ]
+        if up_to_id is not None:
+            conditions.append(ChatMessage.id <= up_to_id)
+
+        stmt = (
+            update(ChatMessage)
+            .where(and_(*conditions))
+            .values(is_read=True)
+            .execution_options(synchronize_session=False)
+        )
+        result = await session.execute(stmt)
+        return int(result.rowcount or 0)
     
     async def soft_delete_message(self, session: AsyncSession, message_id: int, user_id: int) -> bool:
         query = select(ChatMessage).where(
