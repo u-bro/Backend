@@ -1,6 +1,4 @@
-from typing import List
 from fastapi import Request, Depends
-from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.commission import commission_crud
 from app.schemas.commission import CommissionSchema, CommissionCreate, CommissionUpdate
@@ -21,8 +19,7 @@ class CommissionRouter(BaseRouter):
 
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[CommissionSchema]:
-        items = await super().get_paginated(request, page, page_size)
-        return TypeAdapter(List[CommissionSchema]).validate_python(items)
+        return await self.model_crud.get_paginated(request.state.session, page, page_size)
 
     async def get_by_id(self, request: Request, id: int) -> CommissionSchema:
         return await super().get_by_id(request, id)

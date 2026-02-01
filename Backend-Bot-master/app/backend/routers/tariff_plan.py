@@ -1,5 +1,4 @@
 from fastapi import Request, Depends
-
 from app.crud.tariff_plan import tariff_plan_crud
 from app.schemas.tariff_plan import TariffPlanCreate, TariffPlanSchema, TariffPlanUpdate
 from app.backend.routers.base import BaseRouter
