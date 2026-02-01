@@ -8,8 +8,6 @@ class DriverLocationCreate(BaseSchema):
     driver_profile_id: int
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    accuracy_m: Optional[int] = None
-    provider: Optional[str] = None
     status: Literal["offline", "online", "busy", "waiting_ride"] = "offline"
     last_seen_at: Optional[datetime] = None
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -18,8 +16,6 @@ class DriverLocationCreate(BaseSchema):
 class DriverLocationUpdate(BaseSchema):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    accuracy_m: Optional[int] = None
-    provider: Optional[str] = None
     status: Optional[Literal["offline", "online", "busy", "waiting_ride"]] = None
     last_seen_at: Optional[datetime] = None
 

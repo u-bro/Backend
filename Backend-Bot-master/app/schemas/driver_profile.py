@@ -7,19 +7,19 @@ from .car import CarSchema
 
 class DriverProfileCreate(BaseSchema):
     user_id: int
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    middle_name: Optional[str] = None
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    middle_name: Optional[str] = Field(None, max_length=100)
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
-    license_number: Optional[str] = None
-    license_category: Optional[str] = None
+    license_number: Optional[str] = Field(None, max_length=100)
+    license_category: Optional[str] = Field(None, max_length=20)
     license_issued_at: Optional[datetime] = None
     license_expires_at: Optional[datetime] = None
     experience_years: Optional[int] = None
-    qualification_level: Optional[str] = None
+    qualification_level: Optional[str] = Field(None, max_length=50)
     classes_allowed: list[str] = []
-    documents_status: Optional[str] = None
+    documents_status: Optional[str] = Field(None, max_length=50)
     documents_review_notes: Optional[str] = None
     current_class: Optional[str] = None
     current_car_id: Optional[int] = None
@@ -30,13 +30,13 @@ class DriverProfileCreate(BaseSchema):
 
 
 class DriverProfileUpdateMe(BaseSchema):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    middle_name: Optional[str] = None
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    middle_name: Optional[str] = Field(None, max_length=100)
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
-    license_number: Optional[str] = None
-    license_category: Optional[str] = None
+    license_number: Optional[str] = Field(None, max_length=100)
+    license_category: Optional[str] = Field(None, max_length=20)
     experience_years: Optional[int] = None
     current_class: Optional[str] = None
     current_car_id: Optional[int] = None
@@ -44,19 +44,19 @@ class DriverProfileUpdateMe(BaseSchema):
 
 
 class DriverProfileUpdate(BaseSchema):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    middle_name: Optional[str] = None
+    first_name: Optional[str] = Field(None, max_length=100)
+    last_name: Optional[str] = Field(None, max_length=100)
+    middle_name: Optional[str] = Field(None, max_length=100)
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
-    license_number: Optional[str] = None
-    license_category: Optional[str] = None
+    license_number: Optional[str] = Field(None, max_length=100)
+    license_category: Optional[str] = Field(None, max_length=20)
     license_issued_at: Optional[datetime] = None
     license_expires_at: Optional[datetime] = None
     experience_years: Optional[int] = None
-    qualification_level: Optional[str] = None
+    qualification_level: Optional[str] = Field(None, max_length=50)
     classes_allowed: list[str] = []
-    documents_status: Optional[str] = None
+    documents_status: Optional[str] = Field(None, max_length=50)
     documents_review_notes: Optional[str] = None
     current_class: Optional[str] = None
     current_car_id: Optional[int] = None

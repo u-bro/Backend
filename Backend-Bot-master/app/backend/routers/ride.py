@@ -1,6 +1,5 @@
-from typing import Any, List
+from typing import Any
 from fastapi import Request, Depends, HTTPException
-from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.routers.base import BaseRouter
 from app.crud.ride import ride_crud
@@ -37,8 +36,7 @@ class RideRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{id}}/finish", self.finish_ride_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[RideSchema]:
-        items = await super().get_paginated(request, page, page_size)
-        return TypeAdapter(List[RideSchema]).validate_python(items)
+        return await self.model_crud.get_paginated(request.state.session, page, page_size)
 
     async def get_by_id(self, request: Request, id: int) -> RideSchemaWithRating:
         item = await self.model_crud.get_by_id_with_rating(request.state.session, id)

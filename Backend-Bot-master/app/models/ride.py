@@ -36,7 +36,6 @@ class Ride(Base):
     commission_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('commissions.id'), nullable=True)
     is_anomaly: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     anomaly_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-    ride_metadata = mapped_column(JSONB, nullable=True)
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     tariff_plan_id: Mapped[int] = mapped_column(Integer, ForeignKey('tariff_plans.id'))

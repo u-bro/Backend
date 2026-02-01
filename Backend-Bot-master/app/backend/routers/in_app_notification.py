@@ -1,6 +1,5 @@
 from typing import List
 from fastapi import Request, Depends
-from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.in_app_notification import in_app_notification_crud
 from app.schemas.in_app_notification import InAppNotificationSchema, InAppNotificationCreate, InAppNotificationUpdate
@@ -22,9 +21,8 @@ class InAppNotificationRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
 
-    async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> List[InAppNotificationSchema]:
-        items = await super().get_paginated(request, page, page_size)
-        return TypeAdapter(List[InAppNotificationSchema]).validate_python(items)
+    async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[InAppNotificationSchema]:
+        return await self.model_crud.get_paginated(request.state.session, page, page_size)
 
     async def get_by_id(self, request: Request, id: int) -> InAppNotificationSchema:
         return await super().get_by_id(request, id)

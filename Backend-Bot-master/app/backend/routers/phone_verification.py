@@ -1,6 +1,4 @@
-from typing import List
 from fastapi import Request, Depends
-from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.phone_verification import phone_verification_crud
 from app.schemas.phone_verification import PhoneVerificationSchema, PhoneVerificationSchemaCreate, PhoneVerificationUpdate
@@ -19,8 +17,7 @@ class PhoneVerificationRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=200, dependencies=[Depends(require_role("admin"))])
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[PhoneVerificationSchema]:
-        items = await super().get_paginated(request, page, page_size)
-        return TypeAdapter(List[PhoneVerificationSchema]).validate_python(items)
+        return await self.model_crud.get_paginated(request.state.session, page, page_size)
 
     async def get_by_id(self, request: Request, id: int) -> PhoneVerificationSchema:
         return await super().get_by_id(request, id)

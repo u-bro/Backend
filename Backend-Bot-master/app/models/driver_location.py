@@ -10,8 +10,6 @@ class DriverLocation(Base):
     driver_profile_id: Mapped[int] = mapped_column(Integer, ForeignKey('driver_profiles.id'), nullable=False)
     latitude: Mapped[float | None] = mapped_column(DECIMAL(12, 8), nullable=True)
     longitude: Mapped[float | None] = mapped_column(DECIMAL(12, 8), nullable=True)
-    accuracy_m: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default='offline')
     last_seen_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())

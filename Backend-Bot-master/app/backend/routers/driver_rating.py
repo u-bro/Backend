@@ -1,6 +1,4 @@
-from typing import List
 from fastapi import Request, Depends
-from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_rating import driver_rating_crud
 from app.schemas.driver_rating import DriverRatingSchema, DriverRatingCreate, DriverRatingUpdate, DriverRatingCreateIn, DriverRatingAvgOut
@@ -21,8 +19,7 @@ class DriverRatingRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{driver_id}}/avg", self.get_avg_rating, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[DriverRatingSchema]:
-        items = await super().get_paginated(request, page, page_size)
-        return TypeAdapter(List[DriverRatingSchema]).validate_python(items)
+        return await self.model_crud.get_paginated(request.state.session, page, page_size)
 
     async def get_by_id(self, request: Request, id: int) -> DriverRatingSchema:
         return await super().get_by_id(request, id)

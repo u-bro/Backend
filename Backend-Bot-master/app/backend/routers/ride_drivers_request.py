@@ -1,6 +1,4 @@
-from typing import List
 from fastapi import Request, Depends, HTTPException
-from pydantic import TypeAdapter
 from app.backend.routers.base import BaseRouter
 from app.crud.ride_drivers_request import ride_drivers_request_crud
 from app.crud.ride import ride_crud
@@ -19,8 +17,7 @@ class RideDriversRequestRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200)
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[RideDriversRequestSchema]:
-        items = await super().get_paginated(request, page, page_size)
-        return TypeAdapter(List[RideDriversRequestSchema]).validate_python(items)
+        return await self.model_crud.get_paginated(request.state.session, page, page_size)
 
     async def get_by_ride_id(self, request: Request, id: int) -> list[RideDriversRequestSchemaDetailed]:
         return await self.model_crud.get_by_ride_id_detailed(request.state.session, id)
