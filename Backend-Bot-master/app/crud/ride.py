@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import insert, update, delete, text
@@ -234,8 +234,10 @@ class CrudRide(CrudBase):
         rides = result.scalars().all()
         return [RideSchemaHistory.model_validate(ride) for ride in rides]
 
-    async def get_by_client_id_paginated_with_chats(self, session: AsyncSession, client_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchema]:
+    async def get_paginated_as_client_or_driver_with_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchema]:
         offset = (page - 1) * page_size
+        driver_profile = await driver_profile_crud.get_by_user_id(session, user_id)
+        driver_profile_id = getattr(driver_profile, 'id', None)
 
         last_chat_at_sq = (
             select(
@@ -252,8 +254,11 @@ class CrudRide(CrudBase):
             .join(last_chat_at_sq, last_chat_at_sq.c.ride_id == self.model.id)
             .where(
                 and_(
-                    self.model.client_id == client_id,
                     self.model.driver_profile_id.is_not(None),
+                    or_(
+                        self.model.client_id == user_id,
+                        self.model.driver_profile_id == driver_profile_id
+                    ),
                 )
             )
             .order_by(last_chat_at_sq.c.last_chat_at.desc())
