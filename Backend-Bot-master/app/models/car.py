@@ -11,6 +11,9 @@ class Car(Base):
     driver_profile_id: Mapped[int] = mapped_column(Integer, ForeignKey('driver_profiles.id'), nullable=False)
     model: Mapped[str] = mapped_column(String(100), nullable=True)
     number: Mapped[str] = mapped_column(String(100), nullable=True)
+    region: Mapped[str] = mapped_column(String(20), nullable=True)
+    vin: Mapped[str] = mapped_column(String(100), nullable=True)
+    year: Mapped[str] = mapped_column(String(10), nullable=True)
     created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
