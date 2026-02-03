@@ -35,9 +35,13 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
         driver_profile = await driver_profile_crud.get_by_id(session, create_obj.driver_profile_id)
         if driver_profile is None:
             raise HTTPException(status_code=404, detail="Driver profile not found")
-        await driver_profile_crud.update(session, driver_profile.id, DriverProfileUpdate(rating_count=driver_profile.rating_count + 1, rating_avg=(driver_profile.rating_avg * driver_profile.rating_count + create_obj.rate) / (driver_profile.rating_count + 1)))
         
-        return await super().create(session, create_obj, **kwargs)
+        result = await super().create(session, create_obj, **kwargs)
+
+        rating_avg = await self.avg_rating(session, create_obj.driver_profile_id)
+        await driver_profile_crud.update(session, driver_profile.id, DriverProfileUpdate(rating_count=driver_profile.rating_count + 1, rating_avg=rating_avg.avg))
+        
+        return result
 
     async def update(self, session: AsyncSession, id: int, update_obj: DriverRatingUpdate) -> DriverRatingSchema | None:
         update_data = update_obj.model_dump(exclude_none=True)
@@ -61,7 +65,9 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
         driver_profile = await driver_profile_crud.get_by_id(session, result.driver_profile_id)
         if driver_profile is None:
             raise HTTPException(status_code=404, detail="Driver profile not found")
-        await driver_profile_crud.update(session, driver_profile.id, DriverProfileUpdate(rating_avg=(driver_profile.rating_avg * driver_profile.rating_count + result.rate - existing_rating.rate) / (driver_profile.rating_count)))
+        
+        rating_avg = await self.avg_rating(session, result.driver_profile_id)
+        await driver_profile_crud.update(session, driver_profile.id, DriverProfileUpdate(rating_avg=rating_avg.avg))
         return self.schema.model_validate(result)
 
     async def avg_rating(self, session: AsyncSession, driver_id: int, count: int = 5):

@@ -24,7 +24,7 @@ class DriverProfileCreate(BaseSchema):
     current_class: Optional[str] = None
     current_car_id: Optional[int] = None
     ride_count: int = 0
-    rating_avg: float = 0.
+    rating_avg: float = 0.0
     rating_count: int = 0
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
