@@ -29,6 +29,7 @@ MAX_DISTANCE_KM = float(os.environ.get('MAX_DISTANCE_KM', 5.0))
 FEED_PUSH_INTERVAL_SECONDS = int(os.getenv("MATCHING_FEED_PUSH_INTERVAL_SECONDS", "5"))
 FEED_LIMIT = int(os.getenv("MATCHING_FEED_LIMIT", "20"))
 COMMISSION_PAY_SECONDS_LIMIT = int(os.getenv("COMMISSION_PAY_SECONDS_LIMIT", "300"))
+RATING_AVG_COUNT = int(os.getenv("RATING_AVG_COUNT", "5"))
 
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'test-secret-key'
 JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM') or 'HS256'

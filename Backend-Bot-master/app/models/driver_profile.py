@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, TIMESTAMP, func, Boolean, ForeignKey
+from sqlalchemy import Integer, String, TIMESTAMP, func, Boolean, ForeignKey, DECIMAL
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
@@ -28,7 +28,7 @@ class DriverProfile(Base):
     current_car_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('cars.id'), nullable=True)
     documents_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     documents_review_notes: Mapped[str | None] = mapped_column(String, nullable=True)
-    rating_avg = mapped_column(Integer, nullable=True)
+    rating_avg = mapped_column(DECIMAL(3,2), nullable=True)
     rating_count = mapped_column(Integer, nullable=True, default=0)
     ride_count = mapped_column(Integer, nullable=True, default=0)
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
