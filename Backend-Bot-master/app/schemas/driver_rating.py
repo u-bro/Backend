@@ -25,3 +25,7 @@ class DriverRatingSchema(DriverRatingCreate):
 
 class DriverRatingAvgOut(BaseSchema):
     avg: float = Field(..., ge=0)
+
+
+class DriverRatingConfig(BaseSchema):
+    rating_avg_count: int = Field(..., ge=1)

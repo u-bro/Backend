@@ -1,3 +1,4 @@
+import app.config
 from app.crud.base import CrudBase
 from app.models.driver_rating import DriverRating
 from app.schemas.driver_rating import DriverRatingSchema, DriverRatingAvgOut, DriverRatingCreate, DriverRatingUpdate
@@ -7,6 +8,7 @@ from sqlalchemy import select, func, update
 from sqlalchemy.sql.expression import desc
 from .ride import ride_crud
 from .driver_profile import driver_profile_crud
+from app.models import DriverProfile
 from fastapi import HTTPException
 
 
@@ -38,7 +40,7 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
         
         result = await super().create(session, create_obj, **kwargs)
 
-        rating_avg = await self.avg_rating(session, create_obj.driver_profile_id)
+        rating_avg = await self.avg_rating(session, create_obj.driver_profile_id, app.config.RATING_AVG_COUNT)
         await driver_profile_crud.update(session, driver_profile.id, DriverProfileUpdate(rating_count=driver_profile.rating_count + 1, rating_avg=rating_avg.avg))
         
         return result
@@ -66,9 +68,16 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
         if driver_profile is None:
             raise HTTPException(status_code=404, detail="Driver profile not found")
         
-        rating_avg = await self.avg_rating(session, result.driver_profile_id)
+        rating_avg = await self.avg_rating(session, result.driver_profile_id, app.config.RATING_AVG_COUNT)
         await driver_profile_crud.update(session, driver_profile.id, DriverProfileUpdate(rating_avg=rating_avg.avg))
         return self.schema.model_validate(result)
+
+    async def recalculate_rating_avg(self, session: AsyncSession):
+        result = await session.execute(select(DriverProfile).where(DriverProfile.approved))
+        driver_profiles = result.scalars().all()
+        for driver_profile in driver_profiles:
+            rating_avg = await self.avg_rating(session, driver_profile.id, app.config.RATING_AVG_COUNT)
+            await driver_profile_crud.update(session, driver_profile.id, DriverProfileUpdate(rating_avg=rating_avg.avg))
 
     async def avg_rating(self, session: AsyncSession, driver_id: int, count: int = 5):
         subq = (
@@ -82,6 +91,7 @@ class DriverRatingCrud(CrudBase[DriverRating, DriverRatingSchema]):
         result = await session.execute(
             select(func.avg(subq.c.rate))
         )
-        return DriverRatingAvgOut(avg=result.scalar_one_or_none())
+        avg = result.scalar_one_or_none() or 0.0
+        return DriverRatingAvgOut(avg=avg)
 
 driver_rating_crud = DriverRatingCrud()
