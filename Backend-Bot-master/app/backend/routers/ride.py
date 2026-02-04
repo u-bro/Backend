@@ -87,7 +87,6 @@ class RideRouter(BaseRouter):
         request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, car_id=driver_profile.current_car_id, eta=update_obj.eta,status="requested"))
         ride = await ride_crud.get_by_id(session, id)
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_request_sent", "data": ride.model_dump(mode="json")})
-        await self.send_notifications(session, ride.client_id, "ride_request_accepted", "Отклик на поездку принят", "Теперь необходимо оплатить комиссию", ride.model_dump(mode="json"), ride.id)
         return request
 
     async def cancel_ride_request(self, request: Request, id: int, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> RideDriversRequestSchema:

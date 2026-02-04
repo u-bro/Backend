@@ -85,7 +85,7 @@ class FCMService:
             data=self._normalize_data(payload.data),
         )
 
-        return await asyncio.to_thread(messaging.send_multicast, message, dry_run)
+        return await asyncio.to_thread(messaging.send_each_for_multicast, message, dry_run)
 
     async def send_to_user(self, session: AsyncSession, user_id: int, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.BatchResponse | None:
         tokens = await device_token_crud.get_by_user_id(session, user_id)
@@ -93,8 +93,13 @@ class FCMService:
         if not token_values:
             return None
         
-        return await self.send_to_tokens(token_values, payload)
-
+        result = None
+        try:
+            result = await self.send_to_tokens(token_values, payload)
+        except Exception as e:
+            logger.error(f"Error sending push notification to user {user_id}: {e}")
+        
+        return result
 
     async def send_to_topic(self, payload: PushSendToTopicRequest) -> str:
         await self.initialize()
