@@ -15,6 +15,11 @@ from app.services.chat_service import chat_service
 from app.services import pdf_generator, fcm_service, manager_driver_feed
 from app.crud.driver_tracker import driver_tracker
 
+UPDATE_MESSAGE = {
+    'on_the_way': 'Водитель в пути',
+    'arrived': 'Водитель прибыл',
+    'started': 'Поездка начата',
+}
 
 class RideRouter(BaseRouter):
     def __init__(self) -> None:
@@ -69,13 +74,14 @@ class RideRouter(BaseRouter):
         ride = await self.model_crud.update(session, id, update_obj, user_id)
 
         driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
-        if driver_profile:
-            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_changed", "message": "Поездка отменена клиентом", "data": ride.model_dump(mode="json")})
+        if driver_profile and update_obj.status != 'canceled':
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_changed", "message": "Клиент обновил данные поездки", "data": ride.model_dump(mode="json")})
 
         if update_obj.status == 'canceled':
             await ride_drivers_request_crud.reject_by_ride_id(session, id)
             await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride.id, text="Поездка отменена клиентом", message_type="system")
-            await self.send_notifications(session, ride.client_id, "ride_canceled", "Поездка отменена клиентом", "Проверьте информацию о поездке", ride.model_dump(mode="json"), f"{ride.id}_{old_ride.status}_{ride.status}")
+            await manager_driver_feed.send_personal_message(getattr(driver_profile, 'user_id', None), {"type": "ride_canceled", "message": "Поездка отменена клиентом", "data": ride.model_dump(mode="json")})
+            await self.send_notifications(session, ride.client_id, "ride_canceled", "Поездка отменена", "Проверьте информацию о поездке", ride.model_dump(mode="json"), f"{ride.id}_{old_ride.status}_{ride.status}")
             await driver_tracker.release_ride(session, ride.driver_profile_id)
         return ride
 
@@ -103,7 +109,7 @@ class RideRouter(BaseRouter):
         if not old_ride:
             raise HTTPException(status_code=404, detail="Ride not found")
         ride = await self.model_crud.update(session, id, update_obj, user_id)
-        await self.send_notifications(session, ride.client_id, "ride_status_changed", f"Статус поездки изменен с \"{old_ride.status}\" на \"{ride.status}\"", "Проверьте информацию о поездке", ride.model_dump(mode="json"), f"{ride.id}_{old_ride.status}_{ride.status}")
+        await self.send_notifications(session, ride.client_id, "ride_status_changed", UPDATE_MESSAGE.get(ride.status, 'Поездка обновлена'), "Проверьте информацию о поездке", ride.model_dump(mode="json"), f"{ride.id}_{old_ride.status}_{ride.status}")
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_changed", "message": "Поездка изменена вами", "data": ride.model_dump(mode="json")})
 
         if update_obj.status == 'canceled':

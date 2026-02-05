@@ -1,5 +1,5 @@
 from typing import Literal
-from pydantic import Field
+from pydantic import Field, model_validator
 from datetime import datetime, timezone
 from .base import BaseSchema
 from .driver_rating import DriverRatingSchema
@@ -62,6 +62,11 @@ class RideSchemaUpdateByClient(BaseSchema):
     comment: str | None = Field(None, max_length=500)
     canceled_at: datetime | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+    @model_validator(mode="after")
+    def set_canceled_at(self):
+        if self.status == "canceled" and self.canceled_at is None:
+            self.canceled_at = datetime.now(timezone.utc)
+        return self
 
 
 class RideschemaUpdateAfterCommission(BaseSchema):
@@ -73,7 +78,18 @@ class RideSchemaUpdateByDriver(BaseSchema):
     status: Literal["on_the_way", "arrived", "started", "canceled"] | None = Field(None, max_length=50)
     status_reason: str | None = Field(None, max_length=255)
     started_at: datetime | None = Field(None)
+    canceled_at: datetime | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+    @model_validator(mode="after")
+    def set_started_at_when_started(self):
+        if self.status == "started" and self.started_at is None:
+            self.started_at = datetime.now(timezone.utc)
+        return self
+    @model_validator(mode="after")
+    def set_canceled_at(self):
+        if self.status == "canceled" and self.canceled_at is None:
+            self.canceled_at = datetime.now(timezone.utc)
+        return self
 
 
 class RideSchemaAcceptByDriver(BaseSchema):
@@ -90,7 +106,11 @@ class RideSchemaFinishByDriver(BaseSchema):
     completed_at: datetime | None = Field(None)
     actual_fare: float = Field(0, ge=0)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
-
+    @model_validator(mode="after")
+    def set_completed_at(self):
+        if self.status == "completed" and self.completed_at is None:
+            self.completed_at = datetime.now(timezone.utc)
+        return self
 
 class RideSchemaFinishWithAnomaly(RideSchemaFinishByDriver):
     is_anomaly: bool | None = Field(False)

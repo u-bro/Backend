@@ -64,7 +64,7 @@ class WebhookDispatcher:
                 await in_app_notification_crud.create(session, InAppNotificationCreate(
                     user_id=commission_payment.user_id,
                     type='ride_status_changed',
-                    title=f"Статус поездки изменился с \"{ride.status}\" на \"{updated_ride.status}\"",
+                    title=f"Комиссия оплачена",
                     message="Проверьте информацию о поездке",
                     data=updated_ride.model_dump(mode='json'),
                     dedup_key=None
