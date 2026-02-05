@@ -89,7 +89,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         user_id = int(context["user_id"])
         old_state = driver_state_storage.get_driver_by_user(user_id)
         if old_state.status != DriverStatus.ONLINE and old_state.status != DriverStatus.OFFLINE and old_state.status != DriverStatus.WAITING_RIDE:
-            await manager_driver_feed.send_personal_message(old_state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
+            await manager_driver_feed.send_personal_message(old_state.user_id, {"type": "error", "message": "Водитель занят, статус не может быть изменен"})
             return None
 
         if old_state.status == DriverStatus.WAITING_RIDE:
@@ -104,7 +104,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         user_id = int(context["user_id"])
         old_state = driver_state_storage.get_driver_by_user(user_id)
         if old_state.status != DriverStatus.ONLINE and old_state.status != DriverStatus.OFFLINE and old_state.status != DriverStatus.WAITING_RIDE:
-            await manager_driver_feed.send_personal_message(old_state.user_id, {"type": "error", "message": "Driver is busy, so status can't be changed"})
+            await manager_driver_feed.send_personal_message(old_state.user_id, {"type": "error", "message": "Водитель занят, статус не может быть изменен"})
             return None
 
         if old_state.status == DriverStatus.WAITING_RIDE:
