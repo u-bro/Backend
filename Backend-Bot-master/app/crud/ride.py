@@ -11,6 +11,7 @@ from .ride_status_history import ride_status_history_crud
 from .driver_profile import driver_profile_crud
 from .driver_location import driver_location_crud
 from .in_app_notification import in_app_notification_crud
+from .driver_location_sender import driver_location_sender
 from .driver_tracker import driver_tracker, DriverStatus
 from app.models import Ride, TariffPlan, Commission, RideDriversRequest, ChatMessage
 from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating
@@ -142,6 +143,12 @@ class CrudRide(CrudBase):
 
         if not data:
             return await self.get_by_id(session, id)
+        
+        if update_obj.status == 'on_the_way':
+            await driver_location_sender.start_location_task(existing.client_id, existing.driver_profile_id)
+
+        if update_obj.status == 'started' or update_obj.status == 'canceled':
+            await driver_location_sender.stop_location_task(existing.client_id)
 
         if update_obj.status and existing.status != update_obj.status:
             if not self._is_status_transition_allowed(existing.status, update_obj.status):
@@ -201,12 +208,16 @@ class CrudRide(CrudBase):
             return
         ids = [ride.id for ride in existing_rides]
         driver_profile_ids = [ride.driver_profile_id for ride in existing_rides]
+        client_ids = [ride.client_id for ride in existing_rides]
 
         update_stmt_rides = update(self.model).where(self.model.id.in_(ids)).values(status="canceled")
         await session.execute(update_stmt_rides)
 
         for id in driver_profile_ids:
             await driver_tracker.release_ride(session, id)
+        
+        for id in client_ids:
+            await driver_location_sender.stop_location_task(id)
         
         requests = await session.execute(update(RideDriversRequest).where(RideDriversRequest.ride_id.in_(ids)).values(status="rejected").returning(RideDriversRequest))
         for request in requests.scalars().all():
