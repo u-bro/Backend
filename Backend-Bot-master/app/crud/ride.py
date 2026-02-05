@@ -145,10 +145,10 @@ class CrudRide(CrudBase):
             return await self.get_by_id(session, id)
         
         if update_obj.status == 'on_the_way':
-            await driver_location_sender.start_location_task(existing.client_id, existing.driver_profile_id)
+            await driver_location_sender.start_task(existing.client_id, existing.driver_profile_id)
 
         if update_obj.status == 'started' or update_obj.status == 'canceled':
-            await driver_location_sender.stop_location_task(existing.client_id)
+            await driver_location_sender.stop_task(existing.client_id)
 
         if update_obj.status and existing.status != update_obj.status:
             if not self._is_status_transition_allowed(existing.status, update_obj.status):
@@ -217,7 +217,7 @@ class CrudRide(CrudBase):
             await driver_tracker.release_ride(session, id)
         
         for id in client_ids:
-            await driver_location_sender.stop_location_task(id)
+            await driver_location_sender.stop_task(id)
         
         requests = await session.execute(update(RideDriversRequest).where(RideDriversRequest.ride_id.in_(ids)).values(status="rejected").returning(RideDriversRequest))
         for request in requests.scalars().all():

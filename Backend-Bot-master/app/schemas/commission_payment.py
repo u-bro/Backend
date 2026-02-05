@@ -30,7 +30,6 @@ class CommissionPaymentSchema(BaseSchema):
 
     paid_at: datetime | None = None
     payment_id: str | None = None
-    transaction_id: str | None = None
 
     is_refund: bool
 

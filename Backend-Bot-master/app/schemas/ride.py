@@ -29,6 +29,7 @@ class RideSchemaCreate(RideSchemaIn):
     client_id: int = Field(..., gt=0)
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+
 class RideSchema(RideSchemaCreate):
     id: int = Field(..., gt=0)
     status: Literal["requested", "canceled", "waiting_commission", "accepted", "on_the_way", "arrived", "started", "completed"] = Field("requested", max_length=50)
@@ -46,7 +47,21 @@ class RideSchema(RideSchemaCreate):
     anomaly_reason: str | None = Field(None, max_length=255)
 
 
-class RideSchemaUpdateByClient(BaseSchema):
+class RideSchemaWithCanceledValidator(BaseSchema):
+    @model_validator(mode="after")
+    def check_canceled_at(self):
+        if self.status != "canceled" and self.canceled_at is not None:
+            raise ValueError('canceled_at should be None if status is not \"canceled\"')
+        return self
+
+    @model_validator(mode="after")
+    def set_canceled_at(self):
+        if self.status == "canceled" and self.canceled_at is None:
+            self.canceled_at = datetime.now(timezone.utc)
+        return self
+
+
+class RideSchemaUpdateByClient(RideSchemaWithCanceledValidator):
     status: Literal["canceled"] | None = Field(None, max_length=50)
     status_reason: str | None = Field(None, max_length=255)
     pickup_address: str | None = Field(None, max_length=500)
@@ -62,11 +77,6 @@ class RideSchemaUpdateByClient(BaseSchema):
     comment: str | None = Field(None, max_length=500)
     canceled_at: datetime | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
-    @model_validator(mode="after")
-    def set_canceled_at(self):
-        if self.status == "canceled" and self.canceled_at is None:
-            self.canceled_at = datetime.now(timezone.utc)
-        return self
 
 
 class RideschemaUpdateAfterCommission(BaseSchema):
@@ -74,21 +84,23 @@ class RideschemaUpdateAfterCommission(BaseSchema):
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-class RideSchemaUpdateByDriver(BaseSchema):
+class RideSchemaUpdateByDriver(RideSchemaWithCanceledValidator):
     status: Literal["on_the_way", "arrived", "started", "canceled"] | None = Field(None, max_length=50)
     status_reason: str | None = Field(None, max_length=255)
     started_at: datetime | None = Field(None)
     canceled_at: datetime | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @model_validator(mode="after")
+    def check_started_at(self):
+        if self.status != "started" and self.started_at is not None:
+            raise ValueError('started_at should be None if status is not \"started\"')
+        return self
+
     @model_validator(mode="after")
     def set_started_at_when_started(self):
         if self.status == "started" and self.started_at is None:
             self.started_at = datetime.now(timezone.utc)
-        return self
-    @model_validator(mode="after")
-    def set_canceled_at(self):
-        if self.status == "canceled" and self.canceled_at is None:
-            self.canceled_at = datetime.now(timezone.utc)
         return self
 
 
@@ -97,25 +109,21 @@ class RideSchemaAcceptByDriver(BaseSchema):
     driver_profile_id: int | None = Field(None, gt=0)
     status_reason: str | None = Field(None, max_length=255)
     eta: str | None = Field(None, max_length=50)
-    started_at: datetime | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaFinishByDriver(BaseSchema):
     status: Literal["completed"] = Field("completed", max_length=50)
-    completed_at: datetime | None = Field(None)
+    completed_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     actual_fare: float = Field(0, ge=0)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
-    @model_validator(mode="after")
-    def set_completed_at(self):
-        if self.status == "completed" and self.completed_at is None:
-            self.completed_at = datetime.now(timezone.utc)
-        return self
+
 
 class RideSchemaFinishWithAnomaly(RideSchemaFinishByDriver):
     is_anomaly: bool | None = Field(False)
     anomaly_reason: str | None = Field(None, max_length=255)
     ride_metadata: dict | None = Field(None)
+
 
 class RideSchemaHistory(BaseSchema):
     id: int = Field(..., gt=0)

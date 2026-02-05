@@ -1,8 +1,8 @@
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-
 from app.config import DATABASE_URL
+
 
 metadata = MetaData()
 Base = declarative_base(metadata=metadata)

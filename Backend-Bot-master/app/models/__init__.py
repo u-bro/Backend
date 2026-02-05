@@ -1,5 +1,4 @@
 from .user import User
-from .transaction import Transaction
 
 from .role import Role
 from .driver_profile import DriverProfile

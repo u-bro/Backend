@@ -22,7 +22,7 @@ class NotificationWebsocketRouter(BaseWebsocketRouter):
         if manager_notifications.is_connected(user_id):
             return
 
-        await driver_location_sender.stop_location_task(user_id)
+        await driver_location_sender.stop_task(user_id)
 
     async def websocket_endpoint(self, websocket: WebSocket, user_id: int = Depends(get_current_user_id_ws)) -> None:
         async with async_session_maker() as session:
@@ -39,7 +39,7 @@ class NotificationWebsocketRouter(BaseWebsocketRouter):
             await websocket.send_json({"type": "active_ride", "data": ride.model_dump(mode="json")})
 
         if driver_profile and ride.status in ("on_the_way", "arrived"):
-            await driver_location_sender.start_location_task(user_id, driver_profile.id)
+            await driver_location_sender.start_task(user_id, driver_profile.id)
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:
         user_id = context["user_id"]
