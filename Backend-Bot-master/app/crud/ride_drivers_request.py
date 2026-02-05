@@ -74,6 +74,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         
         result_validated = self.schema.model_validate(result)
         await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.WAITING_RIDE)
+        await session.commit()
 
         await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_offer", title="New ride offer", message="New ride offer from driver", data={"offer_id": result.id, "ride_id": result.ride_id, "driver_profile_id": result.driver_profile_id}, dedup_key=str(result.id)))
         await fcm_service.send_to_user(session, ride.client_id, PushNotificationData(title="New ride offer", body="New ride offer from driver"))
