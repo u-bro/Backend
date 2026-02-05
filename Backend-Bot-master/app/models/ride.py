@@ -32,7 +32,6 @@ class Ride(Base):
     distance_str: Mapped[str | None] = mapped_column(String(50), nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_str: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    transaction_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('transactions.id'), nullable=True)
     commission_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('commissions.id'), nullable=True)
     is_anomaly: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     anomaly_reason: Mapped[str | None] = mapped_column(Text, nullable=True)

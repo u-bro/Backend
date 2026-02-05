@@ -22,5 +22,4 @@ class User(Base):
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=False)
 
     role = relationship("Role")
-    transactions = relationship("Transaction", back_populates="user")
     driver_profile = relationship("DriverProfile", back_populates="user", uselist=False, foreign_keys="DriverProfile.user_id")

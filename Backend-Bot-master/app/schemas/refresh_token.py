@@ -14,5 +14,6 @@ class RefreshTokenCreate(RefreshTokenIn):
     revoked_at: datetime | None = Field(default=None)
     created_at: datetime = Field(...)
 
+
 class RefreshTokenSchema(RefreshTokenCreate):
     id: int = Field(...)

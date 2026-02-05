@@ -30,7 +30,6 @@ class CommissionPayment(Base):
 
     paid_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     payment_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    transaction_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     is_refund: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

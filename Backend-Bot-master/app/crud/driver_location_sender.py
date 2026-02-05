@@ -11,24 +11,24 @@ logger = logging.getLogger(__name__)
 
 class DriverLocationSender:
     def __init__(self):
-        self._location_tasks: Dict[int, Task[None]] = {}
+        self._tasks: Dict[int, Task[None]] = {}
 
-    async def start_location_task(self, user_id: int, driver_profile_id: int) -> None:
-        existing = self._location_tasks.get(user_id)
+    async def start_task(self, user_id: int, driver_profile_id: int) -> None:
+        existing = self._tasks.get(user_id)
         if existing is not None and not existing.done():
             existing.cancel()
 
-        self._location_tasks[user_id] = asyncio.create_task(self._location_loop(user_id=user_id, driver_profile_id=driver_profile_id))
+        self._tasks[user_id] = asyncio.create_task(self._loop(user_id=user_id, driver_profile_id=driver_profile_id))
 
-    async def stop_location_task(self, user_id: int) -> None:
-        task = self._location_tasks.pop(user_id, None)
+    async def stop_task(self, user_id: int) -> None:
+        task = self._tasks.pop(user_id, None)
         if task is None:
             return
 
         if not task.done():
             task.cancel()
 
-    async def _location_loop(self, user_id: int, driver_profile_id: int) -> None:
+    async def _loop(self, user_id: int, driver_profile_id: int) -> None:
         try:
             while manager_notifications.is_connected(user_id):
                 async with async_session_maker() as session:
