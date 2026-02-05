@@ -19,19 +19,18 @@ class DocumentRouter(BaseRouter):
     async def get_by_key(self, request: Request, key: str, download: bool = False, user: User = Depends(require_role(["user", "driver", "admin"]))) -> Response:
         filename = key.split("/")[-1] or "document.pdf"
         path_parts = key.split("/")
-        if len(path_parts) < 3:
-            raise HTTPException(status_code=404, detail="Document not found")
-        ride_id = int(path_parts[2])
-        ride = await ride_crud.get_by_id(request.state.session, ride_id)
-        if not ride:
-            raise HTTPException(status_code=404, detail="Ride not found")
+        if len(path_parts) >= 3:
+            ride_id = int(path_parts[2])
+            ride = await ride_crud.get_by_id(request.state.session, ride_id)
+            if not ride:
+                raise HTTPException(status_code=404, detail="Ride not found")
 
-        driver_profile = await driver_profile_crud.get_by_id(request.state.session, ride.driver_profile_id)
-        if not driver_profile:
-            raise HTTPException(status_code=404, detail="Driver_profile not found")
-        
-        if ride.client_id != user.id and driver_profile.user_id != user.id:
-            raise HTTPException(status_code=403, detail="Forbidden")
+            driver_profile = await driver_profile_crud.get_by_id(request.state.session, ride.driver_profile_id)
+            if not driver_profile:
+                raise HTTPException(status_code=404, detail="Driver_profile not found")
+            
+            if ride.client_id != user.id and driver_profile.user_id != user.id:
+                raise HTTPException(status_code=403, detail="Forbidden")
         
         pdf_bytes = await self.model_crud.get_by_key(key)
         disposition = "attachment" if download else "inline"
