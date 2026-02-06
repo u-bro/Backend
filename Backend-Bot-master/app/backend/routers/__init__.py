@@ -22,3 +22,4 @@ from .ride_status_history import ride_status_history_router
 from .role import role_router
 from .tariff_plan import tariff_plan_router
 from .tochka_webhook import tochka_webhook_router
+from .car_photo import car_photo_router

@@ -48,6 +48,7 @@ app.include_router(commission_payment_router, tags=['CommissionPayments'], prefi
 app.include_router(tochka_webhook_router, tags=['Tochka(Webhooks)'], prefix=API_PREFIX)
 app.include_router(ride_drivers_request_router, tags=['RideDriversRequests'], prefix=API_PREFIX)
 app.include_router(car_router, tags=['Cars'], prefix=API_PREFIX)
+app.include_router(car_photo_router, tags=['CarPhotos'], prefix=API_PREFIX)
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request: Request, exc: ResponseValidationError):
