@@ -170,6 +170,58 @@ class PDFGenerator:
         """
         
         return await self._generate_pdf_from_html(html)
+
+    async def generate_commission_receipt(
+        self,
+        ride_id: int,
+        client_name: str,
+        amount: float,
+        purpose: str,
+        payment_mode: str = "Карта",
+        operation_id: Optional[str] = None,
+        created_at: Optional[datetime] = None,
+    ) -> bytes:
+
+        if created_at is None:
+            created_at = datetime.now(timezone.utc)
+
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset=\"UTF-8\">
+            <title>Квитанция комиссии #{ride_id}</title>
+        </head>
+        <body>
+            <div class=\"header\">
+                <div class=\"logo\">U-BRO TAXI</div>
+                <p>Квитанция об оплате комиссии</p>
+            </div>
+
+            <h1>Комиссия за поездку #{ride_id}</h1>
+
+            <div class=\"receipt-info\">
+                <p><strong>Дата:</strong> {created_at.strftime('%d.%m.%Y %H:%M')}</p>
+                <p><strong>Клиент:</strong> {client_name}</p>
+                <p><strong>Назначение:</strong> {purpose}</p>
+                {f'<p><strong>Operation ID:</strong> {operation_id}</p>' if operation_id else ''}
+                <p><strong>Способ оплаты:</strong> {payment_mode}</p>
+            </div>
+
+            <div class=\"receipt-info\">
+                <p><strong>Сумма комиссии:</strong></p>
+                <p class=\"amount\">{amount:.2f} ₽</p>
+            </div>
+
+            <div class=\"footer\">
+                <p>Спасибо за использование U-BRO TAXI!</p>
+                <p>Служба поддержки: support@u-bro.ru</p>
+            </div>
+        </body>
+        </html>
+        """
+
+        return await self._generate_pdf_from_html(html)
     
     async def _generate_pdf_from_html(self, html: str) -> bytes:
         
