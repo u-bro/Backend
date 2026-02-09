@@ -19,6 +19,7 @@ UPDATE_MESSAGE = {
     'on_the_way': 'Водитель в пути',
     'arrived': 'Водитель прибыл',
     'started': 'Поездка начата',
+    'canceled': 'Поездка отменена'
 }
 
 class RideRouter(BaseRouter):

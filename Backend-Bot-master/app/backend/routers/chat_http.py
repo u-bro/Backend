@@ -53,7 +53,7 @@ class ChatHttpRouter(BaseRouter):
             raise HTTPException(status_code=429, detail=error)
 
         message = await chat_service.save_message(session, ChatMessage(ride_id=ride_id, sender_id=sender_id, text=body.text, message_type=body.message_type, attachments=body.attachments, is_moderated=True, created_at=datetime.now(timezone.utc)))
-        await manager.send_to_ride(ride_id, {"type": "new_message", "message": {"id": message.id, "ride_id": ride_id, "sender_id": sender_id, "text": message.text, "message_type": message.message_type, "is_moderated": message.is_moderated, "is_read": message.is_read, "created_at": message.created_at.isoformat() if message.created_at else None}})
+        await manager.send_to_ride(session, ride_id, {"type": "new_message", "message": {"id": message.id, "ride_id": ride_id, "sender_id": sender_id, "text": message.text, "message_type": message.message_type, "is_moderated": message.is_moderated, "is_read": message.is_read, "created_at": message.created_at.isoformat() if message.created_at else None}})
         return message
 
     async def delete_message(self, request: Request, ride_id: int, message_id: int, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
@@ -61,7 +61,7 @@ class ChatHttpRouter(BaseRouter):
         await self._check_permission(session, ride_id, user_id)
         is_deleted = await chat_service.soft_delete_message(session=session, message_id=message_id, user_id=user_id)
         if is_deleted:
-            await manager.send_to_ride(ride_id, {"type": "message_deleted", "message_id": message_id, "deleted_by": user_id})
+            await manager.send_to_ride(session, ride_id, {"type": "message_deleted", "message_id": message_id, "deleted_by": user_id})
         return {"is_deleted": is_deleted, "message_id": message_id}
 
     async def edit_message(self, request: Request, ride_id: int, message_id: int, body: SendMessageRequest, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
@@ -71,7 +71,7 @@ class ChatHttpRouter(BaseRouter):
         if not message:
             raise HTTPException(status_code=404, detail="Message not found or you don't have permission")
 
-        await manager.send_to_ride(ride_id, {"type": "message_edited", "message": {"id": message.id, "text": message.text, "edited_at": message.edited_at.isoformat() if message.edited_at else None}})
+        await manager.send_to_ride(session, ride_id, {"type": "message_edited", "message": {"id": message.id, "text": message.text, "edited_at": message.edited_at.isoformat() if message.edited_at else None}})
         return {"status": "edited", "message": {"id": message.id, "text": message.text, "edited_at": message.edited_at}}
 
     async def mark_message_read(self, request: Request, ride_id: int, message_id: int, user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
@@ -81,14 +81,14 @@ class ChatHttpRouter(BaseRouter):
         if not updated:
             raise HTTPException(status_code=404, detail="Message not found")
 
-        await manager.send_to_ride(ride_id, {"type": "message_read", "ride_id": ride_id, "message_id": updated.id, "read_by": user_id, "is_read": True}, exclude_user_id=user_id)
+        await manager.send_to_ride(session, ride_id, {"type": "message_read", "ride_id": ride_id, "message_id": updated.id, "read_by": user_id, "is_read": True}, exclude_user_id=user_id)
         return {"status": "ok", "message_id": updated.id, "is_read": True}
 
     async def mark_ride_messages_read(self, request: Request, ride_id: int, up_to_id: Optional[int] = Query(None, description="mark messages with id <= up_to_id as read"), user_id: int = Depends(get_current_user_id)) -> Dict[str, Any]:
         session = request.state.session
         await self._check_permission(session, ride_id, user_id)
         updated_count = await chat_service.mark_ride_messages_read(session=session, ride_id=ride_id, user_id=user_id, up_to_id=up_to_id)
-        await manager.send_to_ride(ride_id, {"type": "ride_messages_read", "ride_id": ride_id, "read_by": user_id, "up_to_id": up_to_id, "updated": updated_count}, exclude_user_id=user_id)
+        await manager.send_to_ride(session, ride_id, {"type": "ride_messages_read", "ride_id": ride_id, "read_by": user_id, "up_to_id": up_to_id, "updated": updated_count}, exclude_user_id=user_id)
         return {"status": "ok", "ride_id": ride_id, "up_to_id": up_to_id, "updated": updated_count}
 
     async def get_chat_stats(self) -> Dict[str, Any]:

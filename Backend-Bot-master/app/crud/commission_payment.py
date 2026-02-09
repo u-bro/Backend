@@ -5,9 +5,13 @@ from app.crud.base import CrudBase
 from app.models.commission_payment import CommissionPayment
 from app.schemas.commission_payment import CommissionPaymentSchema
 from app.schemas.ride import RideSchemaUpdateByClient
+from app.schemas.in_app_notification import InAppNotificationCreate
+from app.schemas.push import PushNotificationData
 from app.config import COMMISSION_PAY_SECONDS_LIMIT
 from .ride import ride_crud
-from app.services import chat_service, manager_driver_feed
+from app.services import manager_driver_feed
+from app.services.chat_service import chat_service
+from app.services.fcm_service import fcm_service
 from .driver_tracker import driver_tracker
 from app.db import async_session_maker
 from .driver_profile import driver_profile_crud
@@ -72,6 +76,7 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
                 await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride_id, text="Commission payment timeout", message_type="system")
                 await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_canceled", "message": "Клиент не оплатил комиссию вовремя"})
                 await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за истечения срока оплаты комиссии", data=updated_ride, dedup_key=f"{updated_ride.id}_canceled"))
+                await fcm_service.send_to_user(session, user_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за истечения срока оплаты комиссии'))
                 await driver_tracker.release_ride(session, updated_ride.driver_profile_id)
             await session.commit()
 

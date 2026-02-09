@@ -76,7 +76,7 @@ class ChatService:
             "is_moderated": is_moderated,
             "created_at": datetime.now(timezone.utc),
         }
-        await manager.send_to_ride(ride_id, message)
+        await manager.send_to_ride(session, ride_id, message)
         return await self.save_message(session, ChatMessage(**message))
     
     async def get_my_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10) -> List[ChatMessageHistory]:
@@ -211,8 +211,6 @@ class ChatService:
             },
             "max_message_length": self.max_message_length,
             "moderation": {
-                "custom_words_count": len(BANNED_WORDS),
-                "leet_replacements_count": len(LEET_REPLACEMENTS),
                 "uses_better_profanity": True,
             }
         }
