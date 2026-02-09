@@ -2,6 +2,10 @@ from typing import Dict, List, Optional, Any
 from fastapi import WebSocket, WebSocketDisconnect
 import logging
 from datetime import datetime, timezone
+from app.crud import user_crud
+from sqlalchemy.ext.asyncio import AsyncSession
+from .fcm_service import fcm_service
+from app.schemas.push import PushNotificationData
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +95,7 @@ class ConnectionManager:
                 del self.ride_participants[ride_id]
         logger.info(f"User {user_id} left ride {ride_id}")
     
-    async def send_to_ride(self, ride_id: int, message: dict, exclude_user_id: Optional[int] = None) -> None:
+    async def send_to_ride(self, session: AsyncSession, ride_id: int, message: dict, exclude_user_id: Optional[int] = None) -> None:
         if ride_id not in self.ride_participants:
             logger.warning(f"No participants in ride {ride_id}")
             return
@@ -100,6 +104,11 @@ class ConnectionManager:
             if exclude_user_id and user_id == exclude_user_id:
                 continue
             await self.send_personal_message(user_id, message)
+            sender_id = message.get('sender_id', 0)
+            if message.get('type', '') == 'new_message' and sender_id != user_id:
+                sender = await user_crud.get_by_id(session, sender_id)
+                sender_fullname = " ".join([word for word in [sender.last_name, sender.first_name] if word])
+                await fcm_service.send_to_user(session, user_id, PushNotificationData(title=sender_fullname, body=message.get('message', {}).get('text', 'TEXT')))
 
     def get_online_users(self) -> List[int]:
         return list(self.active_connections.keys())
