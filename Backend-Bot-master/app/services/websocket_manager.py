@@ -104,7 +104,7 @@ class ConnectionManager:
             if exclude_user_id and user_id == exclude_user_id:
                 continue
             await self.send_personal_message(user_id, message)
-            sender_id = message.get('sender_id', 0)
+            sender_id = message.get('message', {}).get('sender_id', 0)
             if message.get('type', '') == 'new_message' and sender_id != user_id:
                 sender = await user_crud.get_by_id(session, sender_id)
                 sender_fullname = " ".join([word for word in [sender.last_name, sender.first_name] if word])
