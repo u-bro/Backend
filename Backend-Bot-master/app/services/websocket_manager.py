@@ -99,7 +99,7 @@ class ConnectionManager:
         if ride_id not in self.ride_participants:
             logger.warning(f"No participants in ride {ride_id}")
             return
-        
+
         for user_id in self.ride_participants[ride_id]:
             if exclude_user_id and user_id == exclude_user_id:
                 continue

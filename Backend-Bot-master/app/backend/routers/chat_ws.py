@@ -6,6 +6,7 @@ from app.backend.routers.websocket_base import BaseWebsocketRouter
 from app.db import async_session_maker
 from app.logger import logger
 from app.services.chat_service import MessageType, chat_service
+from app.crud import ride_crud, driver_profile_crud
 from app.services.websocket_manager import manager
 from app.backend.deps import get_current_user_id_ws
 from starlette.status import WS_1008_POLICY_VIOLATION
@@ -42,7 +43,10 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
             raise WebSocketException(code=WS_1008_POLICY_VIOLATION, reason=f"Not a participant of ride {ride_id}")
 
         await manager.connect(websocket, user_id)
-        manager.join_ride(ride_id, user_id)
+        ride = await ride_crud.get_by_id(session, ride_id)
+        driver_profile = await driver_profile_crud.get_by_id(session, getattr(ride, 'driver_profile_id', 0))
+        manager.join_ride(ride_id, getattr(ride, 'client_id', 0))
+        manager.join_ride(ride_id, getattr(driver_profile, 'user_id', 0))
 
         await manager.send_to_ride(session, ride_id, {"type": "user_joined", "ride_id": ride_id, "user_id": user_id, "timestamp": datetime.now(timezone.utc).isoformat()}, exclude_user_id=user_id)
         await websocket.send_json({"type": "connected", "ride_id": ride_id, "user_id": user_id, "message": "Connected to chat"})
