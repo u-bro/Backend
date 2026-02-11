@@ -13,7 +13,7 @@ class DocumentRouter(BaseRouter):
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.get_by_key, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{key:path}}/url", self.get_public_url, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.upload, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["admin"]))])
+        self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.upload, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.delete_by_key, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
 
     async def get_by_key(self, request: Request, key: str, download: bool = False, user: User = Depends(require_role(["user", "driver", "admin"]))) -> Response:
