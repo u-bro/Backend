@@ -1,6 +1,6 @@
 from fastapi import Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import Response
-from app.backend.deps import require_role
+from app.backend.deps import require_role, get_current_user_id
 from app.backend.routers.base import BaseRouter
 from app.models import User
 from app.crud import document_crud, ride_crud, driver_profile_crud
@@ -13,7 +13,8 @@ class DocumentRouter(BaseRouter):
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.get_by_key, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{key:path}}/url", self.get_public_url, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.upload, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["admin"]))])
+        self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.upload, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
+        self.router.add_api_route(f"{self.prefix}/avatar", self.upload_avatar, methods=["POST"], status_code=201)
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.delete_by_key, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
 
     async def get_by_key(self, request: Request, key: str, download: bool = False, user: User = Depends(require_role(["user", "driver", "admin"]))) -> Response:
@@ -45,6 +46,12 @@ class DocumentRouter(BaseRouter):
 
     async def upload(self, request: Request, key: str, file: UploadFile = File(...)) -> dict:
         pdf_bytes = await file.read()
+        await self.model_crud.upload_pdf_bytes(key, pdf_bytes)
+        return {"key": key, "url": self.model_crud.public_url(key)}
+
+    async def upload_avatar(self, request: Request, file: UploadFile = File(...), user_id = Depends(get_current_user_id)) -> dict:
+        pdf_bytes = await file.read()
+        key = f"user/{user_id}/avatar"
         await self.model_crud.upload_pdf_bytes(key, pdf_bytes)
         return {"key": key, "url": self.model_crud.public_url(key)}
 
