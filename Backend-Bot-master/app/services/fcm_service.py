@@ -36,6 +36,18 @@ class FCMService:
                 normalized[k] = str(v)
         return normalized
 
+    def _build_data_payload(self, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> Dict[str, str]:
+        base: Dict[str, Any] = dict(payload.data or {})
+        if payload.title is not None:
+            base["title"] = payload.title
+        if payload.body is not None:
+            base["body"] = payload.body
+        if payload.image is not None:
+            base["image"] = payload.image
+        if payload.data is not None:
+            base["data"] = payload.data
+        return self._normalize_data(base)
+
     async def initialize(self) -> None:
         if self._initialized:
             return
@@ -62,10 +74,7 @@ class FCMService:
 
         message = messaging.Message(
             token=payload.token,
-            notification=messaging.Notification(title=payload.title, body=payload.body, image=payload.image)
-            if (payload.title is not None or payload.body is not None or payload.image is not None)
-            else None,
-            data=self._normalize_data(payload.data),
+            data=self._build_data_payload(payload),
         )
 
         return await asyncio.to_thread(messaging.send, message)
@@ -79,10 +88,7 @@ class FCMService:
 
         message = messaging.MulticastMessage(
             tokens=tokens_list,
-            notification=messaging.Notification(title=payload.title, body=payload.body, image=payload.image)
-            if (payload.title is not None or payload.body is not None or payload.image is not None)
-            else None,
-            data=self._normalize_data(payload.data),
+            data=self._build_data_payload(payload),
         )
 
         return await asyncio.to_thread(messaging.send_each_for_multicast, message, dry_run)
@@ -106,10 +112,7 @@ class FCMService:
 
         message = messaging.Message(
             topic=payload.topic,
-            notification=messaging.Notification(title=payload.title, body=payload.body, image=payload.image)
-            if (payload.title is not None or payload.body is not None or payload.image is not None)
-            else None,
-            data=self._normalize_data(payload.data),
+            data=self._build_data_payload(payload),
         )
 
         return await asyncio.to_thread(messaging.send, message)
