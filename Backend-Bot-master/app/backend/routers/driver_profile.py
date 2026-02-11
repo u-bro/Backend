@@ -11,6 +11,7 @@ class DriverProfileRouter(BaseRouter):
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/me", self.get_me, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
+        self.router.add_api_route(f"{self.prefix}/user/{{id}}", self.get_by_user_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/me", self.update_me, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["admin"]))])
@@ -24,6 +25,9 @@ class DriverProfileRouter(BaseRouter):
 
     async def get_by_id(self, request: Request, id: int) -> DriverProfileWithCars:
         return await self.model_crud.get_by_id_with_cars(request.state.session, id)
+
+    async def get_by_user_id(self, request: Request, id: int) -> DriverProfileWithCars:
+        return await self.model_crud.get_by_user_id_with_cars(request.state.session, id)
 
     async def create(self, request: Request, body: DriverProfileCreate) -> DriverProfileSchema:
         return await self.model_crud.create(request.state.session, body)
