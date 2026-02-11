@@ -37,6 +37,11 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         item = result.scalar_one_or_none()
         return DriverProfileWithCars.model_validate(item) if item else None
 
+    async def get_by_user_id_with_cars(self, session: AsyncSession, user_id: int):
+        result = await session.execute(select(self.model).options(selectinload(self.model.cars)).where(self.model.user_id == user_id))
+        item = result.scalar_one_or_none()
+        return DriverProfileWithCars.model_validate(item) if item else None
+
     async def ride_count_increment(self, session: AsyncSession, id: int):
         stmt = update(self.model).where(self.model.id == id).values(ride_count=self.model.ride_count + 1).returning(self.model)
         result = await self.execute_get_one(session, stmt)
