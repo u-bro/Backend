@@ -1,3 +1,4 @@
+from fastapi import HTTPException
 from app.crud.base import CrudBase
 from app.models.refresh_token import RefreshToken
 from app.schemas.refresh_token import RefreshTokenSchema, RefreshTokenIn, RefreshTokenCreate
@@ -35,11 +36,18 @@ class RefreshTokenCrud(CrudBase[RefreshToken, RefreshTokenSchema]):
         return result
 
     async def get_by_token(self, session: AsyncSession, token: str) -> RefreshTokenSchema | None:
-        result = await session.execute(select(self.model).where(self.model.token == token))
+        token_hash = self.hash_token(token)
+        result = await session.execute(select(self.model).where(self.model.token == token_hash))
         token = result.scalar_one_or_none()
         return self.schema.model_validate(token) if token else None
 
-    async def revoke(self, session: AsyncSession, token: str) -> None:
-        await session.execute(update(self.model).where(self.model.token == token).values(revoked_at=datetime.now(timezone.utc)))
+    async def revoke(self, session: AsyncSession, token: str) -> RefreshTokenSchema:
+        existing = await self.get_by_token(session, token)
+        if not existing or existing.revoked_at:
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+
+        result = await session.execute(update(self.model).where(self.model.token == existing.token).values(revoked_at=datetime.now(timezone.utc)).returning(self.model))
+        return self.schema.model_validate(result.scalar_one())
+
 
 refresh_token_crud = RefreshTokenCrud()
