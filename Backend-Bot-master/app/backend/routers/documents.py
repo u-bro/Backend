@@ -52,18 +52,20 @@ class DocumentRouter(BaseRouter):
         )
 
     async def get_public_url(self, request: Request, key: str) -> dict:
-        return {"url": self.model_crud.public_url(key), "key": key}
+        return {"url": self.model_crud.presigned_get_url(key), "key": key}
 
     async def upload(self, request: Request, key: str, file: UploadFile = File(...)) -> dict:
         pdf_bytes = await file.read()
-        await self.model_crud.upload_pdf_bytes(key, pdf_bytes)
-        return {"key": key, "url": self.model_crud.public_url(key)}
+        content_type = file.content_type or "application/octet-stream"
+        await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type)
+        return {"key": key, "url": self.model_crud.presigned_get_url(key)}
 
     async def upload_avatar(self, request: Request, file: UploadFile = File(...), user_id = Depends(get_current_user_id)) -> dict:
         pdf_bytes = await file.read()
         key = f"user/{user_id}/avatar"
-        await self.model_crud.upload_pdf_bytes(key, pdf_bytes)
-        return {"key": key, "url": self.model_crud.public_url(key)}
+        content_type = file.content_type or "image/jpeg"
+        await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type)
+        return {"key": key, "url": self.model_crud.presigned_get_url(key)}
 
     async def delete_by_key(self, request: Request, key: str) -> dict:
         await self.model_crud.delete_by_key(key)
