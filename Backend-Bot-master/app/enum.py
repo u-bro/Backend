@@ -15,3 +15,8 @@ class MessageType:
     LOCATION = "location"
     SYSTEM = "system"  
     VOICE = "voice"
+
+
+class S3Bucket:
+    DOCUMENT = "document"
+    AVATAR = "document"
