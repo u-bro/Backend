@@ -4,6 +4,7 @@ from app.backend.routers.base import BaseRouter
 from app.crud.device_token import device_token_crud
 from app.schemas.push import PushSendToTokenRequest, PushSendToTopicRequest, PushSendToUserRequest
 from app.services.fcm_service import fcm_service
+from app.enum import RoleCode
 
 
 class PushAdminRouter(BaseRouter):
@@ -11,9 +12,9 @@ class PushAdminRouter(BaseRouter):
         super().__init__(device_token_crud, "/push")
 
     def setup_routes(self) -> None:
-        self.router.add_api_route(f"{self.prefix}/send/token", self.send_to_token, methods=["POST"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
-        self.router.add_api_route(f"{self.prefix}/send/topic", self.send_to_topic, methods=["POST"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
-        self.router.add_api_route(f"{self.prefix}/send/user", self.send_to_user, methods=["POST"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
+        self.router.add_api_route(f"{self.prefix}/send/token", self.send_to_token, methods=["POST"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/send/topic", self.send_to_topic, methods=["POST"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/send/user", self.send_to_user, methods=["POST"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
 
     async def send_to_token(self, request: Request, body: PushSendToTokenRequest) -> dict:
         message_id = await fcm_service.send_to_token(body)

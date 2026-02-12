@@ -1,11 +1,12 @@
 from pydantic import Field
 from . import BaseSchema
 from typing import Literal
+from app.enum import RoleCode
 
 
 class AuthSchemaRegister(BaseSchema):
     phone: str = Field(..., max_length=20)
-    role_code: Literal['driver', 'user'] = Field(...)
+    role_code: Literal[RoleCode.DRIVER, RoleCode.USER] = Field(...)
 
 
 class AuthSchemaLogin(BaseSchema):

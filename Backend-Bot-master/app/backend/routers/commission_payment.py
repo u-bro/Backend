@@ -9,6 +9,7 @@ from app.services.webhook_dispatcher import webhook_dispatcher
 from app.models import Ride, CommissionPayment
 from app.backend.routers.base import BaseRouter
 from app.services import pdf_generator
+from app.enum import RoleCode
 
 
 class CommissionPaymentRouter(BaseRouter):
@@ -19,7 +20,7 @@ class CommissionPaymentRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/{{id}}/payment-link", self.create_payment_link, methods=["POST"], status_code=201, dependencies=[Depends(require_owner(Ride, "client_id"))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_owner(CommissionPayment, "user_id"))])
 
-    async def create_payment_link(self, request: Request, id: int, body: CommissionPaymentCreateRequest, user=Depends(require_role(["user", "driver", "admin"])), generate_check: bool = False) -> CommissionPaymentSchema:
+    async def create_payment_link(self, request: Request, id: int, body: CommissionPaymentCreateRequest, user=Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN])), generate_check: bool = False) -> CommissionPaymentSchema:
         session = request.state.session
 
         ride = await ride_crud.get_by_id(session, id)

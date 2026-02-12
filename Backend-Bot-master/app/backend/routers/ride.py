@@ -14,6 +14,7 @@ from app.crud import document_crud, in_app_notification_crud, driver_profile_cru
 from app.services.chat_service import chat_service
 from app.services import pdf_generator, fcm_service, manager_driver_feed
 from app.crud.driver_tracker import driver_tracker
+from app.enum import RoleCode
 
 UPDATE_MESSAGE = {
     'on_the_way': 'Водитель в пути',
@@ -27,19 +28,19 @@ class RideRouter(BaseRouter):
         super().__init__(ride_crud, "/rides")
 
     def setup_routes(self) -> None:
-        self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}/me/client", self.get_my_as_client, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}/me/driver", self.get_my_as_driver, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
+        self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/me/client", self.get_my_as_client, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/me/driver", self.get_my_as_driver, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
         
-        self.router.add_api_route(f"{self.prefix}/{{id}}/client", self.update_by_client, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"])), Depends(require_owner(Ride, 'client_id'))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}/driver", self.update_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"])), Depends(require_driver_profile(Ride))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}/accept", self.accept_ride, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}/cancel-request", self.cancel_ride_request, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}/finish", self.finish_ride_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["driver", "admin"]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/client", self.update_by_client, methods=["PUT"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN])), Depends(require_owner(Ride, 'client_id'))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/driver", self.update_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN])), Depends(require_driver_profile(Ride))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/accept", self.accept_ride, methods=["PUT"], status_code=200, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/cancel-request", self.cancel_ride_request, methods=["PUT"], status_code=200, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/finish", self.finish_ride_by_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN]))])
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[RideSchema]:
         return await self.model_crud.get_paginated(request.state.session, page, page_size)

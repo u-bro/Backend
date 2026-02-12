@@ -20,3 +20,9 @@ class MessageType:
 class S3Bucket:
     DOCUMENT = "document"
     AVATAR = "document"
+
+
+class RoleCode:
+    USER = "user"
+    DRIVER = "driver"
+    ADMIN = "admin"

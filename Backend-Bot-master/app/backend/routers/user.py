@@ -4,6 +4,8 @@ from app.schemas.user import UserSchemaCreate, UserSchema, UserSchemaMe, UserSch
 from app.backend.routers.base import BaseRouter
 from app.backend.deps import require_role, get_current_user, get_current_user_id
 from app.models import User
+from app.enum import RoleCode
+
 
 class UserRouter(BaseRouter):
     def __init__(self, model_crud, prefix) -> None:
@@ -11,12 +13,12 @@ class UserRouter(BaseRouter):
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/me", self.get_me, methods=["GET"], status_code=200)
-        self.router.add_api_route(f"{self.prefix}/me", self.update_me, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200)
-        self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role("admin"))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200)
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role("admin"))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role("admin"))])
+        self.router.add_api_route(f"{self.prefix}/me", self.update_me, methods=["PUT"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role(RoleCode.ADMIN))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(RoleCode.ADMIN))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(RoleCode.ADMIN))])
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 2) -> list[UserSchema]:
         return await super().get_paginated(request, page, page_size)
@@ -38,8 +40,8 @@ class UserRouter(BaseRouter):
 
     async def get_me(self, request: Request, user: User = Depends(get_current_user)) ->  UserSchemaMe:
         role_name = user.role.code
-        role_name = "user" if role_name == "driver" and (not user.driver_profile or not user.driver_profile.approved) else role_name
-        if role_name == "driver":
+        role_name = RoleCode.USER if role_name == RoleCode.DRIVER and (not user.driver_profile or not user.driver_profile.approved) else role_name
+        if role_name == RoleCode.DRIVER:
             driver_location = await driver_location_crud.get_by_driver_profile_id(request.state.session, user.driver_profile.id)
             if not driver_location:
                 raise HTTPException(status_code=404, detail="Driver location not found")
