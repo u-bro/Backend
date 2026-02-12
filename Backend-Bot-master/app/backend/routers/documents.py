@@ -1,4 +1,4 @@
-from fastapi import Depends, File, HTTPException, Request, UploadFile
+from fastapi import Depends, File, HTTPException, Request, UploadFile, Query
 from fastapi.responses import Response
 from app.backend.deps import require_role, get_current_user_id
 from app.backend.routers.base import BaseRouter
@@ -11,7 +11,7 @@ class DocumentRouter(BaseRouter):
         super().__init__(document_crud, "/documents")
 
     def setup_routes(self) -> None:
-        self.router.add_api_route(f"{self.prefix}/avatar/{{id}}", self.get_avatar_by_user_id, methods=["GET"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/avatar/{{id}}", self.get_avatar_by_user_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.get_by_key, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{key:path}}/url", self.get_public_url, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/avatar", self.upload_avatar, methods=["POST"], status_code=201)
@@ -42,8 +42,8 @@ class DocumentRouter(BaseRouter):
             headers={"Content-Disposition": f"{disposition}; filename={filename}"},
         )
 
-    async def get_avatar_by_user_id(self, request: Request, id: int, download: bool = False) -> Response:
-        pdf_bytes = await self.model_crud.get_by_key(f"user/{id}/avatar")
+    async def get_avatar_by_user_id(self, request: Request, id: int, role_code: str = Query("user"), download: bool = False) -> Response:
+        pdf_bytes = await self.model_crud.get_by_key(f"user/{id}/{role_code}/avatar")
         disposition = "attachment" if download else "inline"
         return Response(
             content=pdf_bytes,
@@ -52,18 +52,20 @@ class DocumentRouter(BaseRouter):
         )
 
     async def get_public_url(self, request: Request, key: str) -> dict:
-        return {"url": self.model_crud.public_url(key), "key": key}
+        return {"url": self.model_crud.presigned_get_url(key), "key": key}
 
     async def upload(self, request: Request, key: str, file: UploadFile = File(...)) -> dict:
         pdf_bytes = await file.read()
-        await self.model_crud.upload_pdf_bytes(key, pdf_bytes)
-        return {"key": key, "url": self.model_crud.public_url(key)}
+        content_type = file.content_type or "application/octet-stream"
+        await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type)
+        return {"key": key, "url": self.model_crud.presigned_get_url(key)}
 
-    async def upload_avatar(self, request: Request, file: UploadFile = File(...), user_id = Depends(get_current_user_id)) -> dict:
+    async def upload_avatar(self, request: Request, role_code: str = Query("user"), file: UploadFile = File(...), user_id = Depends(get_current_user_id)) -> dict:
         pdf_bytes = await file.read()
-        key = f"user/{user_id}/avatar"
-        await self.model_crud.upload_pdf_bytes(key, pdf_bytes)
-        return {"key": key, "url": self.model_crud.public_url(key)}
+        key = f"user/{user_id}/{role_code}/avatar"
+        content_type = file.content_type or "image/jpeg"
+        await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type)
+        return {"key": key, "url": self.model_crud.presigned_get_url(key)}
 
     async def delete_by_key(self, request: Request, key: str) -> dict:
         await self.model_crud.delete_by_key(key)

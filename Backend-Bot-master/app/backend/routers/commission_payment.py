@@ -80,7 +80,7 @@ class CommissionPaymentRouter(BaseRouter):
                 operation_id=item.tochka_operation_id,
                 created_at=getattr(item, "created_at", None),
             )
-            await document_crud.upload_pdf_bytes(key, pdf_bytes)
+            await document_crud.upload_bytes(key, pdf_bytes)
 
         if existing:
             updated = await commission_payment_crud.update(session, existing.id, fields)

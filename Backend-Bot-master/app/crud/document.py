@@ -2,16 +2,17 @@ import anyio, boto3
 from botocore.exceptions import ClientError
 from fastapi import HTTPException
 from app.config import S3_DOCUMENTS_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_KEY
+from botocore.config import Config
 
 
 class CrudDocument:
     def __init__(self, bucket: str):
         self.bucket = bucket
-        self.client = boto3.client("s3", endpoint_url="https://s3.selcdn.ru", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_KEY)
+        self.client = boto3.client("s3", endpoint_url="https://s3.selcdn.ru", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_KEY, config=Config(signature_version="s3v4"))
 
-    def _put_object(self, key: str, pdf_bytes: bytes, metadata: dict | None = None) -> None:
+    def _put_object(self, key: str, pdf_bytes: bytes, content_type: str, metadata: dict | None = None) -> None:
         extra: dict = {
-            "ContentType": "application/pdf",
+            "ContentType": content_type,
             "ContentDisposition": f'inline; filename="{key.split("/")[-1]}"',
         }
         if metadata:
@@ -36,11 +37,12 @@ class CrudDocument:
     def _delete_object(self, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=key)
 
-    async def upload_pdf_bytes(self, key: str, pdf_bytes: bytes, metadata: dict | None = None) -> None:
+    async def upload_bytes(self, key: str, pdf_bytes: bytes, content_type: str = "application/pdf", metadata: dict | None = None) -> None:
         await anyio.to_thread.run_sync(
             self._put_object,
             key,
             pdf_bytes,
+            content_type,
             metadata,
         )
 
@@ -60,8 +62,8 @@ class CrudDocument:
     def public_url(self, key: str) -> str:
         return f"https://{self.bucket}.s3.selcdn.ru/{key}"
 
-    async def create(self, key: str, pdf_bytes: bytes, metadata: dict | None = None) -> None:
-        return await self.upload_pdf_bytes(key, pdf_bytes, metadata=metadata)
+    async def create(self, key: str, pdf_bytes: bytes, content_type: str = "application/pdf", metadata: dict | None = None) -> None:
+        return await self.upload_bytes(key, pdf_bytes, content_type=content_type, metadata=metadata)
 
     async def get_by_key(self, key: str) -> bytes:
         return await self.get_pdf_bytes(key)
