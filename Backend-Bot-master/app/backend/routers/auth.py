@@ -1,10 +1,12 @@
-from fastapi import Request
+from fastapi import Request, Depends
 from app.crud.phone_verification import phone_verification_crud
 from app.crud.auth import CrudAuth, auth_crud
+from app.crud.refresh_token import refresh_token_crud
 from app.schemas import AuthSchemaLogin, PhoneVerificationSchema, TokenResponse, RefreshTokenVerifyRequest, TokenResponseRegister
 from app.schemas.phone_verification import PhoneVerificationSchemaCreate, PhoneVerificationVerifyRequest
 from app.backend.routers.base import BaseRouter
 from app.models import User
+from app.backend.deps import get_current_user_id
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -16,6 +18,7 @@ class AuthRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/send", self.login_or_register, methods=["POST"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/verify", self.verify_otp, methods=["POST"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/refresh", self.refresh, methods=["POST"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/logout", self.logout, methods=["POST"], status_code=200, dependencies=[Depends(get_current_user_id)])
 
     async def login_or_register(self, request: Request, login_obj: AuthSchemaLogin) -> PhoneVerificationSchema:
         user, is_registred = await self.model_crud.login_or_register(request.state.session, login_obj.phone)
@@ -39,6 +42,10 @@ class AuthRouter(BaseRouter):
 
     async def refresh(self, request: Request, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse:
         return await self.model_crud.refresh(request.state.session, refresh_obj)
+
+    async def logout(self, request: Request, refresh_obj: RefreshTokenVerifyRequest) -> dict:
+        await refresh_token_crud.revoke(request.state.session, refresh_obj.refresh_token)
+        return {"ok": True}
 
     @staticmethod
     def generate_otp(length: int = 6) -> str:

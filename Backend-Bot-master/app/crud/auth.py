@@ -72,17 +72,11 @@ class CrudAuth(CrudBase):
             
         return user, is_registred
 
-    async def refresh(self, session: AsyncSession, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse | None:
-        token_hash = refresh_token_crud.hash_token(refresh_obj.refresh_token)
-        
-        found_token = await refresh_token_crud.get_by_token(session, token_hash)
-        if not found_token or found_token.revoked_at:
-            raise HTTPException(status_code=401, detail="Invalid refresh token")
-        
-        await refresh_token_crud.revoke(session, token_hash)
+    async def refresh(self, session: AsyncSession, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse | None: 
+        old_token = await refresh_token_crud.revoke(session, refresh_obj.refresh_token)
 
-        access_token = self.create_access_token(found_token.user_id, timedelta(minutes=JWT_EXPIRATION_MINTUES))
-        refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=found_token.user_id))
+        access_token = self.create_access_token(old_token.user_id, timedelta(minutes=JWT_EXPIRATION_MINTUES))
+        refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=old_token.user_id))
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token.token

@@ -11,16 +11,17 @@ class DocumentRouter(BaseRouter):
         super().__init__(document_crud, "/documents")
 
     def setup_routes(self) -> None:
+        self.router.add_api_route(f"{self.prefix}/avatar/{{id}}", self.get_avatar_by_user_id, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.get_by_key, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{key:path}}/url", self.get_public_url, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.upload, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/avatar", self.upload_avatar, methods=["POST"], status_code=201)
+        self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.upload, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["user", "driver", "admin"]))])
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.delete_by_key, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
 
     async def get_by_key(self, request: Request, key: str, download: bool = False, user: User = Depends(require_role(["user", "driver", "admin"]))) -> Response:
         filename = key.split("/")[-1] or "document.pdf"
         path_parts = key.split("/")
-        if len(path_parts) >= 3:
+        if len(path_parts) >= 4:
             ride_id = int(path_parts[2])
             ride = await ride_crud.get_by_id(request.state.session, ride_id)
             if not ride:
@@ -39,6 +40,15 @@ class DocumentRouter(BaseRouter):
             content=pdf_bytes,
             media_type="application/pdf",
             headers={"Content-Disposition": f"{disposition}; filename={filename}"},
+        )
+
+    async def get_avatar_by_user_id(self, request: Request, id: int, download: bool = False) -> Response:
+        pdf_bytes = await self.model_crud.get_by_key(f"user/{id}/avatar")
+        disposition = "attachment" if download else "inline"
+        return Response(
+            content=pdf_bytes,
+            media_type="image/jpeg",
+            headers={"Content-Disposition": f"{disposition}; filename=avatar_{id}"},
         )
 
     async def get_public_url(self, request: Request, key: str) -> dict:
