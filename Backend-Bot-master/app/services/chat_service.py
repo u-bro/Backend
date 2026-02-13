@@ -4,9 +4,7 @@ from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, update
 from better_profanity import profanity
-from sqlalchemy.orm import selectinload
 from app.models.chat_message import ChatMessage
-from app.models.ride import Ride
 from app.schemas.chat_message import ChatMessageSchema, ChatMessageHistory
 from app.logger import logger
 from .websocket_manager import manager
@@ -17,38 +15,36 @@ from app.enum import MessageType
 class ChatService:
     def __init__(self):
         self._message_timestamps: Dict[int, List[datetime]] = defaultdict(list)
-        self.rate_limit_messages = 10  
-        self.rate_limit_period = 60  
+        self.rate_limit_messages = 60
+        self.rate_limit_period = 60
         self.max_message_length = 2000
         self.min_message_length = 1
-        
+
         profanity.load_censor_words()
-    
+
     def check_rate_limit(self, user_id: int) -> tuple[bool, Optional[str]]:
         now = datetime.now(timezone.utc)
         cutoff = now - timedelta(seconds=self.rate_limit_period)
-        
+
         self._message_timestamps[user_id] = [
-            ts for ts in self._message_timestamps[user_id] 
+            ts for ts in self._message_timestamps[user_id]
             if ts > cutoff
         ]
-        
+
         if len(self._message_timestamps[user_id]) >= self.rate_limit_messages:
             return False, f"Rate limit exceeded. Max {self.rate_limit_messages} messages per {self.rate_limit_period}s"
-        
+
         self._message_timestamps[user_id].append(now)
         return True, None
-    
+
     async def verify_ride_user(self, session: AsyncSession, ride_id: int, user_id: int) -> bool:
-        query = select(Ride).options(selectinload(Ride.driver_profile)).where(Ride.id == ride_id)
-        result = await session.execute(query)
-        ride = result.scalar_one_or_none()
+        ride = await ride_crud.get_by_id_with_driver_profile(session, ride_id)
 
         if not ride:
             logger.error(f"Ride {ride_id} not found")
             return False
-        
-        driver_profile = getattr(ride, "driver_profile", None)
+
+        driver_profile = ride.driver_profile
         if not driver_profile:
             logger.error(f"Driver profile not found for ride {ride_id}")
             return False
@@ -58,13 +54,13 @@ class ChatService:
             return False
 
         return True
-    
+
     async def save_message(self, session: AsyncSession, message: ChatMessage) -> ChatMessageSchema:
         session.add(message)
         await session.flush()
         await session.refresh(message)
         return ChatMessageSchema.model_validate(message)
-    
+
     async def save_message_and_send_to_ride(self, session: AsyncSession, ride_id: int, text: str, sender_id: int | None = None, message_type: str = MessageType.TEXT, receiver_id: Optional[int] = None, attachments: Optional[Dict[str, Any]] = None, is_moderated: bool = True) -> ChatMessageSchema:
         message = {
             "ride_id": ride_id,
@@ -78,7 +74,7 @@ class ChatService:
         }
         await manager.send_to_ride(session, ride_id, message)
         return await self.save_message(session, ChatMessage(**message))
-    
+
     async def get_my_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10) -> List[ChatMessageHistory]:
         rides = await ride_crud.get_paginated_as_client_or_driver_with_chats(session, user_id, page, page_size, "updated_at desc")
         ride_ids = [ride.id for ride in rides if ride.driver_profile_id]
@@ -90,30 +86,30 @@ class ChatService:
             ride_messages = [m for m in messages if m.ride_id == ride_id]
             ride_messages.sort(key=lambda x: x.edited_at or x.created_at, reverse=True)
             chat = ChatMessageHistory(ride_id=ride_id, last_message=ChatMessageSchema.model_validate(ride_messages[0]).model_dump(mode='json'))
-            my_chats.append(chat)            
+            my_chats.append(chat)
 
         return my_chats
-    
+
     async def get_chat_history(self, session: AsyncSession, ride_id: int, limit: int = 50, before_id: Optional[int] = None, include_deleted: bool = False) -> List[ChatMessageSchema]:
         conditions = [ChatMessage.ride_id == ride_id]
-        
+
         if before_id:
             conditions.append(ChatMessage.id < before_id)
-        
+
         if not include_deleted:
             conditions.append(ChatMessage.deleted_at.is_(None))
-        
+
         query = (
             select(ChatMessage)
             .where(and_(*conditions))
-            .order_by(ChatMessage.id.desc())
+            .order_by(ChatMessage.id.asc())
             .limit(limit)
         )
-        
+
         result = await session.execute(query)
         messages = result.scalars().all()
-        
-        return [ChatMessageSchema.model_validate(m) for m in reversed(messages)]
+
+        return [ChatMessageSchema.model_validate(m) for m in messages]
 
     async def mark_message_read(self, session: AsyncSession, ride_id: int, message_id: int, user_id: int) -> Optional[ChatMessageSchema]:
         is_ride_participant = await self.verify_ride_user(session=session, ride_id=ride_id, user_id=user_id)
@@ -131,9 +127,6 @@ class ChatService:
         message = result.scalar_one_or_none()
         if not message:
             return None
-
-        if message.sender_id == user_id or message.is_read:
-            return ChatMessageSchema.model_validate(message)
 
         message.is_read = True
         return ChatMessageSchema.model_validate(message)
@@ -161,7 +154,7 @@ class ChatService:
         )
         result = await session.execute(stmt)
         return int(result.rowcount or 0)
-    
+
     async def soft_delete_message(self, session: AsyncSession, message_id: int) -> bool:
         query = select(ChatMessage).where(
             and_(
@@ -169,16 +162,16 @@ class ChatService:
                 ChatMessage.deleted_at.is_(None)
             )
         )
-        
+
         result = await session.execute(query)
         message = result.scalar_one_or_none()
-        
+
         if not message:
             return False
-        
+
         message.deleted_at = datetime.now(timezone.utc)
         return True
-    
+
     async def edit_message(self, session: AsyncSession, message_id: int, new_text: str) -> Optional[ChatMessageSchema]:
         query = select(ChatMessage).where(
             and_(
@@ -186,7 +179,7 @@ class ChatService:
                 ChatMessage.deleted_at.is_(None)
             )
         )
-        
+
         result = await session.execute(query)
         message = result.scalar_one_or_none()
         if not message:
@@ -194,9 +187,9 @@ class ChatService:
 
         message.text = new_text
         message.edited_at = datetime.now(timezone.utc)
-        
+
         return ChatMessageSchema.model_validate(message)
-    
+
     async def delete_messages_by_ride_ids(self, session: AsyncSession, ride_ids: List[int]):
         now = datetime.now(timezone.utc)
         deleted = await session.execute(update(ChatMessage).where(and_(ChatMessage.ride_id.in_(ride_ids), ChatMessage.deleted_at.is_(None))).values(deleted_at=now).returning(ChatMessage.id))
@@ -214,7 +207,7 @@ class ChatService:
                 "uses_better_profanity": True,
             }
         }
-    
-    
+
+
 
 chat_service = ChatService()
