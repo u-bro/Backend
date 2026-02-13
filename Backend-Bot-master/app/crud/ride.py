@@ -3,7 +3,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import insert, update, delete, text
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
 from .commission import commission_crud
@@ -14,7 +14,7 @@ from .in_app_notification import in_app_notification_crud
 from .driver_location_sender import driver_location_sender
 from .driver_tracker import driver_tracker, DriverStatus
 from app.models import Ride, TariffPlan, Commission, RideDriversRequest, ChatMessage
-from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating
+from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating, RideSchemaWithDriverProfile
 from app.schemas.ride_status_history import RideStatusHistoryCreate
 from app.schemas.in_app_notification import InAppNotificationCreate
 from fastapi import HTTPException
@@ -41,7 +41,7 @@ ALLOWED_TRANSITIONS = {
 }
 
 
-class CrudRide(CrudBase):
+class RideCrud(CrudBase):
     @staticmethod
     def _calculate_expected_fare(tariff_plan: TariffPlan, distance_meters: int | None) -> float | None:
         return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier)))
@@ -98,9 +98,9 @@ class CrudRide(CrudBase):
 
     @staticmethod
     def _add_expected_fare_and_snapshot(data: dict, tariff_plan: TariffPlan, distance_meters: int, commission: Commission):
-        expected_fare = CrudRide._calculate_expected_fare(tariff_plan, distance_meters)
-        commission_amount = CrudRide._calculate_commission_amount(expected_fare, commission)
-        snapshot = CrudRide._build_snapshot(tariff_plan, distance_meters, expected_fare, commission, commission_amount)
+        expected_fare = RideCrud._calculate_expected_fare(tariff_plan, distance_meters)
+        commission_amount = RideCrud._calculate_commission_amount(expected_fare, commission)
+        snapshot = RideCrud._build_snapshot(tariff_plan, distance_meters, expected_fare, commission, commission_amount)
         data["expected_fare"] = expected_fare
         data["commission_amount"] = commission_amount
         data["expected_fare_snapshot"] = snapshot
@@ -301,8 +301,13 @@ class CrudRide(CrudBase):
         return self.schema.model_validate(ride) if ride else None
 
     async def get_by_id_with_rating(self, session: AsyncSession, id: int) -> RideSchemaWithRating | None:
-        result = await session.execute(select(self.model).options(selectinload(self.model.driver_rating)).where(self.model.id == id))
+        result = await session.execute(select(self.model).options(joinedload(self.model.driver_rating)).where(self.model.id == id))
         item = result.scalar_one_or_none()
         return RideSchemaWithRating.model_validate(item) if item else None
 
-ride_crud = CrudRide(Ride, RideSchema)
+    async def get_by_id_with_driver_profile(self, session: AsyncSession, id: int) -> RideSchemaWithDriverProfile | None:
+        result = await session.execute(select(self.model).options(joinedload(self.model.driver_profile)).where(self.model.id == id))
+        item = result.scalar_one_or_none()
+        return RideSchemaWithDriverProfile.model_validate(item) if item else None
+
+ride_crud = RideCrud(Ride, RideSchema)

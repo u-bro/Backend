@@ -8,8 +8,8 @@ from app.enum import RoleCode
 
 
 class InAppNotificationRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(in_app_notification_crud, "/notifications/in-app")
+    def __init__(self, model_crud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/me", self.get_my_notifications, methods=["GET"], status_code=200)
@@ -49,4 +49,4 @@ class InAppNotificationRouter(BaseRouter):
     async def mark_one_as_read(self, request: Request, id: int, user_id = Depends(get_current_user_id)) -> InAppNotificationSchema:
         return await self.model_crud.mark_one_as_read(request.state.session, id, user_id)
 
-in_app_notification_router = InAppNotificationRouter().router
+in_app_notification_router = InAppNotificationRouter(in_app_notification_crud, "/notifications/in-app").router

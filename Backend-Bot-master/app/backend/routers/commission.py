@@ -7,8 +7,8 @@ from app.enum import RoleCode
 
 
 class CommissionRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(commission_crud, "/commissions")
+    def __init__(self, model_crud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/count", self.get_count, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
@@ -35,4 +35,4 @@ class CommissionRouter(BaseRouter):
         return await self.model_crud.delete(request.state.session, id)
 
 
-commission_router = CommissionRouter().router
+commission_router = CommissionRouter(commission_crud, "/commissions").router

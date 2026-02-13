@@ -1,17 +1,13 @@
 import anyio, boto3
 from botocore.exceptions import ClientError
 from fastapi import HTTPException
-from app.config import S3_DOCUMENTS_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_KEY, S3_AVATARS_BUCKET
+from app.config import AWS_ACCESS_KEY_ID, AWS_SECRET_KEY
 from app.enum import S3Bucket
 from botocore.config import Config
 
 
-class CrudDocument:
+class DocumentCrud:
     def __init__(self):
-        self.buckets = {
-            'document': S3_DOCUMENTS_BUCKET,
-            'avatar': S3_AVATARS_BUCKET
-        }
         self.client = boto3.client("s3", endpoint_url="https://s3.selcdn.ru", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_KEY, config=Config(signature_version="s3v4"))
 
     def _put_object(self, key: str, pdf_bytes: bytes, content_type: str, metadata: dict | None = None, bucket: str = S3Bucket.DOCUMENT) -> None:
@@ -23,7 +19,7 @@ class CrudDocument:
             extra["Metadata"] = {k: str(v) for k, v in metadata.items()}
 
         self.client.put_object(
-            Bucket=self.buckets[bucket],
+            Bucket=bucket,
             Key=key,
             Body=pdf_bytes,
             **extra,
@@ -31,7 +27,7 @@ class CrudDocument:
 
     def _get_object_bytes(self, key: str, bucket: str = S3Bucket.DOCUMENT) -> bytes:
         try:
-            obj = self.client.get_object(Bucket=self.buckets[bucket], Key=key)
+            obj = self.client.get_object(Bucket=bucket, Key=key)
             return obj["Body"].read()
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
@@ -39,7 +35,7 @@ class CrudDocument:
             raise HTTPException(status_code=500, detail=f"Error getting object: {e}")
 
     def _delete_object(self, key: str, bucket: str = S3Bucket.DOCUMENT) -> None:
-        self.client.delete_object(Bucket=self.buckets[bucket], Key=key)
+        self.client.delete_object(Bucket=bucket, Key=key)
 
     async def upload_bytes(self, key: str, pdf_bytes: bytes, content_type: str = "application/pdf", metadata: dict | None = None, bucket: str = S3Bucket.DOCUMENT) -> None:
         await anyio.to_thread.run_sync(
@@ -60,12 +56,12 @@ class CrudDocument:
     def presigned_get_url(self, key: str, expires_seconds: int = 3600, bucket: str = S3Bucket.DOCUMENT) -> str:
         return self.client.generate_presigned_url(
             ClientMethod="get_object",
-            Params={"Bucket": self.buckets[bucket], "Key": key},
+            Params={"Bucket": bucket, "Key": key},
             ExpiresIn=expires_seconds,
         )
 
-    def public_url(self, key: str, bucket: str = S3Bucket.DOCUMENT) -> str:
-        return f"https://{self.buckets[bucket]}.s3.selcdn.ru/{key}"
+    def public_url(self, key: str, bucket_uuid: str) -> str:
+        return f"https://{bucket_uuid}.selstorage.ru/{key}"
 
     async def create(self, key: str, pdf_bytes: bytes, content_type: str = "application/pdf", metadata: dict | None = None, bucket: str = S3Bucket.DOCUMENT) -> None:
         return await self.upload_bytes(key, pdf_bytes, content_type=content_type, metadata=metadata, bucket=bucket)
@@ -77,4 +73,4 @@ class CrudDocument:
         return await self.delete_by_key(key, bucket=bucket)
 
 
-document_crud = CrudDocument()
+document_crud = DocumentCrud()

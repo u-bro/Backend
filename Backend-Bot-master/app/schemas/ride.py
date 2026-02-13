@@ -3,6 +3,8 @@ from pydantic import Field, model_validator
 from datetime import datetime, timezone
 from .base import BaseSchema
 from .driver_rating import DriverRatingSchema
+from .driver_profile import DriverProfileSchema
+
 
 class RideSchemaIn(BaseSchema):
     status: Literal["requested"] = Field("requested", max_length=50)
@@ -139,3 +141,6 @@ class RideSchemaHistory(BaseSchema):
 
 class RideSchemaWithRating(RideSchema):
     driver_rating: DriverRatingSchema | None = None
+
+class RideSchemaWithDriverProfile(RideSchema):
+    driver_profile: DriverProfileSchema | None = None

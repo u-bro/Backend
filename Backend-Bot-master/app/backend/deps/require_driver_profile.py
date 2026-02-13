@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 from app.backend.deps.get_current_user import get_current_user_id
 from typing import TypeVar, Type
 
@@ -11,7 +11,7 @@ def require_driver_profile(model: Type[T]):
         if session is None:
             raise HTTPException(status_code=500, detail="Database session is not available")
 
-        result = await session.execute(select(model).options(selectinload(model.driver_profile)).where(model.id == id))
+        result = await session.execute(select(model).options(joinedload(model.driver_profile)).where(model.id == id))
         item = result.scalar_one_or_none()
         driver_profile = getattr(item, "driver_profile", None)
 

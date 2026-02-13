@@ -12,6 +12,9 @@ from datetime import datetime, timezone
 
 
 class ChatHttpRouter(BaseRouter):
+    def __init__(self, model_crud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
+
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/history", self.get_chat_history, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/send", self.send_message, methods=["POST"], status_code=200)
@@ -22,9 +25,6 @@ class ChatHttpRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/me", self.get_my_chats, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/stats", self.get_chat_stats, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/me/delete", self.delete_messages_by_ride_ids, methods=["POST"], status_code=200)
-
-    def __init__(self) -> None:
-        super().__init__(chat_service, "/chat")
 
     async def get_my_chats(self, request: Request, page: int = 1, page_size: int = 10, user_id: int = Depends(get_current_user_id)) -> list[ChatMessageHistory]:
         session = request.state.session
@@ -104,14 +104,14 @@ class ChatHttpRouter(BaseRouter):
         return {"deleted": deleted}
 
     async def _check_permission(self, session: AsyncSession, ride_id: int, user_id: int):
-        ride = await ride_crud.get_by_id(session, ride_id)
+        ride = await ride_crud.get_by_id_with_driver_profile(session, ride_id)
         if not ride:
             raise HTTPException(status_code=404, detail="Ride not found")
         
-        driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
+        driver_profile = ride.driver_profile
         if user_id != ride.client_id and user_id != getattr(driver_profile, 'user_id', None):
             raise HTTPException(status_code=403, detail="Forbidden")
         
         return ride, driver_profile
 
-chat_http_router = ChatHttpRouter().router
+chat_http_router = ChatHttpRouter(chat_service, "/chat").router

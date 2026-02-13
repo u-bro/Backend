@@ -1,13 +1,13 @@
 from fastapi import Request, Depends
-from app.crud.tariff_plan import tariff_plan_crud
+from app.crud.tariff_plan import tariff_plan_crud, TariffPlanCrud
 from app.schemas.tariff_plan import TariffPlanCreate, TariffPlanSchema, TariffPlanUpdate
 from app.backend.routers.base import BaseRouter
 from app.backend.deps import require_role
 from app.enum import RoleCode
 
 
-class TariffPlanRouter(BaseRouter):
-    def __init__(self, model_crud, prefix) -> None:
+class TariffPlanRouter(BaseRouter[TariffPlanCrud]):
+    def __init__(self, model_crud: TariffPlanCrud, prefix: str) -> None:
         super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:

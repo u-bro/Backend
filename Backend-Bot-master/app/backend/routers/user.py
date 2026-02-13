@@ -1,5 +1,6 @@
 from fastapi import Request, Depends, HTTPException
-from app.crud import user_crud, driver_location_crud, ride_crud
+from app.crud.user import user_crud, UserCrud
+from app.crud import driver_location_crud, ride_crud
 from app.schemas.user import UserSchemaCreate, UserSchema, UserSchemaMe, UserSchemaUpdate, UserSchemaUpdateMe
 from app.backend.routers.base import BaseRouter
 from app.backend.deps import require_role, get_current_user, get_current_user_id
@@ -7,8 +8,8 @@ from app.models import User
 from app.enum import RoleCode
 
 
-class UserRouter(BaseRouter):
-    def __init__(self, model_crud, prefix) -> None:
+class UserRouter(BaseRouter[UserCrud]):
+    def __init__(self, model_crud: UserCrud, prefix: str) -> None:
         super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
