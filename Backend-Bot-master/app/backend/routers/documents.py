@@ -4,7 +4,7 @@ from app.backend.deps import require_role, get_current_user_id
 from app.backend.routers.base import BaseRouter
 from app.models import User
 from app.crud.document import DocumentCrud, document_crud
-from app.crud import ride_crud, driver_profile_crud
+from app.crud import ride_crud
 from app.enum import S3Bucket, RoleCode
 from app.config import S3_AVATARS_BUCKET_UUID
 
@@ -27,11 +27,11 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
         path_parts = key.split("/")
         if len(path_parts) >= 4:
             ride_id = int(path_parts[2])
-            ride = await ride_crud.get_by_id(request.state.session, ride_id)
+            ride = await ride_crud.get_by_id_with_driver_profile(request.state.session, ride_id)
             if not ride:
                 raise HTTPException(status_code=404, detail="Ride not found")
 
-            driver_profile = await driver_profile_crud.get_by_id(request.state.session, ride.driver_profile_id)
+            driver_profile = ride.driver_profile
             if not driver_profile:
                 raise HTTPException(status_code=404, detail="Driver_profile not found")
             

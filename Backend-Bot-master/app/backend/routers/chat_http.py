@@ -104,11 +104,11 @@ class ChatHttpRouter(BaseRouter):
         return {"deleted": deleted}
 
     async def _check_permission(self, session: AsyncSession, ride_id: int, user_id: int):
-        ride = await ride_crud.get_by_id(session, ride_id)
+        ride = await ride_crud.get_by_id_with_driver_profile(session, ride_id)
         if not ride:
             raise HTTPException(status_code=404, detail="Ride not found")
         
-        driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
+        driver_profile = ride.driver_profile
         if user_id != ride.client_id and user_id != getattr(driver_profile, 'user_id', None):
             raise HTTPException(status_code=403, detail="Forbidden")
         
