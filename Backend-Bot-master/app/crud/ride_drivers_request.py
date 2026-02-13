@@ -4,7 +4,7 @@ from app.models import RideDriversRequest
 from app.schemas.ride_drivers_request import RideDriversRequestSchema, RideDriversRequestUpdate, RideDriversRequestCreate, RideDriversRequestSchemaDetailed
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select, update, insert, and_
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 from .in_app_notification import in_app_notification_crud
 from .driver_profile import driver_profile_crud
 from .ride import ride_crud
@@ -36,7 +36,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
 
     async def get_by_ride_id_detailed(self, session: AsyncSession, ride_id: int):
-        result = await session.execute(select(self.model).options(selectinload(self.model.driver_profile)).options(selectinload(self.model.car)).where(self.model.ride_id == ride_id))
+        result = await session.execute(select(self.model).options(joinedload(self.model.driver_profile)).options(joinedload(self.model.car)).where(self.model.ride_id == ride_id))
         ride_drivers_requests = result.scalars().all()
         return [RideDriversRequestSchemaDetailed.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
 

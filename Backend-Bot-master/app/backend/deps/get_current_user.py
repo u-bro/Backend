@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 from app.models import User
 from .get_current_user_id import get_current_user_id
 
@@ -11,8 +11,8 @@ async def get_current_user(request: Request, user_id: int = Depends(get_current_
 
     result = await session.execute(
         select(User)
-        .options(selectinload(User.role))
-        .options(selectinload(User.driver_profile))
+        .options(joinedload(User.role))
+        .options(joinedload(User.driver_profile))
         .where(User.id == user_id)
     )
     user = result.scalar_one_or_none()

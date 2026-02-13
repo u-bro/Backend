@@ -3,7 +3,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import insert, update, delete, text
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import joinedload
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
 from .commission import commission_crud
@@ -301,7 +301,7 @@ class RideCrud(CrudBase):
         return self.schema.model_validate(ride) if ride else None
 
     async def get_by_id_with_rating(self, session: AsyncSession, id: int) -> RideSchemaWithRating | None:
-        result = await session.execute(select(self.model).options(selectinload(self.model.driver_rating)).where(self.model.id == id))
+        result = await session.execute(select(self.model).options(joinedload(self.model.driver_rating)).where(self.model.id == id))
         item = result.scalar_one_or_none()
         return RideSchemaWithRating.model_validate(item) if item else None
 
