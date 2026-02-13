@@ -1,4 +1,5 @@
 from enum import Enum
+from .config import S3_DOCUMENTS_BUCKET, S3_AVATARS_BUCKET
 
 
 class DriverStatus(str, Enum):
@@ -18,8 +19,8 @@ class MessageType:
 
 
 class S3Bucket:
-    DOCUMENT = "document"
-    AVATAR = "document"
+    DOCUMENT = S3_DOCUMENTS_BUCKET
+    AVATAR = S3_DOCUMENTS_BUCKET
 
 
 class RoleCode:
