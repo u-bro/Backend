@@ -1,14 +1,14 @@
 from typing import List
 from fastapi import Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.crud.in_app_notification import in_app_notification_crud
+from app.crud.in_app_notification import in_app_notification_crud, InAppNotificationCrud
 from app.schemas.in_app_notification import InAppNotificationSchema, InAppNotificationCreate, InAppNotificationUpdate
 from app.backend.deps import require_role, get_current_user_id
 from app.enum import RoleCode
 
 
-class InAppNotificationRouter(BaseRouter):
-    def __init__(self, model_crud, prefix: str) -> None:
+class InAppNotificationRouter(BaseRouter[InAppNotificationCrud]):
+    def __init__(self, model_crud: InAppNotificationCrud, prefix: str) -> None:
         super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
