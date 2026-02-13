@@ -12,6 +12,7 @@ from .role import role_crud
 from .driver_profile import driver_profile_crud
 from .refresh_token import refresh_token_crud
 from fastapi import HTTPException
+from app.enum import RoleCode
 
 
 class CrudAuth(CrudBase):
@@ -58,7 +59,7 @@ class CrudAuth(CrudBase):
         
         new_user = await super().create(session, UserSchemaCreate(phone=register_obj.phone, is_active=True, role_id=role.id))
 
-        if register_obj.role_code == 'driver':
+        if register_obj.role_code == RoleCode.DRIVER:
             await driver_profile_crud.create(session, DriverProfileCreate(user_id=new_user.id, approved=False))
         
         return self.schema.model_validate(new_user)
@@ -67,7 +68,7 @@ class CrudAuth(CrudBase):
         user = await self.get_by_phone(session, phone)
         is_registred = False
         if not user:
-            user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code='driver'))
+            user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code=RoleCode.DRIVER))
             is_registred = True
             
         return user, is_registred

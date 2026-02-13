@@ -5,6 +5,7 @@ from app.crud.ride import ride_crud
 from app.schemas.ride_drivers_request import RideDriversRequestSchema,RideDriversRequestSchemaDetailed, RideDriversRequestUpdate
 from app.backend.deps import require_role, require_owner
 from app.models import Ride, User
+from app.enum import RoleCode
 
 
 class RideDriversRequestRouter(BaseRouter):
@@ -12,8 +13,8 @@ class RideDriversRequestRouter(BaseRouter):
         super().__init__(ride_drivers_request_crud, "/ride-requests")
 
     def setup_routes(self) -> None:
-        self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
-        self.router.add_api_route(f"{self.prefix}/ride/{{id}}", self.get_by_ride_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["user", "driver","admin"])), Depends(require_owner(Ride, 'client_id'))])
+        self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/ride/{{id}}", self.get_by_ride_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN])), Depends(require_owner(Ride, 'client_id'))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200)
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[RideDriversRequestSchema]:
@@ -22,7 +23,7 @@ class RideDriversRequestRouter(BaseRouter):
     async def get_by_ride_id(self, request: Request, id: int) -> list[RideDriversRequestSchemaDetailed]:
         return await self.model_crud.get_by_ride_id_detailed(request.state.session, id)
 
-    async def update(self, request: Request, id: int, body: RideDriversRequestUpdate, user: User = Depends(require_role(["user", "driver","admin"]))) -> RideDriversRequestSchema:
+    async def update(self, request: Request, id: int, body: RideDriversRequestUpdate, user: User = Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))) -> RideDriversRequestSchema:
         session = request.state.session
         existing = await self.model_crud.get_by_id(session, id)
         if not existing:

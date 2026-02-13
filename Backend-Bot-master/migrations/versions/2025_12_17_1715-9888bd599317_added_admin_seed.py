@@ -56,5 +56,3 @@ def downgrade() -> None:
 
     admin_phone = os.getenv("ADMIN_PHONE")
     bind.execute(sa.text("DELETE FROM users WHERE phone = :phone"), {"phone": admin_phone})
-
-    bind.execute(sa.text("DELETE FROM roles WHERE code IN ('user', 'driver', 'admin')"))

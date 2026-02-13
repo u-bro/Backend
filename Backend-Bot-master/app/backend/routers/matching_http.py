@@ -6,6 +6,8 @@ from app.services import manager_driver_feed
 from app.services.driver_state_storage import driver_state_storage
 from app.backend.deps import get_current_driver_profile_id, require_role
 from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate, DriverLocationUpdateMe
+from app.enum import RoleCode
+
 
 class MatchingHttpRouter(BaseRouter):
     def __init__(self) -> None:
@@ -15,15 +17,15 @@ class MatchingHttpRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/driver/register", self.register_driver, methods=["POST"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/feed", self.get_ride_feed, methods=["GET"], status_code=200)
 
-        self.router.add_api_route(f"{self.prefix}/notify/{{user_id}}", self.send_notification, methods=["POST"], dependencies=[Depends(require_role('admin'))])
-        self.router.add_api_route(f"{self.prefix}/broadcast", self.broadcast_message, methods=["POST"], dependencies=[Depends(require_role('admin'))])
+        self.router.add_api_route(f"{self.prefix}/notify/{{user_id}}", self.send_notification, methods=["POST"], dependencies=[Depends(require_role(RoleCode.ADMIN))])
+        self.router.add_api_route(f"{self.prefix}/broadcast", self.broadcast_message, methods=["POST"], dependencies=[Depends(require_role(RoleCode.ADMIN))])
 
-        self.router.add_api_route(f"{self.prefix}/driver-location", self.create, methods=["POST"], dependencies=[Depends(require_role('admin'))])
-        self.router.add_api_route(f"{self.prefix}/driver-location/{{id}}", self.update, methods=["PUT"], dependencies=[Depends(require_role('admin'))])
+        self.router.add_api_route(f"{self.prefix}/driver-location", self.create, methods=["POST"], dependencies=[Depends(require_role(RoleCode.ADMIN))])
+        self.router.add_api_route(f"{self.prefix}/driver-location/{{id}}", self.update, methods=["PUT"], dependencies=[Depends(require_role(RoleCode.ADMIN))])
         self.router.add_api_route(f"{self.prefix}/driver-location", self.update_me, methods=["PUT"])
-        self.router.add_api_route(f"{self.prefix}/driver-location", self.get_paginated, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
-        self.router.add_api_route(f"{self.prefix}/driver-location/{{id}}", self.get_by_id, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
-        self.router.add_api_route(f"{self.prefix}/drivers/stats", self.get_drivers_stats, methods=["GET"], dependencies=[Depends(require_role(['user', 'driver', 'admin']))])
+        self.router.add_api_route(f"{self.prefix}/driver-location", self.get_paginated, methods=["GET"], dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/driver-location/{{id}}", self.get_by_id, methods=["GET"], dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/drivers/stats", self.get_drivers_stats, methods=["GET"], dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
 
     async def register_driver(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> Dict[str, Any]:
         profile = await driver_profile_crud.get_by_id(request.state.session, driver_profile_id)

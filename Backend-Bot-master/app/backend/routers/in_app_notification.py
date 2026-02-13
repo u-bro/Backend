@@ -4,6 +4,7 @@ from app.backend.routers.base import BaseRouter
 from app.crud.in_app_notification import in_app_notification_crud
 from app.schemas.in_app_notification import InAppNotificationSchema, InAppNotificationCreate, InAppNotificationUpdate
 from app.backend.deps import require_role, get_current_user_id
+from app.enum import RoleCode
 
 
 class InAppNotificationRouter(BaseRouter):
@@ -15,11 +16,11 @@ class InAppNotificationRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/me/unread", self.get_my_unread_notifications, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/me/read-all", self.mark_all_as_read, methods=["PUT"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/me/read/{{id}}", self.mark_one_as_read, methods=["PUT"], status_code=200)
-        self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
-        self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role(["admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role(["admin"]))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role(["admin"]))])
+        self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[InAppNotificationSchema]:
         return await self.model_crud.get_paginated(request.state.session, page, page_size)
