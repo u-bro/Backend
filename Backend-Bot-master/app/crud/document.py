@@ -60,8 +60,8 @@ class DocumentCrud:
             ExpiresIn=expires_seconds,
         )
 
-    def public_url(self, key: str, bucket: str = S3Bucket.DOCUMENT) -> str:
-        return f"https://{bucket}.s3.selcdn.ru/{key}"
+    def public_url(self, key: str, bucket_uuid: str) -> str:
+        return f"https://{bucket_uuid}.selstorage.ru/{key}"
 
     async def create(self, key: str, pdf_bytes: bytes, content_type: str = "application/pdf", metadata: dict | None = None, bucket: str = S3Bucket.DOCUMENT) -> None:
         return await self.upload_bytes(key, pdf_bytes, content_type=content_type, metadata=metadata, bucket=bucket)
