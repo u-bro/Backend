@@ -1,13 +1,14 @@
-from typing import TypeVar
+from typing import TypeVar, Generic
 from fastapi import APIRouter, HTTPException, Request
 from app.crud import CrudBase
 
 
 T = TypeVar('T')
+CrudType = TypeVar('CrudType', bound=CrudBase)
 
 
-class BaseRouter:
-    def __init__(self, model_crud: CrudBase, prefix: str) -> None:
+class BaseRouter(Generic[CrudType]):
+    def __init__(self, model_crud: CrudType, prefix: str) -> None:
         self.router = APIRouter()
         self.model_crud = model_crud
         self.prefix = prefix

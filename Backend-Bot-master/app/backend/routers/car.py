@@ -7,8 +7,8 @@ from app.enum import RoleCode
 
 
 class CarRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(car_crud, "/cars")
+    def __init__(self, model_crud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
@@ -33,4 +33,4 @@ class CarRouter(BaseRouter):
         return await self.model_crud.delete(request.state.session, id)
 
 
-car_router = CarRouter().router
+car_router = CarRouter(car_crud, "/cars").router

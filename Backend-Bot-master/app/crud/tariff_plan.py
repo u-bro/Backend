@@ -8,7 +8,7 @@ from app.crud.base import CrudBase
 from app.models import TariffPlan
 from app.schemas.tariff_plan import TariffPlanSchema, TariffPlanUpdate
 
-class CrudTariffPlan(CrudBase):
+class TariffPlanCrud(CrudBase):
     async def update(self, session: AsyncSession, id: int, update_obj: TariffPlanUpdate) -> TariffPlanSchema | None:
         now = datetime.now(timezone.utc)
         existing_result = await session.execute(select(self.model).where(self.model.id == id))
@@ -46,4 +46,4 @@ class CrudTariffPlan(CrudBase):
         created = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(created) if created else None
 
-tariff_plan_crud = CrudTariffPlan(TariffPlan, TariffPlanSchema)
+tariff_plan_crud = TariffPlanCrud(TariffPlan, TariffPlanSchema)

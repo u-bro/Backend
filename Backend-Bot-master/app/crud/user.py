@@ -6,7 +6,7 @@ from app.schemas.user import UserSchema, UserSchemaUpdate
 from fastapi import HTTPException
 
 
-class CrudUser(CrudBase):
+class UserCrud(CrudBase):
     async def delete(self, session: AsyncSession, id: int) -> UserSchema | None:
         stmt = (
             update(self.model)
@@ -51,4 +51,4 @@ class CrudUser(CrudBase):
         result = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(result) if result else None
 
-user_crud: CrudUser = CrudUser(User, UserSchema)
+user_crud: UserCrud = UserCrud(User, UserSchema)

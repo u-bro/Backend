@@ -3,14 +3,15 @@ from fastapi.responses import Response
 from app.backend.deps import require_role, get_current_user_id
 from app.backend.routers.base import BaseRouter
 from app.models import User
-from app.crud import document_crud, ride_crud, driver_profile_crud
+from app.crud.document import DocumentCrud, document_crud
+from app.crud import ride_crud, driver_profile_crud
 from app.enum import S3Bucket
 from app.enum import RoleCode
 
 
-class DocumentRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(document_crud, "/documents")
+class DocumentRouter(BaseRouter[DocumentCrud]):
+    def __init__(self, model_crud: DocumentCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/avatar/{{id}}", self.get_avatar_by_user_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
@@ -74,4 +75,4 @@ class DocumentRouter(BaseRouter):
         return {"key": key}
 
 
-documents_router = DocumentRouter().router
+documents_router = DocumentRouter(document_crud, "/documents").router

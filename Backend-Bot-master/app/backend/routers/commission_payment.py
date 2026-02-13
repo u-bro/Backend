@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, Request
 from app.backend.deps import require_role, require_owner
 from app.config import TOCHKA_ACQUIRING_FAIL_REDIRECT_URL, TOCHKA_ACQUIRING_REDIRECT_URL, TOCHKA_USE_SANDBOX, TOCHKA_WEBHOOK_EXAMPLE
-from app.crud import ride_crud, commission_payment_crud, document_crud, user_crud
+from app.crud.commission_payment import commission_payment_crud, CommissionPaymentCrud
+from app.crud import ride_crud, document_crud, user_crud
 from app.schemas.commission_payment import CommissionPaymentCreateRequest, CommissionPaymentSchema
 from app.services.tochka_acquiring import TochkaAPIError, tochka_acquiring_client
 from app.services.webhook_dispatcher import webhook_dispatcher
@@ -12,10 +13,10 @@ from app.services import pdf_generator
 from app.enum import RoleCode
 
 
-class CommissionPaymentRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(commission_payment_crud, "/commissions/payments")
-
+class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
+    def __init__(self, model_crud: CommissionPaymentCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
+        
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/{{id}}/payment-link", self.create_payment_link, methods=["POST"], status_code=201, dependencies=[Depends(require_owner(Ride, "client_id"))])
         self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_owner(CommissionPayment, "user_id"))])
@@ -27,7 +28,7 @@ class CommissionPaymentRouter(BaseRouter):
         if not ride:
             raise HTTPException(status_code=404, detail="Ride not found")
 
-        existing = await commission_payment_crud.get_by_ride_and_user(session, id, user.id, is_refund=False)
+        existing = await self.model_crud.get_by_ride_and_user(session, id, user.id, is_refund=False)
         if existing and existing.payment_link:
             return existing
 
@@ -84,7 +85,7 @@ class CommissionPaymentRouter(BaseRouter):
             await document_crud.upload_bytes(key, pdf_bytes)
 
         if existing:
-            updated = await commission_payment_crud.update(session, existing.id, fields)
+            updated = await self.model_crud.update(session, existing.id, fields)
             if not updated:
                 raise HTTPException(status_code=500, detail="Failed to update commission payment")
             if TOCHKA_USE_SANDBOX:
@@ -93,7 +94,7 @@ class CommissionPaymentRouter(BaseRouter):
                 await _generate_and_upload_check(updated)
             return updated
 
-        created = await commission_payment_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
+        created = await self.model_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
         if TOCHKA_USE_SANDBOX:
             await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
         if generate_check:
@@ -102,10 +103,10 @@ class CommissionPaymentRouter(BaseRouter):
 
     async def get_commission_payment(self, request: Request, id: int) -> CommissionPaymentSchema:
         session = request.state.session
-        item = await commission_payment_crud.get_by_id(session, id)
+        item = await self.model_crud.get_by_id(session, id)
         if not item:
             raise HTTPException(status_code=404, detail="Commission payment not found")
         return item
 
 
-commission_payment_router = CommissionPaymentRouter().router
+commission_payment_router = CommissionPaymentRouter(commission_payment_crud, "/commissions/payments").router

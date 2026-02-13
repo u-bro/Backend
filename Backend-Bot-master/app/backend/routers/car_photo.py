@@ -9,8 +9,8 @@ from app.enum import RoleCode
 
 
 class CarPhotoRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(car_photo_crud, "/car-photos")
+    def __init__(self, model_crud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
@@ -54,4 +54,4 @@ class CarPhotoRouter(BaseRouter):
         if car.driver_profile_id != driver_profile_id:
             raise HTTPException(status_code=403, detail='Forbidden')
 
-car_photo_router = CarPhotoRouter().router
+car_photo_router = CarPhotoRouter(car_photo_crud, "/car-photos").router

@@ -41,7 +41,7 @@ ALLOWED_TRANSITIONS = {
 }
 
 
-class CrudRide(CrudBase):
+class RideCrud(CrudBase):
     @staticmethod
     def _calculate_expected_fare(tariff_plan: TariffPlan, distance_meters: int | None) -> float | None:
         return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier)))
@@ -98,9 +98,9 @@ class CrudRide(CrudBase):
 
     @staticmethod
     def _add_expected_fare_and_snapshot(data: dict, tariff_plan: TariffPlan, distance_meters: int, commission: Commission):
-        expected_fare = CrudRide._calculate_expected_fare(tariff_plan, distance_meters)
-        commission_amount = CrudRide._calculate_commission_amount(expected_fare, commission)
-        snapshot = CrudRide._build_snapshot(tariff_plan, distance_meters, expected_fare, commission, commission_amount)
+        expected_fare = RideCrud._calculate_expected_fare(tariff_plan, distance_meters)
+        commission_amount = RideCrud._calculate_commission_amount(expected_fare, commission)
+        snapshot = RideCrud._build_snapshot(tariff_plan, distance_meters, expected_fare, commission, commission_amount)
         data["expected_fare"] = expected_fare
         data["commission_amount"] = commission_amount
         data["expected_fare_snapshot"] = snapshot
@@ -305,4 +305,4 @@ class CrudRide(CrudBase):
         item = result.scalar_one_or_none()
         return RideSchemaWithRating.model_validate(item) if item else None
 
-ride_crud = CrudRide(Ride, RideSchema)
+ride_crud = RideCrud(Ride, RideSchema)

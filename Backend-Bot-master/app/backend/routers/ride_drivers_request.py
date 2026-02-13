@@ -1,6 +1,6 @@
 from fastapi import Request, Depends, HTTPException
 from app.backend.routers.base import BaseRouter
-from app.crud.ride_drivers_request import ride_drivers_request_crud
+from app.crud.ride_drivers_request import ride_drivers_request_crud, RideDriversRequestCrud
 from app.crud.ride import ride_crud
 from app.schemas.ride_drivers_request import RideDriversRequestSchema,RideDriversRequestSchemaDetailed, RideDriversRequestUpdate
 from app.backend.deps import require_role, require_owner
@@ -8,9 +8,9 @@ from app.models import Ride, User
 from app.enum import RoleCode
 
 
-class RideDriversRequestRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(ride_drivers_request_crud, "/ride-requests")
+class RideDriversRequestRouter(BaseRouter[RideDriversRequestCrud]):
+    def __init__(self, model_crud: RideDriversRequestCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
@@ -37,4 +37,4 @@ class RideDriversRequestRouter(BaseRouter):
         return await self.model_crud.update(session, id, body)
 
 
-ride_drivers_request_router = RideDriversRequestRouter().router
+ride_drivers_request_router = RideDriversRequestRouter(ride_drivers_request_crud, "/ride-requests").router

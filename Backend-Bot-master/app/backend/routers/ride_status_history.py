@@ -1,14 +1,14 @@
 from fastapi import Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.crud.ride_status_history import ride_status_history_crud
+from app.crud.ride_status_history import ride_status_history_crud, RideStatusHistoryCrud
 from app.schemas.ride_status_history import RideStatusHistorySchema, RideStatusHistoryCreate
 from app.backend.deps import require_role
 from app.enum import RoleCode
 
 
-class RideStatusHistoryRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(ride_status_history_crud, "/ride-status-history")
+class RideStatusHistoryRouter(BaseRouter[RideStatusHistoryCrud]):
+    def __init__(self, model_crud: RideStatusHistoryCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
@@ -29,4 +29,4 @@ class RideStatusHistoryRouter(BaseRouter):
         return await self.model_crud.delete(request.state.session, id)
 
 
-ride_status_history_router = RideStatusHistoryRouter().router
+ride_status_history_router = RideStatusHistoryRouter(ride_status_history_crud, "/ride-status-history").router

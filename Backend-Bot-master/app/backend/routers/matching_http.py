@@ -1,7 +1,8 @@
 from typing import Any, Dict, List
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.crud import driver_profile_crud, driver_location_crud, driver_feed, driver_tracker
+from app.crud.driver_location import driver_location_crud, DriverLocationCrud
+from app.crud import driver_profile_crud, driver_feed, driver_tracker
 from app.services import manager_driver_feed
 from app.services.driver_state_storage import driver_state_storage
 from app.backend.deps import get_current_driver_profile_id, require_role
@@ -9,9 +10,9 @@ from app.schemas.driver_location import DriverLocationSchema, DriverLocationCrea
 from app.enum import RoleCode
 
 
-class MatchingHttpRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(driver_location_crud, "/matching")
+class MatchingHttpRouter(BaseRouter[DriverLocationCrud]):
+    def __init__(self, model_crud: DriverLocationCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/driver/register", self.register_driver, methods=["POST"], status_code=200)
@@ -82,4 +83,4 @@ class MatchingHttpRouter(BaseRouter):
     async def get_drivers_stats(self) -> Dict[str, Any]:
         return {**driver_state_storage.get_stats(), "ws_connections": manager_driver_feed.get_connection_count()}
 
-matching_http_router = MatchingHttpRouter().router
+matching_http_router = MatchingHttpRouter(driver_location_crud, "/matching").router

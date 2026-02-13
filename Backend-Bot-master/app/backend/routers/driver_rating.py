@@ -1,16 +1,16 @@
 import app.config
 from fastapi import Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.crud.driver_rating import driver_rating_crud
+from app.crud.driver_rating import driver_rating_crud, DriverRatingCrud
 from app.schemas.driver_rating import DriverRatingSchema, DriverRatingCreate, DriverRatingUpdate, DriverRatingCreateIn, DriverRatingAvgOut, DriverRatingConfig
 from app.backend.deps import require_role, require_owner, get_current_user_id
 from app.models import DriverRating
 from app.enum import RoleCode
 
 
-class DriverRatingRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(driver_rating_crud, "/driver-ratings")
+class DriverRatingRouter(BaseRouter[DriverRatingCrud]):
+    def __init__(self, model_crud: DriverRatingCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
@@ -45,4 +45,4 @@ class DriverRatingRouter(BaseRouter):
         await self.model_crud.recalculate_rating_avg(request.state.session)
         return {"ok": True}
 
-driver_rating_router = DriverRatingRouter().router
+driver_rating_router = DriverRatingRouter(driver_rating_crud, "/driver-ratings").router

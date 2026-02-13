@@ -2,7 +2,7 @@ from typing import Any
 from fastapi import Request, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.routers.base import BaseRouter
-from app.crud.ride import ride_crud
+from app.crud.ride import ride_crud, RideCrud
 from app.models import Ride
 from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver, RideSchemaWithRating
 from app.schemas.push import PushNotificationData
@@ -23,9 +23,9 @@ UPDATE_MESSAGE = {
     'canceled': 'Поездка отменена'
 }
 
-class RideRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(ride_crud, "/rides")
+class RideRouter(BaseRouter[RideCrud]):
+    def __init__(self, model_crud: RideCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
@@ -143,4 +143,4 @@ class RideRouter(BaseRouter):
         await fcm_service.send_to_user(session, client_id, PushNotificationData(title=title, body=message))
     
 
-ride_router = RideRouter().router
+ride_router = RideRouter(ride_crud, "/rides").router

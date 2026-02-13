@@ -1,15 +1,15 @@
 from fastapi import Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.crud.driver_document import driver_document_crud
+from app.crud.driver_document import driver_document_crud, DriverDocumentCrud
 from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverDocumentUpdate
 from app.backend.deps import require_role, require_driver_profile, require_driver_verification
 from app.models import DriverDocument
 from app.enum import RoleCode
 
 
-class DriverDocumentRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(driver_document_crud, "/driver-documents")
+class DriverDocumentRouter(BaseRouter[DriverDocumentCrud]):
+    def __init__(self, model_crud: DriverDocumentCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
@@ -34,4 +34,4 @@ class DriverDocumentRouter(BaseRouter):
         return await self.model_crud.delete(request.state.session, id)
 
 
-driver_document_router = DriverDocumentRouter().router
+driver_document_router = DriverDocumentRouter(driver_document_crud, "/driver-documents").router

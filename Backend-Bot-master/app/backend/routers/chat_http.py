@@ -12,6 +12,9 @@ from datetime import datetime, timezone
 
 
 class ChatHttpRouter(BaseRouter):
+    def __init__(self, model_crud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
+
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/history", self.get_chat_history, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{ride_id}}/send", self.send_message, methods=["POST"], status_code=200)
@@ -22,9 +25,6 @@ class ChatHttpRouter(BaseRouter):
         self.router.add_api_route(f"{self.prefix}/me", self.get_my_chats, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/stats", self.get_chat_stats, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/me/delete", self.delete_messages_by_ride_ids, methods=["POST"], status_code=200)
-
-    def __init__(self) -> None:
-        super().__init__(chat_service, "/chat")
 
     async def get_my_chats(self, request: Request, page: int = 1, page_size: int = 10, user_id: int = Depends(get_current_user_id)) -> list[ChatMessageHistory]:
         session = request.state.session
@@ -114,4 +114,4 @@ class ChatHttpRouter(BaseRouter):
         
         return ride, driver_profile
 
-chat_http_router = ChatHttpRouter().router
+chat_http_router = ChatHttpRouter(chat_service, "/chat").router

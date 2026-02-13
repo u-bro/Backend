@@ -2,15 +2,15 @@ from typing import List
 from fastapi import Depends, HTTPException, Request
 from app.backend.deps import require_role
 from app.backend.routers.base import BaseRouter
-from app.crud.device_token import device_token_crud
+from app.crud.device_token import device_token_crud, DeviceTokenCrud
 from app.schemas.device_token import DeviceTokenCreate, DeviceTokenIn, DeviceTokenSchema
 from app.models import User
 from app.enum import RoleCode
 
 
-class DeviceTokenRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(device_token_crud, "/device-tokens")
+class DeviceTokenRouter(BaseRouter[DeviceTokenCrud]):
+    def __init__(self, model_crud: DeviceTokenCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/me", self.get_my_tokens, methods=["GET"], status_code=200)
@@ -35,4 +35,4 @@ class DeviceTokenRouter(BaseRouter):
         return await self.model_crud.delete_by_user_id_and_token(request.state.session, user.id, token)
 
 
-device_token_router = DeviceTokenRouter().router
+device_token_router = DeviceTokenRouter(device_token_crud, "/device-tokens").router

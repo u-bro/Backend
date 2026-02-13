@@ -1,15 +1,14 @@
 from fastapi import Depends, Request
 from app.backend.deps import require_role
 from app.backend.routers.base import BaseRouter
-from app.crud.device_token import device_token_crud
 from app.schemas.push import PushSendToTokenRequest, PushSendToTopicRequest, PushSendToUserRequest
 from app.services.fcm_service import fcm_service
 from app.enum import RoleCode
 
 
-class PushAdminRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(device_token_crud, "/push")
+class PushAdminRouter(BaseRouter[None]):
+    def __init__(self, model_crud: None, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/send/token", self.send_to_token, methods=["POST"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
@@ -29,4 +28,4 @@ class PushAdminRouter(BaseRouter):
         return {"success_count": resp.success_count, "failure_count": resp.failure_count}
 
 
-push_notification_router = PushAdminRouter().router
+push_notification_router = PushAdminRouter(None, "/push").router

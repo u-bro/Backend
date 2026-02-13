@@ -1,14 +1,14 @@
 from fastapi import Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.crud.phone_verification import phone_verification_crud
+from app.crud.phone_verification import phone_verification_crud, PhoneVerificationCrud
 from app.schemas.phone_verification import PhoneVerificationSchema, PhoneVerificationSchemaCreate, PhoneVerificationUpdate
 from app.backend.deps import require_role
 from app.enum import RoleCode
 
 
-class PhoneVerificationRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(phone_verification_crud, "/phone-verifications")
+class PhoneVerificationRouter(BaseRouter[PhoneVerificationCrud]):
+    def __init__(self, model_crud: PhoneVerificationCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(self.prefix, self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role(RoleCode.ADMIN))])
@@ -34,4 +34,4 @@ class PhoneVerificationRouter(BaseRouter):
         return await self.model_crud.delete(request.state.session, id)
 
 
-phone_verification_router = PhoneVerificationRouter().router
+phone_verification_router = PhoneVerificationRouter(phone_verification_crud, "/phone-verifications").router

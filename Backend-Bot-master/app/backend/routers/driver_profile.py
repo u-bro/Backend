@@ -1,14 +1,14 @@
 from fastapi import Request, Depends
 from app.backend.routers.base import BaseRouter
-from app.crud.driver_profile import driver_profile_crud
+from app.crud.driver_profile import driver_profile_crud, DriverProfileCrud
 from app.schemas.driver_profile import DriverProfileSchema, DriverProfileCreate, DriverProfileUpdate, DriverProfileApprove, DriverProfileApproveIn, DriverProfileUpdateMe, DriverProfileWithCars
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id
 from app.enum import RoleCode
 
 
-class DriverProfileRouter(BaseRouter):
-    def __init__(self) -> None:
-        super().__init__(driver_profile_crud, "/driver-profiles")
+class DriverProfileRouter(BaseRouter[DriverProfileCrud]):
+    def __init__(self, model_crud: DriverProfileCrud, prefix: str) -> None:
+        super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/me", self.get_me, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN]))])
@@ -48,4 +48,4 @@ class DriverProfileRouter(BaseRouter):
     async def get_me(self, request: Request, id: int = Depends(get_current_driver_profile_id)) -> DriverProfileSchema:
         return await self.model_crud.get_by_id_with_cars(request.state.session, id)
 
-driver_profile_router = DriverProfileRouter().router
+driver_profile_router = DriverProfileRouter(driver_profile_crud, "/driver-profiles").router
