@@ -20,7 +20,7 @@ class MessageType:
 
 class S3Bucket:
     DOCUMENT = S3_DOCUMENTS_BUCKET
-    AVATAR = S3_DOCUMENTS_BUCKET
+    AVATAR = S3_AVATARS_BUCKET
 
 
 class RoleCode:
