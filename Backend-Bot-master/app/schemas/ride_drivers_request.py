@@ -10,20 +10,20 @@ class RideDriversRequestCreate(BaseSchema):
     ride_id: int = Field(..., gt=0)
     driver_profile_id: int = Field(..., gt=0)
     car_id: int | None = Field(None, gt=0)
-    status: Literal['requested'] | None = Field("requested", max_length=50)
-    eta: str | None = Field(None, max_length=50)
+    status: Literal['requested'] | None = Field("requested")
+    eta: dict | None = Field(None)
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideDriversRequestUpdate(BaseSchema):
-    status: Literal['accepted', 'rejected', 'canceled'] = Field(..., max_length=50)
-    eta: str | None = Field(None, max_length=50)
+    status: Literal['accepted', 'rejected', 'canceled'] = Field(...)
+    eta: dict | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideDriversRequestSchema(RideDriversRequestCreate):
     id: int = Field(..., gt=0)
-    status: Literal['requested', 'accepted', 'rejected', 'canceled'] = Field(..., max_length=50)
+    status: Literal['requested', 'accepted', 'rejected', 'canceled'] = Field(...)
     updated_at: datetime | None = None
 
 
