@@ -3,7 +3,7 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import insert, update, delete, text
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from app.crud.base import CrudBase
 from .tariff_plan import tariff_plan_crud
 from .commission import commission_crud
@@ -14,7 +14,7 @@ from .in_app_notification import in_app_notification_crud
 from .driver_location_sender import driver_location_sender
 from .driver_tracker import driver_tracker, DriverStatus
 from app.models import Ride, TariffPlan, Commission, RideDriversRequest, ChatMessage
-from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating
+from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating, RideSchemaWithDriverProfile
 from app.schemas.ride_status_history import RideStatusHistoryCreate
 from app.schemas.in_app_notification import InAppNotificationCreate
 from fastapi import HTTPException
@@ -304,5 +304,10 @@ class RideCrud(CrudBase):
         result = await session.execute(select(self.model).options(selectinload(self.model.driver_rating)).where(self.model.id == id))
         item = result.scalar_one_or_none()
         return RideSchemaWithRating.model_validate(item) if item else None
+
+    async def get_by_id_with_driver_profile(self, session: AsyncSession, id: int) -> RideSchemaWithDriverProfile | None:
+        result = await session.execute(select(self.model).options(joinedload(self.model.driver_profile)).where(self.model.id == id))
+        item = result.scalar_one_or_none()
+        return RideSchemaWithDriverProfile.model_validate(item) if item else None
 
 ride_crud = RideCrud(Ride, RideSchema)
