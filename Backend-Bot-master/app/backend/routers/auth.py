@@ -1,17 +1,18 @@
 from fastapi import Request, Depends
 from app.crud.phone_verification import phone_verification_crud
-from app.crud.auth import CrudAuth, auth_crud
+from app.crud.auth import AuthCrud, auth_crud
 from app.crud.refresh_token import refresh_token_crud
 from app.schemas import AuthSchemaLogin, PhoneVerificationSchema, TokenResponse, RefreshTokenVerifyRequest, TokenResponseRegister
-from app.schemas.phone_verification import PhoneVerificationSchemaCreate, PhoneVerificationVerifyRequest
+from app.schemas.phone_verification import PhoneVerificationSchemaCreate, PhoneVerificationVerifyRequest, PhoneVerificationUpdate
 from app.backend.routers.base import BaseRouter
 from app.models import User
 from app.backend.deps import get_current_user_id
+from app.config import OTP_TTL
 import secrets
 from datetime import datetime, timedelta, timezone
 
-class AuthRouter(BaseRouter):
-    def __init__(self, model_crud: CrudAuth, prefix: str) -> None:
+class AuthRouter(BaseRouter[AuthCrud]):
+    def __init__(self, model_crud: AuthCrud, prefix: str) -> None:
         super().__init__(model_crud, prefix)
 
     def setup_routes(self) -> None:
@@ -26,7 +27,7 @@ class AuthRouter(BaseRouter):
 
     async def send_otp(self, request: Request, user: User, is_registred: bool) -> PhoneVerificationSchema:
         code = self.generate_otp()
-        ttl = 120
+        ttl = OTP_TTL
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
         create_obj = PhoneVerificationSchemaCreate(
             user_id=user.id,
@@ -38,6 +39,7 @@ class AuthRouter(BaseRouter):
         return await phone_verification_crud.create(request.state.session, create_obj)
 
     async def verify_otp(self, request: Request, verify_obj: PhoneVerificationVerifyRequest) -> TokenResponseRegister:
+        await phone_verification_crud.attempts_increment(request.state.session, verify_obj.phone)
         return await phone_verification_crud.verify_by_user_id(request.state.session, verify_obj)
 
     async def refresh(self, request: Request, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse:
