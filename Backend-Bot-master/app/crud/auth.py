@@ -15,7 +15,7 @@ from fastapi import HTTPException
 from app.enum import RoleCode
 
 
-class CrudAuth(CrudBase):
+class AuthCrud(CrudBase):
     def __init__(self, model, schema, secret_key: str, algorithm: str = "HS256"):
         super().__init__(model, schema)
         self.secret_key = secret_key
@@ -83,4 +83,4 @@ class CrudAuth(CrudBase):
             refresh_token=refresh_token.token
         )
 
-auth_crud = CrudAuth(User, UserSchema, JWT_SECRET_KEY, JWT_ALGORITHM)
+auth_crud = AuthCrud(User, UserSchema, JWT_SECRET_KEY, JWT_ALGORITHM)
