@@ -1,13 +1,13 @@
 from app.crud.base import CrudBase
 from app.models.phone_verification import PhoneVerification
-from app.schemas.phone_verification import PhoneVerificationSchema
+from app.schemas.phone_verification import PhoneVerificationSchema, PhoneVerificationSchemaCreate
 from app.schemas.auth import TokenResponseRegister
 from app.schemas.refresh_token import RefreshTokenIn
 from app.models.phone_verification import PhoneVerification
 from app.schemas import PhoneVerificationSchema
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.sql import update, desc
+from sqlalchemy.sql import update, desc, insert
 from app.schemas.phone_verification import PhoneVerificationVerifyRequest
 from datetime import datetime, timedelta, timezone
 from app.config import JWT_EXPIRATION_MINTUES, OTP_MAX_ATTEMPTS
@@ -78,5 +78,13 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
         result = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(result) if result else None
 
+    async def create(self, session: AsyncSession, create_obj: PhoneVerificationSchemaCreate) -> PhoneVerificationSchema | None:
+        item = await self.get_by_phone(session, create_obj.phone)
+        if item.expires_at > datetime.now(timezone.utc):
+            raise HTTPException(status_code=400, detail='Previous code is not expired')
+
+        stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
+        result = await self.execute_get_one(session, stmt)
+        return self.schema.model_validate(result) if result else None
 
 phone_verification_crud = PhoneVerificationCrud()
