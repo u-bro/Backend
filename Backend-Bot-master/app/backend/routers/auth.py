@@ -3,7 +3,7 @@ from app.crud.phone_verification import phone_verification_crud
 from app.crud.auth import AuthCrud, auth_crud
 from app.crud.refresh_token import refresh_token_crud
 from app.schemas import AuthSchemaLogin, PhoneVerificationSchema, TokenResponse, RefreshTokenVerifyRequest, TokenResponseRegister
-from app.schemas.phone_verification import PhoneVerificationSchemaCreate, PhoneVerificationVerifyRequest
+from app.schemas.phone_verification import PhoneVerificationSchemaCreate, PhoneVerificationVerifyRequest, PhoneVerificationUpdate
 from app.backend.routers.base import BaseRouter
 from app.models import User
 from app.backend.deps import get_current_user_id
@@ -39,6 +39,7 @@ class AuthRouter(BaseRouter[AuthCrud]):
         return await phone_verification_crud.create(request.state.session, create_obj)
 
     async def verify_otp(self, request: Request, verify_obj: PhoneVerificationVerifyRequest) -> TokenResponseRegister:
+        await phone_verification_crud.attempts_increment(request.state.session, verify_obj.phone)
         return await phone_verification_crud.verify_by_user_id(request.state.session, verify_obj)
 
     async def refresh(self, request: Request, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse:

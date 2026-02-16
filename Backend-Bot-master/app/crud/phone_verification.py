@@ -10,7 +10,7 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import update, desc
 from app.schemas.phone_verification import PhoneVerificationVerifyRequest
 from datetime import datetime, timedelta, timezone
-from app.config import JWT_EXPIRATION_MINTUES
+from app.config import JWT_EXPIRATION_MINTUES, OTP_MAX_ATTEMPTS
 from .auth import auth_crud
 from .refresh_token import refresh_token_crud
 from fastapi import HTTPException
@@ -65,6 +65,18 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
             refresh_token=refresh_token.token,
             is_registred=item.is_registred
         )
+
+    async def attempts_increment(self, session: AsyncSession, phone: str) -> PhoneVerificationSchema | None:
+        existing = await self.get_by_phone(session, phone)
+        if not existing:
+            return None
+        
+        if existing.attempts > OTP_MAX_ATTEMPTS:
+            raise HTTPException(status_code=400, detail='Too many attempts. Resend code')
+
+        stmt = update(self.model).where(self.model.id == existing.id).values(attempts=self.model.attempts + 1).returning(self.model)
+        result = await self.execute_get_one(session, stmt)
+        return self.schema.model_validate(result) if result else None
 
 
 phone_verification_crud = PhoneVerificationCrud()
