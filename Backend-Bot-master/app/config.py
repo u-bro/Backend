@@ -23,6 +23,7 @@ DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{D
 
 TELEGRAM_OTP_BASE_URL = 'https://gatewayapi.telegram.org/'
 TELEGRAM_OTP_TOKEN = 'AAEDMAAATZrglNKgaX0kPyOE5krqBpx-M09H3bJM7Q-AdA'
+OTP_TTL = int(os.environ.get('OTP_TTL', 120))
 
 MAX_DISTANCE_KM = float(os.environ.get('MAX_DISTANCE_KM', 5.0))
 FEED_PUSH_INTERVAL_SECONDS = int(os.getenv("MATCHING_FEED_PUSH_INTERVAL_SECONDS", "5"))
