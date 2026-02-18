@@ -2,7 +2,7 @@ from fastapi import Request, Depends
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_profile import driver_profile_crud, DriverProfileCrud
 from app.schemas.driver_profile import DriverProfileSchema, DriverProfileCreate, DriverProfileUpdate, DriverProfileApprove, DriverProfileApproveIn, DriverProfileUpdateMe, DriverProfileWithCars
-from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id
+from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, get_current_driver_profile_id_without_approve
 from app.enum import RoleCode
 
 
@@ -42,10 +42,10 @@ class DriverProfileRouter(BaseRouter[DriverProfileCrud]):
     async def approve_profile(self, request: Request, id: int, body: DriverProfileApproveIn, user_id: int = Depends(get_current_user_id)) -> DriverProfileSchema:
         return await self.model_crud.approve(request.state.session, id, DriverProfileApprove(approved_by=user_id, **body.model_dump()))
 
-    async def update_me(self, request: Request, body: DriverProfileUpdateMe, id = Depends(get_current_driver_profile_id)) -> DriverProfileSchema:
+    async def update_me(self, request: Request, body: DriverProfileUpdateMe, id = Depends(get_current_driver_profile_id_without_approve)) -> DriverProfileSchema:
         return await self.model_crud.update(request.state.session, id, body)
 
-    async def get_me(self, request: Request, id: int = Depends(get_current_driver_profile_id)) -> DriverProfileSchema:
+    async def get_me(self, request: Request, id: int = Depends(get_current_driver_profile_id_without_approve)) -> DriverProfileSchema:
         return await self.model_crud.get_by_id_with_cars(request.state.session, id)
 
 driver_profile_router = DriverProfileRouter(driver_profile_crud, "/driver-profiles").router
