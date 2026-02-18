@@ -7,9 +7,9 @@ from .car import CarSchema
 
 class DriverProfileCreate(BaseSchema):
     user_id: int
-    first_name: Optional[str] = Field(None, max_length=100)
-    last_name: Optional[str] = Field(None, max_length=100)
-    middle_name: Optional[str] = Field(None, max_length=100)
+    first_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    last_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    middle_name: Optional[str] = Field(None, min_length=2, max_length=100)
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=100)
@@ -30,9 +30,9 @@ class DriverProfileCreate(BaseSchema):
 
 
 class DriverProfileUpdateMe(BaseSchema):
-    first_name: Optional[str] = Field(None, max_length=100)
-    last_name: Optional[str] = Field(None, max_length=100)
-    middle_name: Optional[str] = Field(None, max_length=100)
+    first_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    last_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    middle_name: Optional[str] = Field(None, min_length=2, max_length=100)
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=100)
@@ -44,9 +44,9 @@ class DriverProfileUpdateMe(BaseSchema):
 
 
 class DriverProfileUpdate(BaseSchema):
-    first_name: Optional[str] = Field(None, max_length=100)
-    last_name: Optional[str] = Field(None, max_length=100)
-    middle_name: Optional[str] = Field(None, max_length=100)
+    first_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    last_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    middle_name: Optional[str] = Field(None, min_length=2, max_length=100)
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=100)

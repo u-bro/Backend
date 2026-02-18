@@ -4,9 +4,9 @@ from .base import BaseSchema
 
 
 class UserSchemaCreate(BaseSchema):
-    first_name: str | None = Field(None, max_length=100)
-    last_name: str | None = Field(None, max_length=100)
-    middle_name: str | None = Field(None, max_length=100)
+    first_name: str | None = Field(None, min_length=2, max_length=100)
+    last_name: str | None = Field(None, min_length=2, max_length=100)
+    middle_name: str | None = Field(None, min_length=2, max_length=100)
     phone: str | None = Field(None, max_length=20)
     email: str | None = Field(None, max_length=255)
     city: str | None = Field(None, max_length=100)
@@ -22,9 +22,9 @@ class UserSchemaUpdate(UserSchemaCreate):
 
 
 class UserSchemaUpdateMe(BaseSchema):
-    first_name: str | None = Field(None, max_length=100)
-    last_name: str | None = Field(None, max_length=100)
-    middle_name: str | None = Field(None, max_length=100)
+    first_name: str | None = Field(None, min_length=2, max_length=100)
+    last_name: str | None = Field(None, min_length=2, max_length=100)
+    middle_name: str | None = Field(None, min_length=2, max_length=100)
     phone: str | None = Field(None, max_length=20)
     email: str | None = Field(None, max_length=255)
     city: str | None = Field(None, max_length=100)
