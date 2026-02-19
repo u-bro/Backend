@@ -8,7 +8,8 @@ class PhoneVerificationUpdate(BaseSchema):
     user_id: Optional[int] = None
     phone: Optional[str] = None
     code: Optional[str] = None
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = Field(None)
+    next_sending_at: datetime | None = Field(None)
     status: Optional[str] = None
     attempts: Optional[int] = None
     is_registred: Optional[bool] = None
@@ -19,6 +20,7 @@ class PhoneVerificationSchemaCreate(BaseSchema):
     phone: str = Field(..., max_length=20)
     code: str = Field(..., max_length=10)
     expires_at: datetime | None = Field(None)
+    next_sending_at: datetime | None = Field(None)
     status: Optional[str] = None
     attempts: Optional[int] = 0
     is_registred: Optional[bool] = None

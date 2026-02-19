@@ -25,6 +25,7 @@ TELEGRAM_OTP_BASE_URL = 'https://gatewayapi.telegram.org/'
 TELEGRAM_OTP_TOKEN = 'AAEDMAAATZrglNKgaX0kPyOE5krqBpx-M09H3bJM7Q-AdA'
 OTP_TTL = int(os.environ.get('OTP_TTL', 120))
 OTP_MAX_ATTEMPTS = int(os.environ.get('OTP_MAX_ATTEMPTS', 3))
+OTP_NEXT_SENDING_SECONDS = int(os.environ.get('OTP_NEXT_SENDING_SECONDS', 30))
 
 MAX_DISTANCE_KM = float(os.environ.get('MAX_DISTANCE_KM', 5.0))
 FEED_PUSH_INTERVAL_SECONDS = int(os.getenv("MATCHING_FEED_PUSH_INTERVAL_SECONDS", "5"))
