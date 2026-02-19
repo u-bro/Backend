@@ -1,15 +1,24 @@
 from typing import Optional
 from .base import BaseSchema
 from datetime import datetime, timezone
-from pydantic import Field
+from pydantic import Field, model_validator
 from .car import CarSchema
 
 
-class DriverProfileCreate(BaseSchema):
+class DriverProfileValidated(BaseSchema):
+
+    @model_validator(mode="after")
+    def check_first_name_and_last_name(self):
+        if self.first_name and not self.last_name or self.last_name and not self.first_name:
+            raise ValueError('first_name and last_name must be provided together')
+        return self
+
+
+class DriverProfileCreate(DriverProfileValidated):
     user_id: int
-    first_name: Optional[str] = Field(None, min_length=2, max_length=100)
-    last_name: Optional[str] = Field(None, min_length=2, max_length=100)
-    middle_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    middle_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=100)
@@ -29,10 +38,10 @@ class DriverProfileCreate(BaseSchema):
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-class DriverProfileUpdateMe(BaseSchema):
-    first_name: Optional[str] = Field(None, min_length=2, max_length=100)
-    last_name: Optional[str] = Field(None, min_length=2, max_length=100)
-    middle_name: Optional[str] = Field(None, min_length=2, max_length=100)
+class DriverProfileUpdateMe(DriverProfileValidated):
+    first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    middle_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=100)
@@ -43,10 +52,10 @@ class DriverProfileUpdateMe(BaseSchema):
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-class DriverProfileUpdate(BaseSchema):
-    first_name: Optional[str] = Field(None, min_length=2, max_length=100)
-    last_name: Optional[str] = Field(None, min_length=2, max_length=100)
-    middle_name: Optional[str] = Field(None, min_length=2, max_length=100)
+class DriverProfileUpdate(DriverProfileValidated):
+    first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    middle_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=100)
