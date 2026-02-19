@@ -81,7 +81,7 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
     async def create(self, session: AsyncSession, create_obj: PhoneVerificationSchemaCreate) -> PhoneVerificationSchema | None:
         item = await self.get_by_phone(session, create_obj.phone)
         if item and item.next_sending_at and item.next_sending_at > datetime.now(timezone.utc):
-            raise HTTPException(status_code=400, detail='Previous code is not expired')
+            raise HTTPException(status_code=400, detail='Too many code sendings')
 
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
         result = await self.execute_get_one(session, stmt)
