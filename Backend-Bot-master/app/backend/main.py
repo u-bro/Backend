@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.exceptions import ResponseValidationError
+from fastapi.exceptions import ResponseValidationError, RequestValidationError
 from fastapi.encoders import jsonable_encoder
 from app.backend.middlewares.exception import setup_error_middleware
 from app.backend.openapi_schema import custom_openapi
@@ -49,6 +49,15 @@ app.include_router(tochka_webhook_router, tags=['Tochka(Webhooks)'], prefix=API_
 app.include_router(ride_drivers_request_router, tags=['RideDriversRequests'], prefix=API_PREFIX)
 app.include_router(car_router, tags=['Cars'], prefix=API_PREFIX)
 app.include_router(car_photo_router, tags=['CarPhotos'], prefix=API_PREFIX)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": "Unprocessable content",
+        },
+    )
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request: Request, exc: ResponseValidationError):
