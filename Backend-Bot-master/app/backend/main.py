@@ -1,12 +1,14 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
-
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import HTTPException
 from fastapi.exceptions import ResponseValidationError, RequestValidationError
+from http import HTTPStatus
 from app.backend.middlewares.exception import setup_error_middleware
 from app.backend.openapi_schema import custom_openapi
 from app.backend.middlewares import install_db_middleware
 from app.backend.routers import *
+from app.logger import logger
 
 
 app = FastAPI()
@@ -49,8 +51,20 @@ app.include_router(ride_drivers_request_router, tags=['RideDriversRequests'], pr
 app.include_router(car_router, tags=['Cars'], prefix=API_PREFIX)
 app.include_router(car_photo_router, tags=['CarPhotos'], prefix=API_PREFIX)
 
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    logger.error(f"HTTP exception occurred: {exc}")
+    try:
+        detail = HTTPStatus(exc.status_code).phrase
+    except ValueError:
+        detail = "Error"
+    return JSONResponse(status_code=exc.status_code, content={"detail": detail})
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Request validation error occurred: {exc}")
     return JSONResponse(
         status_code=422,
         content={
@@ -60,6 +74,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request: Request, exc: ResponseValidationError):
+    logger.error(f"Response validation error occurred: {exc}")
     return JSONResponse(
         status_code=422,
         content={
