@@ -1,3 +1,4 @@
+import app.config
 from typing import Any, Dict, List
 from fastapi import HTTPException, Query, Request, Depends
 from app.backend.routers.base import BaseRouter
@@ -6,7 +7,7 @@ from app.crud import driver_profile_crud, driver_feed, driver_tracker
 from app.services import manager_driver_feed
 from app.services.driver_state_storage import driver_state_storage
 from app.backend.deps import get_current_driver_profile_id, require_role
-from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate, DriverLocationUpdateMe
+from app.schemas.driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate, DriverLocationUpdateMe, MatchingConfig
 from app.enum import RoleCode
 
 
@@ -17,6 +18,7 @@ class MatchingHttpRouter(BaseRouter[DriverLocationCrud]):
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/driver/register", self.register_driver, methods=["POST"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/feed", self.get_ride_feed, methods=["GET"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/config", self.configure_matching_consts, methods=["PUT"], dependencies=[Depends(require_role(RoleCode.ADMIN))])
 
         self.router.add_api_route(f"{self.prefix}/notify/{{user_id}}", self.send_notification, methods=["POST"], dependencies=[Depends(require_role(RoleCode.ADMIN))])
         self.router.add_api_route(f"{self.prefix}/broadcast", self.broadcast_message, methods=["POST"], dependencies=[Depends(require_role(RoleCode.ADMIN))])
@@ -82,5 +84,9 @@ class MatchingHttpRouter(BaseRouter[DriverLocationCrud]):
 
     async def get_drivers_stats(self) -> Dict[str, Any]:
         return {**driver_state_storage.get_stats(), "ws_connections": manager_driver_feed.get_connection_count()}
+
+    async def configure_matching_consts(self, request: Request, body: MatchingConfig):
+        app.config.MAX_DISTANCE_KM = body.max_distance_km
+        return {"ok": True}
 
 matching_http_router = MatchingHttpRouter(driver_location_crud, "/matching").router
