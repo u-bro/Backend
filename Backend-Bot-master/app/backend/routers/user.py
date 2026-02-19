@@ -41,12 +41,10 @@ class UserRouter(BaseRouter[UserCrud]):
 
     async def get_me(self, request: Request, user: User = Depends(get_current_user)) ->  UserSchemaMe:
         role_name = user.role.code
-        role_name = RoleCode.USER if role_name == RoleCode.DRIVER and (not user.driver_profile or not user.driver_profile.approved) else role_name
         if role_name == RoleCode.DRIVER:
             driver_location = await driver_location_crud.get_by_driver_profile_id(request.state.session, user.driver_profile.id)
-            if not driver_location:
-                raise HTTPException(status_code=404, detail="Driver location not found")
-            return UserSchemaMe(**user.__dict__, role_name=role_name, is_active_ride=driver_location.status in ['busy', 'waiting_ride'])
+            is_active_ride = driver_location.status in ['busy', 'waiting_ride'] if driver_location else False
+            return UserSchemaMe(**user.__dict__, role_name=role_name, is_active_ride=is_active_ride)
 
         rides = await ride_crud.get_by_client_id(request.state.session, user.id)
         statuses = [ride.status for ride in rides if ride.status in ['requested', 'waiting_commission', 'accepted', 'on_the_way', 'arrived', 'started']]

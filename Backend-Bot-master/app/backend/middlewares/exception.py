@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
+from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from typing import Union, Any
+from http import HTTPStatus
 
 from pydantic import ValidationError
 from app.logger import logger
@@ -16,10 +18,16 @@ class ErrorHandlingMiddleware:
             return await call_next(request)
         except HTTPException as exc:
             logger.error(f"Http error occurred: {exc}")
+            try:
+                detail = HTTPStatus(exc.status_code).phrase
+            except ValueError:
+                detail = "Error"
             return JSONResponse(
                 status_code=exc.status_code,
-                content={"detail": exc.detail}
+                content={"detail": detail}
             )
+        except (RequestValidationError, ResponseValidationError):
+            raise
         except ValidationError as exc:
             logger.error(f"Validation error occurred: {exc}")
             return JSONResponse(
