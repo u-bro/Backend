@@ -11,6 +11,7 @@ class AuthSchemaRegister(BaseSchema):
 
 class AuthSchemaLogin(BaseSchema):
     phone: str = Field(..., max_length=20)
+    code_role: Literal[RoleCode.DRIVER, RoleCode.USER] | None = Field(None)
 
 
 class TokenResponse(BaseSchema):

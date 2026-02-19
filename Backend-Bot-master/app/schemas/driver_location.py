@@ -26,3 +26,7 @@ class DriverLocationUpdateMe(DriverLocationUpdate):
 
 class DriverLocationSchema(DriverLocationCreate):
     id: int
+
+
+class MatchingConfig(BaseSchema):
+    max_distance_km: float = Field(..., ge=0)

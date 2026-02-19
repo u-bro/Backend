@@ -1,10 +1,9 @@
 from typing import Dict, List
 from asyncio import Task
-import math, asyncio, logging
+import math, asyncio, logging, app.config
 from app.services.websocket_manager import manager_driver_feed
 from app.services.driver_state_storage import driver_state_storage
 from app.db import async_session_maker
-from app.config import MAX_DISTANCE_KM, FEED_PUSH_INTERVAL_SECONDS, FEED_LIMIT
 from app.models import Ride
 from app.schemas.ride import RideSchema
 from sqlalchemy import and_, select
@@ -29,7 +28,6 @@ class DriverFeed:
              math.cos(lat1_rad) * math.cos(lat2_rad) *
              math.sin(delta_lon / 2) ** 2)
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        
         return R * c
 
     async def start_feed_task(self, user_id: int, driver_profile_id: int) -> None:
@@ -51,10 +49,10 @@ class DriverFeed:
         try:
             while manager_driver_feed.is_connected(user_id):
                 async with async_session_maker() as session:
-                    feed = await self.get_driver_feed(session, driver_profile_id, FEED_LIMIT)
+                    feed = await self.get_driver_feed(session, driver_profile_id, app.config.FEED_LIMIT)
                     await manager_driver_feed.send_personal_message(user_id, {"type": "ride_feed", "driver_profile_id": driver_profile_id, "count": len(feed), "rides": feed})
 
-                await asyncio.sleep(FEED_PUSH_INTERVAL_SECONDS)
+                await asyncio.sleep(app.config.FEED_PUSH_INTERVAL_SECONDS)
         except asyncio.CancelledError:
             return
         except Exception as exc:
@@ -78,7 +76,7 @@ class DriverFeed:
                 driver.latitude, driver.longitude,
                 float(pickup_lat), float(pickup_lng)
             )
-            if distance > MAX_DISTANCE_KM:
+            if distance > app.config.MAX_DISTANCE_KM:
                 continue
 
             ride_with_distance = {**ride.model_dump(), 'distance_to_pickup_km': round(distance, 2)}

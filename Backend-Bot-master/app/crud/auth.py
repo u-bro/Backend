@@ -5,12 +5,14 @@ from sqlalchemy.sql import select
 from app.crud.base import CrudBase
 from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate, RefreshTokenVerifyRequest, TokenResponse, UserSchemaCreate
 from app.schemas.refresh_token import RefreshTokenIn
+from app.schemas.user import UserSchemaUpdate
 from app.logger import logger
 from app.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINTUES
 from app.models import User
 from .role import role_crud
 from .driver_profile import driver_profile_crud
 from .refresh_token import refresh_token_crud
+from .user import user_crud
 from fastapi import HTTPException
 from app.enum import RoleCode
 
@@ -64,11 +66,19 @@ class AuthCrud(CrudBase):
         
         return self.schema.model_validate(new_user)
 
-    async def login_or_register(self, session: AsyncSession, phone: str) -> (UserSchema, bool):
+    async def login_or_register(self, session: AsyncSession, phone: str, code_role: RoleCode | None = None) -> (UserSchema, bool):
         user = await self.get_by_phone(session, phone)
         is_registred = False
+        if user and code_role:
+            role = await role_crud.get_by_code(session, code_role)
+            if not role:
+                logger.warning(f"Role with code \'{code_role}\' not found")
+                raise HTTPException(status_code=404, detail="Role not found")
+            user = await user_crud.update(session, user.id, UserSchemaUpdate(role_id=role.id))
+
         if not user:
-            user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code=RoleCode.DRIVER))
+            role_code = code_role if code_role else RoleCode.DRIVER
+            user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code=role_code))
             is_registred = True
             
         return user, is_registred

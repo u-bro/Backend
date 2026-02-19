@@ -22,7 +22,7 @@ class AuthRouter(BaseRouter[AuthCrud]):
         self.router.add_api_route(f"{self.prefix}/logout", self.logout, methods=["POST"], status_code=200, dependencies=[Depends(get_current_user_id)])
 
     async def login_or_register(self, request: Request, login_obj: AuthSchemaLogin) -> PhoneVerificationSchema:
-        user, is_registred = await self.model_crud.login_or_register(request.state.session, login_obj.phone)
+        user, is_registred = await self.model_crud.login_or_register(request.state.session, login_obj.phone, login_obj.code_role)
         return await self.send_otp(request, user, is_registred)
 
     async def send_otp(self, request: Request, user: User, is_registred: bool) -> PhoneVerificationSchema:
