@@ -26,11 +26,13 @@ class UserSchemaCreate(UserSchemaValidated):
 
 class UserSchemaUpdate(UserSchemaCreate):
     last_active: datetime | None = Field(None)
-    is_active: bool | None = Field(None) 
+    is_active: bool | None = Field(None)
+    role_id: int | None = Field(None, gt=0)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class UserSchemaUpdateMe(UserSchemaValidated):
+    role_id: int | None = Field(None, gt=0)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
