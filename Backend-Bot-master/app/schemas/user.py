@@ -1,6 +1,7 @@
 from pydantic import Field, model_validator
 from datetime import datetime, timezone
 from .base import BaseSchema
+from .role import RoleSchema
 
 
 class UserSchemaValidated(BaseSchema):
@@ -43,3 +44,7 @@ class UserSchema(UserSchemaUpdate):
 class UserSchemaMe(UserSchema):
     role_name: str
     is_active_ride: bool = False
+
+
+class UserSchemaWithRole(UserSchema):
+    role: RoleSchema

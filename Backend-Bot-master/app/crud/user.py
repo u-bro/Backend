@@ -1,8 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import update, select
+from sqlalchemy.orm import joinedload
 from app.crud.base import CrudBase
 from app.models import User
-from app.schemas.user import UserSchema, UserSchemaUpdate
+from app.schemas.user import UserSchema, UserSchemaUpdate, UserSchemaWithRole
 from fastapi import HTTPException
 
 
@@ -50,5 +51,10 @@ class UserCrud(CrudBase):
         )
         result = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(result) if result else None
+
+    async def get_by_id_with_role(self, session: AsyncSession, id: int) -> UserSchemaWithRole | None:
+        result = await session.execute(select(self.model).options(joinedload(self.model.role)).where(self.model.id == id))
+        item = result.scalar_one_or_none()
+        return UserSchemaWithRole.model_validate(item) if item else None
 
 user_crud: UserCrud = UserCrud(User, UserSchema)
