@@ -9,6 +9,7 @@ from app.backend.openapi_schema import custom_openapi
 from app.backend.middlewares import install_db_middleware
 from app.backend.routers import *
 from app.logger import logger
+from app.const import HTTP_ERROR_MESSAGES
 
 
 app = FastAPI()
@@ -55,30 +56,32 @@ app.include_router(car_photo_router, tags=['CarPhotos'], prefix=API_PREFIX)
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     logger.error(f"HTTP exception occurred: {exc}")
-    try:
-        detail = HTTPStatus(exc.status_code).phrase
-    except ValueError:
-        detail = "Error"
+    error_messages = HTTP_ERROR_MESSAGES.get(exc.status_code, ('UNKNOWN',))
+    detail = exc.detail if exc.detail in error_messages else error_messages[0]
     return JSONResponse(status_code=exc.status_code, content={"detail": detail})
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     logger.error(f"Request validation error occurred: {exc}")
+    error_messages = HTTP_ERROR_MESSAGES.get(400, ('VALIDATION_ERROR',))
+    if exc.errors()[0].get('msg') == "String should match pattern '^[A-Za-z0-9._-]+@[A-Za-z0-9-]+\\.[A-Za-z]{2,}$'":
+        error_messages = ('VALIDATION_ERROR_MAIL',)
     return JSONResponse(
-        status_code=422,
+        status_code=400,
         content={
-            "detail": "Unprocessable content",
+            "detail": error_messages[0],
         },
     )
 
 @app.exception_handler(ResponseValidationError)
 async def validation_exception_handler(request: Request, exc: ResponseValidationError):
     logger.error(f"Response validation error occurred: {exc}")
+    error_messages = HTTP_ERROR_MESSAGES.get(400, ('VALIDATION_ERROR',))
     return JSONResponse(
-        status_code=422,
+        status_code=400,
         content={
-            "detail": "Unprocessable content",
+            "detail": error_messages[0],
         },
     )
 

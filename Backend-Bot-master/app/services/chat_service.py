@@ -81,6 +81,7 @@ class ChatService:
         user = await user_crud.get_by_id_with_role(session, user_id)
         if not user:
             raise HTTPException(status_code=404, detail='User not found')
+
         rides = await ride_crud.get_paginated_as_driver_with_chats(session, user_id, page, page_size, "updated_at desc") if user.role.code == RoleCode.DRIVER else await ride_crud.get_paginated_as_client_with_chats(session, user_id, page, page_size, "updated_at desc")
         ride_ids = [ride.id for ride in rides if ride.driver_profile_id]
         query = select(ChatMessage).where(and_(ChatMessage.ride_id.in_(ride_ids), ChatMessage.deleted_at.is_(None)))
