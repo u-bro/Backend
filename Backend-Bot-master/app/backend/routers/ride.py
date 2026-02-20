@@ -8,7 +8,7 @@ from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSch
 from app.schemas.push import PushNotificationData
 from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.ride_drivers_request import RideDriversRequestCreate, RideDriversRequestSchema, RideDriversRequestUpdate
-from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile
+from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile, get_current_driver_profile_id_without_approve
 from app.models import Ride
 from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud, ride_drivers_request_crud, car_crud
 from app.services.chat_service import chat_service
@@ -54,7 +54,7 @@ class RideRouter(BaseRouter[RideCrud]):
     async def get_my_as_client(self, request: Request, user_id: int = Depends(get_current_user_id), page: int = 1, page_size: int = 10):
         return await self.model_crud.get_by_client_id_paginated(request.state.session, user_id, page, page_size, "created_at desc")
     
-    async def get_my_as_driver(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id), page: int = 1, page_size: int = 10):
+    async def get_my_as_driver(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id_without_approve), page: int = 1, page_size: int = 10):
         return await self.model_crud.get_by_driver_profile_id_paginated(request.state.session, driver_profile_id, page, page_size, "created_at desc")
 
     async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
