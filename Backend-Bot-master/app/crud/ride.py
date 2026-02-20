@@ -281,6 +281,66 @@ class RideCrud(CrudBase):
         rides = result.scalars().all()
         return [RideSchema.model_validate(ride) for ride in rides]
 
+    async def get_paginated_as_client_with_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchema]:
+        offset = (page - 1) * page_size
+
+        last_chat_at_sq = (
+            select(
+                ChatMessage.ride_id.label("ride_id"),
+                func.max(ChatMessage.created_at).label("last_chat_at"),
+            )
+            .where(ChatMessage.deleted_at.is_(None))
+            .group_by(ChatMessage.ride_id)
+            .subquery()
+        )
+
+        stmt = (
+            select(self.model)
+            .join(last_chat_at_sq, last_chat_at_sq.c.ride_id == self.model.id)
+            .where(
+                self.model.client_id == user_id
+            )
+            .order_by(last_chat_at_sq.c.last_chat_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+
+        result = await session.execute(stmt)
+        rides = result.scalars().all()
+        return [RideSchema.model_validate(ride) for ride in rides]
+    
+    async def get_paginated_as_driver_with_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchema]:
+        offset = (page - 1) * page_size
+        driver_profile = await driver_profile_crud.get_by_user_id(session, user_id)
+        driver_profile_id = getattr(driver_profile, 'id', None)
+
+        last_chat_at_sq = (
+            select(
+                ChatMessage.ride_id.label("ride_id"),
+                func.max(ChatMessage.created_at).label("last_chat_at"),
+            )
+            .where(ChatMessage.deleted_at.is_(None))
+            .group_by(ChatMessage.ride_id)
+            .subquery()
+        )
+
+        stmt = (
+            select(self.model)
+            .join(last_chat_at_sq, last_chat_at_sq.c.ride_id == self.model.id)
+            .where(
+                and_(
+                    self.model.driver_profile_id.is_not(None),
+                    self.model.driver_profile_id == driver_profile_id
+                )
+            )
+            .order_by(last_chat_at_sq.c.last_chat_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+
+        result = await session.execute(stmt)
+        rides = result.scalars().all()
+        return [RideSchema.model_validate(ride) for ride in rides]
 
     async def get_by_driver_profile_id_paginated(self, session: AsyncSession, driver_profile_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchemaHistory]:
         offset = (page - 1) * page_size

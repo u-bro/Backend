@@ -1,12 +1,14 @@
 from datetime import datetime, timezone
 from typing import Any, Dict
-from fastapi import WebSocket, Depends, WebSocketException
+from fastapi import WebSocket, Depends, WebSocketException, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.routers.websocket_base import BaseWebsocketRouter
 from app.db import async_session_maker
 from app.logger import logger
-from app.services.chat_service import MessageType, chat_service
-from app.crud import ride_crud
+from app.services.chat_service import chat_service
+from app.enum import RoleCode, MessageType
+from app.crud import ride_crud, user_crud
+from app.models import User
 from app.services.websocket_manager import manager
 from app.backend.deps import get_current_user_id_ws
 from starlette.status import WS_1008_POLICY_VIOLATION
@@ -31,7 +33,11 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
 
     async def websocket_endpoint(self, websocket: WebSocket, ride_id: int, user_id: int = Depends(get_current_user_id_ws)) -> None:
         async with async_session_maker() as session:
-            await self.run(websocket, ride_id=ride_id, user_id=user_id, session=session)
+            user = await user_crud.get_by_id_with_role(session, user_id)
+            if not user:
+                raise HTTPException(status_code=404, detail='Not found')
+            role_code = user.role.code if user.role else RoleCode.USER
+            await self.run(websocket, ride_id=ride_id, user_id=user_id, session=session, role_code=role_code)
 
     async def on_connect(self, websocket: WebSocket, **context: Any) -> None:
         ride_id = int(context["ride_id"])
@@ -83,10 +89,11 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
     async def handle_message(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         ride_id = int(context["ride_id"])
         user_id = int(context["user_id"])
+        role_code = str(context['role_code'])
         session: AsyncSession = context["session"]
 
         text = (data.get("text") or "").strip()
-        message_type = data.get("message_type", MessageType.TEXT)
+        message_type = role_code
         temp_id = data.get("temp_id")
 
         if not text:

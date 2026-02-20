@@ -14,10 +14,13 @@ async def get_current_driver_profile_id(
         raise HTTPException(status_code=500, detail="Database session is not available")
 
     result = await session.execute(
-        select(DriverProfile.id).where(and_(DriverProfile.user_id == user.id, DriverProfile.approved == True))
+        select(DriverProfile).where(and_(DriverProfile.user_id == user.id))
     )
-    driver_profile_id = result.scalar_one_or_none()
-    if driver_profile_id is None:
+    driver_profile = result.scalar_one_or_none()
+    if driver_profile is None:
         raise HTTPException(status_code=404, detail="Driver profile not found")
-
-    return int(driver_profile_id)
+    
+    if not driver_profile.approved:
+        raise HTTPException(status_code=403, detail="DRIVER_PROFILE_NOT_APPROVED")
+    
+    return int(driver_profile.id)

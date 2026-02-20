@@ -1,6 +1,7 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 from collections import defaultdict
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, update
 from better_profanity import profanity
@@ -9,7 +10,8 @@ from app.schemas.chat_message import ChatMessageSchema, ChatMessageHistory
 from app.logger import logger
 from .websocket_manager import manager
 from app.crud.ride import ride_crud
-from app.enum import MessageType
+from app.crud.user import user_crud
+from app.enum import MessageType, RoleCode
 
 
 class ChatService:
@@ -76,7 +78,11 @@ class ChatService:
         return await self.save_message(session, ChatMessage(**message))
 
     async def get_my_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10) -> List[ChatMessageHistory]:
-        rides = await ride_crud.get_paginated_as_client_or_driver_with_chats(session, user_id, page, page_size, "updated_at desc")
+        user = await user_crud.get_by_id_with_role(session, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail='User not found')
+
+        rides = await ride_crud.get_paginated_as_driver_with_chats(session, user_id, page, page_size, "updated_at desc") if user.role.code == RoleCode.DRIVER else await ride_crud.get_paginated_as_client_with_chats(session, user_id, page, page_size, "updated_at desc")
         ride_ids = [ride.id for ride in rides if ride.driver_profile_id]
         query = select(ChatMessage).where(and_(ChatMessage.ride_id.in_(ride_ids), ChatMessage.deleted_at.is_(None)))
         result = await session.execute(query)
@@ -90,7 +96,7 @@ class ChatService:
 
         return my_chats
 
-    async def get_chat_history(self, session: AsyncSession, ride_id: int, limit: int = 50, before_id: Optional[int] = None, include_deleted: bool = False) -> List[ChatMessageSchema]:
+    async def get_chat_history(self, session: AsyncSession, ride_id: int, limit: int = 50, before_id: Optional[int] = None, include_deleted: bool = False, current_user_id: int | None = None) -> List[ChatMessageSchema]:
         conditions = [ChatMessage.ride_id == ride_id]
 
         if before_id:
@@ -109,7 +115,10 @@ class ChatService:
         result = await session.execute(query)
         messages = result.scalars().all()
 
-        return [ChatMessageSchema.model_validate(m) for m in messages]
+        result = [ChatMessageSchema.model_validate(m) for m in messages]
+        if current_user_id:
+            result = [ChatMessageSchema(**message.model_dump(mode='json', exclude={'message_type'}), message_type='me' if current_user_id == message.sender_id else message.message_type) for message in result]
+        return result
 
     async def mark_message_read(self, session: AsyncSession, ride_id: int, message_id: int, user_id: int) -> Optional[ChatMessageSchema]:
         is_ride_participant = await self.verify_ride_user(session=session, ride_id=ride_id, user_id=user_id)
