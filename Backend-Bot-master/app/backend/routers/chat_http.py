@@ -34,7 +34,7 @@ class ChatHttpRouter(BaseRouter):
         session = request.state.session
         ride, driver_profile = await self._check_permission(session, ride_id, user_id)
 
-        messages = await chat_service.get_chat_history(session=session, ride_id=ride_id, limit=limit + 1, before_id=before_id)
+        messages = await chat_service.get_chat_history(session=session, ride_id=ride_id, limit=limit + 1, before_id=before_id, current_user_id=user_id)
         user_ids = [ride.client_id]
         if driver_profile:
             user_ids.append(driver_profile.user_id)

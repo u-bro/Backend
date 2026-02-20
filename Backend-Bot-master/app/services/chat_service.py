@@ -95,7 +95,7 @@ class ChatService:
 
         return my_chats
 
-    async def get_chat_history(self, session: AsyncSession, ride_id: int, limit: int = 50, before_id: Optional[int] = None, include_deleted: bool = False) -> List[ChatMessageSchema]:
+    async def get_chat_history(self, session: AsyncSession, ride_id: int, limit: int = 50, before_id: Optional[int] = None, include_deleted: bool = False, current_user_id: int | None = None) -> List[ChatMessageSchema]:
         conditions = [ChatMessage.ride_id == ride_id]
 
         if before_id:
@@ -114,7 +114,10 @@ class ChatService:
         result = await session.execute(query)
         messages = result.scalars().all()
 
-        return [ChatMessageSchema.model_validate(m) for m in messages]
+        result = [ChatMessageSchema.model_validate(m) for m in messages]
+        if current_user_id:
+            result = [ChatMessageSchema(**message.model_dump(mode='json', exclude={'message_type'}), message_type='me' if current_user_id == message.sender_id else message.message_type) for message in result]
+        return result
 
     async def mark_message_read(self, session: AsyncSession, ride_id: int, message_id: int, user_id: int) -> Optional[ChatMessageSchema]:
         is_ride_participant = await self.verify_ride_user(session=session, ride_id=ride_id, user_id=user_id)
