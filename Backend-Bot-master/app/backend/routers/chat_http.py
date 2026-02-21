@@ -2,9 +2,9 @@ from typing import Any, Dict, Optional
 from fastapi import HTTPException, Query, Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.routers.base import BaseRouter
-from app.schemas.chat_message import ChatHistoryResponse, SendMessageRequest, ChatMessageSchema, ChatMessageHistory, ChatRidesDelete
+from app.schemas.chat_message import ChatHistoryResponse, SendMessageRequest, ChatMessageSchema, ChatMessageHistory, ChatRidesDelete, UserChatReceiver
 from app.services.chat_service import chat_service
-from app.crud import ride_crud, driver_profile_crud
+from app.crud import ride_crud, user_crud
 from app.backend.deps import get_current_user_id
 from app.services.websocket_manager import manager
 from app.models.chat_message import ChatMessage
@@ -35,15 +35,17 @@ class ChatHttpRouter(BaseRouter):
         ride, driver_profile = await self._check_permission(session, ride_id, user_id)
 
         messages = await chat_service.get_chat_history(session=session, ride_id=ride_id, limit=limit + 1, before_id=before_id, current_user_id=user_id)
-        user_ids = [ride.client_id]
-        if driver_profile:
-            user_ids.append(driver_profile.user_id)
+        if user_id == ride.client_id:
+            receiver = UserChatReceiver(first_name=driver_profile.first_name, last_name=driver_profile.last_name, middle_name=driver_profile.middle_name, photo_url=driver_profile.photo_url)
+        else:
+            client = await user_crud.get_by_id(session=session, id=ride.client_id)
+            receiver = UserChatReceiver(first_name=client.first_name, last_name=client.last_name, middle_name=client.middle_name, photo_url=client.photo_url)
 
         has_more = len(messages) > limit
         if has_more:
             messages = messages[1:]
 
-        return ChatHistoryResponse(ride_id=ride_id, messages=[m.model_dump() for m in messages], user_ids=user_ids, count=len(messages), has_more=has_more)
+        return ChatHistoryResponse(ride_id=ride_id, messages=[m.model_dump() for m in messages], count=len(messages), has_more=has_more, receiver=receiver)
 
     async def send_message(self, request: Request, ride_id: int, body: SendMessageRequest, sender_id: int = Depends(get_current_user_id)) -> ChatMessageSchema:
         session = request.state.session

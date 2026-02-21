@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional
 from .base import BaseSchema
 from datetime import datetime
 from pydantic import BaseModel, Field
+from .user import UserChatReceiver
 
 
 class ChatMessageSchema(BaseSchema):
@@ -39,7 +40,7 @@ class SendMessageResponse(BaseModel):
 class ChatHistoryResponse(BaseModel):
     ride_id: int
     messages: List[Dict[str, Any]]
-    user_ids: List[int]
+    receiver: UserChatReceiver
     count: int
     has_more: bool
 
