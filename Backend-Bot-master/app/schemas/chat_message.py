@@ -42,7 +42,6 @@ class ChatHistoryResponse(BaseModel):
     messages: List[Dict[str, Any]]
     receiver: UserChatReceiver
     count: int
-    has_more: bool
 
 
 class ChatMessageHistory(BaseModel):

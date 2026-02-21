@@ -51,6 +51,8 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
         await manager.connect(websocket, user_id)
         ride = await ride_crud.get_by_id_with_driver_profile(session, ride_id)
         driver_profile = ride.driver_profile
+        print(getattr(ride, 'client_id', 0))
+        print(getattr(driver_profile, 'user_id', 0))
         manager.join_ride(ride_id, getattr(ride, 'client_id', 0))
         manager.join_ride(ride_id, getattr(driver_profile, 'user_id', 0))
 
@@ -124,6 +126,7 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
                     "created_at": message.created_at.isoformat() if message.created_at else None,
                 },
             },
+            my_user_id=user_id
         )
 
         logger.info(f"Chat message in ride {ride_id} from user {user_id}")

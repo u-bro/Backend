@@ -96,20 +96,19 @@ class ChatService:
 
         return my_chats
 
-    async def get_chat_history(self, session: AsyncSession, ride_id: int, limit: int = 50, before_id: Optional[int] = None, include_deleted: bool = False, current_user_id: int | None = None) -> List[ChatMessageSchema]:
+    async def get_chat_history(self, session: AsyncSession, ride_id: int, page_size: int = 50, page: int = 1, include_deleted: bool = False, current_user_id: int | None = None) -> List[ChatMessageSchema]:
         conditions = [ChatMessage.ride_id == ride_id]
-
-        if before_id:
-            conditions.append(ChatMessage.id < before_id)
 
         if not include_deleted:
             conditions.append(ChatMessage.deleted_at.is_(None))
-
+        print((page - 1) * page_size)
+        print(page_size)
         query = (
             select(ChatMessage)
             .where(and_(*conditions))
-            .order_by(ChatMessage.id.asc())
-            .limit(limit)
+            .order_by(ChatMessage.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
         )
 
         result = await session.execute(query)
