@@ -30,18 +30,18 @@ class ChatHttpRouter(BaseRouter):
         session = request.state.session
         return await chat_service.get_my_chats(session=session, user_id=user_id, page=page, page_size=page_size)
 
-    async def get_chat_history(self, request: Request, ride_id: int, limit: int = Query(50, ge=1, le=100), before_id: Optional[int] = Query(None, description="message id"), user_id = Depends(get_current_user_id)) -> ChatHistoryResponse:
+    async def get_chat_history(self, request: Request, ride_id: int, page_size: int = Query(50, ge=1, le=100), page: int = Query(1, ge=1), user_id = Depends(get_current_user_id)) -> ChatHistoryResponse:
         session = request.state.session
         ride, driver_profile = await self._check_permission(session, ride_id, user_id)
 
-        messages = await chat_service.get_chat_history(session=session, ride_id=ride_id, limit=limit + 1, before_id=before_id, current_user_id=user_id)
+        messages = await chat_service.get_chat_history(session=session, ride_id=ride_id, page_size=page_size, page=page, current_user_id=user_id)
         if user_id == ride.client_id:
             receiver = UserChatReceiver(first_name=driver_profile.first_name, last_name=driver_profile.last_name, middle_name=driver_profile.middle_name, photo_url=driver_profile.photo_url)
         else:
             client = await user_crud.get_by_id(session=session, id=ride.client_id)
             receiver = UserChatReceiver(first_name=client.first_name, last_name=client.last_name, middle_name=client.middle_name, photo_url=client.photo_url)
 
-        has_more = len(messages) > limit
+        has_more = len(messages) > page_size
         if has_more:
             messages = messages[1:]
 
