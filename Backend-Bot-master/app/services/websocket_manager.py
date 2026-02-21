@@ -95,7 +95,7 @@ class ConnectionManager:
                 del self.ride_participants[ride_id]
         logger.info(f"User {user_id} left ride {ride_id}")
     
-    async def send_to_ride(self, session: AsyncSession, ride_id: int, message: dict, exclude_user_id: Optional[int] = None) -> None:
+    async def send_to_ride(self, session: AsyncSession, ride_id: int, message: dict, exclude_user_id: Optional[int] = None, my_user_id: Optional[int] = None) -> None:
         if ride_id not in self.ride_participants:
             logger.warning(f"No participants in ride {ride_id}")
             return
@@ -103,12 +103,19 @@ class ConnectionManager:
         for user_id in self.ride_participants[ride_id]:
             if exclude_user_id and user_id == exclude_user_id:
                 continue
-            await self.send_personal_message(user_id, message)
-            sender_id = message.get('message', {}).get('sender_id', 0)
-            if message.get('type', '') == 'new_message' and sender_id != user_id:
+            
+            new_message = message.copy()
+            if new_message.get('type', '') == 'new_message': 
+                new_message['message'] = message['message'].copy()
+                if my_user_id and user_id == my_user_id:    
+                    new_message['message']['message_type'] = 'me'
+
+            await self.send_personal_message(user_id, new_message)
+            sender_id = new_message.get('message', {}).get('sender_id', 0)
+            if new_message.get('type', '') == 'new_message' and sender_id != user_id:
                 sender = await user_crud.get_by_id(session, sender_id)
                 sender_fullname = " ".join([word for word in [sender.last_name, sender.first_name] if word])
-                await fcm_service.send_to_user(session, user_id, PushNotificationData(title=sender_fullname, body=message.get('message', {}).get('text', 'TEXT')))
+                await fcm_service.send_to_user(session, user_id, PushNotificationData(title=sender_fullname, body=new_message.get('message', {}).get('text', 'TEXT')))
 
     def get_online_users(self) -> List[int]:
         return list(self.active_connections.keys())
