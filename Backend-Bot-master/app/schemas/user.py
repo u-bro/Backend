@@ -48,3 +48,10 @@ class UserSchemaMe(UserSchema):
 
 class UserSchemaWithRole(UserSchema):
     role: RoleSchema
+
+
+class UserChatReceiver(BaseSchema):
+    first_name: str | None = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    last_name: str | None = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    middle_name: str | None = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    photo_url: str | None = Field(None)
