@@ -41,11 +41,7 @@ class ChatHttpRouter(BaseRouter):
             client = await user_crud.get_by_id(session=session, id=ride.client_id)
             receiver = UserChatReceiver(first_name=client.first_name, last_name=client.last_name, middle_name=client.middle_name, photo_url=client.photo_url)
 
-        has_more = len(messages) > page_size
-        if has_more:
-            messages = messages[1:]
-
-        return ChatHistoryResponse(ride_id=ride_id, messages=[m.model_dump() for m in messages], count=len(messages), has_more=has_more, receiver=receiver)
+        return ChatHistoryResponse(ride_id=ride_id, messages=[m.model_dump() for m in messages], count=len(messages), receiver=receiver)
 
     async def send_message(self, request: Request, ride_id: int, body: SendMessageRequest, sender_id: int = Depends(get_current_user_id)) -> ChatMessageSchema:
         session = request.state.session
