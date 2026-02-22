@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'axes',
     'admin_users.apps.AdminUsersConfig',
     'admin_drivers.apps.AdminDriversConfig',
     'admin_tariffs.apps.AdminTariffsConfig',
@@ -28,6 +29,7 @@ INSTALLED_APPS = [
     'admin_driver_documents.apps.AdminDriverDocumentsConfig',
     'admin_chat_messages.apps.AdminChatMessagesConfig',
     'admin_commissions.apps.AdminCommissionsConfig',
+    'admin_commission_payments.apps.AdminCommissionPaymentsConfig',
     'admin_ride_status_history.apps.AdminRideStatusHistoryConfig',
     'admin_cars.apps.AdminCarsConfig',
     'admin_car_photos.apps.AdminCarPhotosConfig',
@@ -42,6 +44,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -121,3 +124,10 @@ SECURE_SSL_REDIRECT = not DEBUG
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
+
+AXES_FAILURE_LIMIT = int(os.getenv('AXES_FAILURE_LIMIT', '5'))
+AXES_COOLOFF_TIME = int(os.getenv('AXES_COOLOFF_TIME', '1'))
+AXES_LOCK_OUT_AT_FAILURE = True
+AXES_RESET_ON_SUCCESS = True
+AXES_ONLY_USER_FAILURES = False
+AXES_LOCKOUT_TEMPLATE = None
