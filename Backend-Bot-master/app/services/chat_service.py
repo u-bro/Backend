@@ -61,7 +61,9 @@ class ChatService:
         session.add(message)
         await session.flush()
         await session.refresh(message)
-        return ChatMessageSchema.model_validate(message)
+        result = ChatMessageSchema.model_validate(message)
+        await session.commit()
+        return result
 
     async def save_message_and_send_to_ride(self, session: AsyncSession, ride_id: int, text: str, sender_id: int | None = None, message_type: str = MessageType.TEXT, receiver_id: Optional[int] = None, attachments: Optional[Dict[str, Any]] = None, is_moderated: bool = True) -> ChatMessageSchema:
         message = {
@@ -74,8 +76,9 @@ class ChatService:
             "is_moderated": is_moderated,
             "created_at": datetime.now(timezone.utc),
         }
+        result = await self.save_message(session, ChatMessage(**message))
         await manager.send_to_ride(session, ride_id, message)
-        return await self.save_message(session, ChatMessage(**message))
+        return result
 
     async def get_my_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10) -> List[ChatMessageHistory]:
         user = await user_crud.get_by_id_with_role(session, user_id)
