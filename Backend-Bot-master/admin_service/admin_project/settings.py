@@ -4,12 +4,11 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 sys.path.insert(0, str(BASE_DIR))
 
-SECRET_KEY = 'django-insecure-test-key-for-admin-service'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-test-key-for-admin-service')
 
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', '0') in {'1', 'true', 'True', 'yes', 'YES'}
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'api.dev.u-bro.ru']
 
@@ -36,6 +35,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -63,7 +63,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'admin_project.wsgi.application'
 
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -78,7 +77,6 @@ DATABASES = {
     }
 }
 
-
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -86,19 +84,15 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
 LANGUAGE_CODE = 'ru-ru'
 TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
 USE_TZ = True
 
-
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 
 JAZZMIN_SETTINGS = {
     "site_title": "Admin Panel",
@@ -107,13 +101,20 @@ JAZZMIN_SETTINGS = {
     "welcome_sign": "Добро пожаловать в админ панель",
 }
 
-
 CSRF_TRUSTED_ORIGINS = [
     'https://api.dev.u-bro.ru',
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
 
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG

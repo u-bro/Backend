@@ -24,14 +24,19 @@ class DriverProfileAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
+    list_per_page = 25
     list_editable = tuple(
         [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'qualification_level', 'classes_allowed']]
     )
     list_filter = ("approved", "documents_status")
-    search_fields = ("display_name", "first_name", "last_name")
+    search_fields = ("user_id", "first_name", "last_name")
     actions = ["approve_drivers", "reject_drivers", "block_drivers", "unblock_drivers"]
 
     readonly_fields = ('id', 'created_at', 'updated_at', 'approved_at')
+
+    def display_name(self, obj):
+        name_parts = [p for p in [getattr(obj, 'first_name', None), getattr(obj, 'last_name', None)] if p]
+        return " ".join(name_parts) if name_parts else f"Driver {obj.id}"
 
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)

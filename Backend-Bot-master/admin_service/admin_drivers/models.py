@@ -12,7 +12,6 @@ class DriverProfile(models.Model):
     user_id = models.IntegerField()
     first_name = models.CharField(max_length=100, null=True, blank=True)
     last_name = models.CharField(max_length=100, null=True, blank=True)
-    display_name = models.CharField(max_length=150, null=True, blank=True)
     birth_date = models.DateTimeField(null=True, blank=True)
     photo_url = models.CharField(max_length=255, null=True, blank=True)
     license_number = models.CharField(max_length=100, null=True, blank=True)
@@ -33,4 +32,5 @@ class DriverProfile(models.Model):
     updated_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str: 
-        return self.display_name or f"Driver {self.id}"
+        name_parts = [p for p in [self.first_name, self.last_name] if p]
+        return " ".join(name_parts) or f"Driver {self.id}"

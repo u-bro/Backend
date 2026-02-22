@@ -36,7 +36,7 @@ RATING_AVG_COUNT = int(os.getenv("RATING_AVG_COUNT", "5"))
 
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'test-secret-key'
 JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM') or 'HS256'
-JWT_EXPIRATION_MINTUES = int(os.environ.get('JWT_EXPIRATION_MINTUES', 15))
+JWT_EXPIRATION_MINUTES = int(os.environ.get('JWT_EXPIRATION_MINTUES', 15))
 
 REFRESH_TOKEN_EXPIRATION_DAYS = int(os.environ.get('REFRESH_TOKEN_EXPIRATION_DAYS', 7))
 REFRESH_TOKEN_SALT = os.environ.get('REFRESH_TOKEN_SALT') or 'test-refresh-token-salt'
