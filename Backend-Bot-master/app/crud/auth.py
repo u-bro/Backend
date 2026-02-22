@@ -7,7 +7,7 @@ from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate, Ref
 from app.schemas.refresh_token import RefreshTokenIn
 from app.schemas.user import UserSchemaUpdate
 from app.logger import logger
-from app.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINTUES
+from app.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES
 from app.models import User
 from .role import role_crud
 from .driver_profile import driver_profile_crud
@@ -23,7 +23,7 @@ class AuthCrud(CrudBase):
         self.secret_key = secret_key
         self.algorithm = algorithm
 
-    def create_access_token(self, user_id: int, expires_delta: timedelta = timedelta(minutes=JWT_EXPIRATION_MINTUES)) -> str:
+    def create_access_token(self, user_id: int, expires_delta: timedelta = timedelta(minutes=JWT_EXPIRATION_MINUTES)) -> str:
         expire = datetime.now(timezone.utc) + expires_delta
         payload = {
             "user_id": user_id,
@@ -84,7 +84,7 @@ class AuthCrud(CrudBase):
     async def refresh(self, session: AsyncSession, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse | None: 
         old_token = await refresh_token_crud.revoke(session, refresh_obj.refresh_token)
 
-        access_token = self.create_access_token(old_token.user_id, timedelta(minutes=JWT_EXPIRATION_MINTUES))
+        access_token = self.create_access_token(old_token.user_id, timedelta(minutes=JWT_EXPIRATION_MINUTES))
         refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=old_token.user_id))
         return TokenResponse(
             access_token=access_token,

@@ -10,7 +10,7 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import update, desc, insert
 from app.schemas.phone_verification import PhoneVerificationVerifyRequest
 from datetime import datetime, timedelta, timezone
-from app.config import JWT_EXPIRATION_MINTUES, OTP_MAX_ATTEMPTS
+from app.config import JWT_EXPIRATION_MINUTES, OTP_MAX_ATTEMPTS
 from .auth import auth_crud
 from .refresh_token import refresh_token_crud
 from fastapi import HTTPException
@@ -58,7 +58,7 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
         result = await self.execute_get_one(session, stmt)
         self.schema.model_validate(result)
 
-        access_token = auth_crud.create_access_token(item.user_id, timedelta(minutes=JWT_EXPIRATION_MINTUES))
+        access_token = auth_crud.create_access_token(item.user_id, timedelta(minutes=JWT_EXPIRATION_MINUTES))
         refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=item.user_id))
         return TokenResponseRegister(
             access_token=access_token,
