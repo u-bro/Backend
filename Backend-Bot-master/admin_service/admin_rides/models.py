@@ -30,7 +30,6 @@ class Ride(models.Model):
     actual_fare = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     distance_meters = models.IntegerField(null=True, blank=True)
     duration_seconds = models.IntegerField(null=True, blank=True)
-    transaction_id = models.IntegerField(null=True, blank=True)
     commission_id = models.IntegerField(null=True, blank=True)
     is_anomaly = models.BooleanField(default=False)
     anomaly_reason = models.TextField(null=True, blank=True)

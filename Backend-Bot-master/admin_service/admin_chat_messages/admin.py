@@ -19,6 +19,8 @@ class ChatMessageAdmin(admin.ModelAdmin):
     list_filter = ("message_type", "is_moderated", "created_at")
     search_fields = ("text",)
 
+    list_per_page = 25
+
     readonly_fields = ('id', 'created_at', 'edited_at', 'deleted_at')
 
     def get_readonly_fields(self, request, obj=None):

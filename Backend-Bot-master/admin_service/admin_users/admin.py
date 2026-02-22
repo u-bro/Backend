@@ -23,6 +23,8 @@ class UserAdmin(admin.ModelAdmin):
         f for f in list_display if f != 'id' and any(f == fld.name for fld in User._meta.fields) and f != 'phone'
     ])
 
+    list_per_page = 25
+
     readonly_fields = ('id', 'created_at', 'last_active_at')
 
     def get_readonly_fields(self, request, obj=None):
@@ -63,10 +65,8 @@ class UserAdmin(admin.ModelAdmin):
             
         count = 0
         for user in queryset:
-            print(f"Blocking user {user.id}, current is_active: {user.is_active}")
             user.is_active = False
             user.save()
-            print(f"After save, is_active: {user.is_active}")
             count += 1
         self.message_user(request, f"Blocked {count} users", messages.SUCCESS)
 

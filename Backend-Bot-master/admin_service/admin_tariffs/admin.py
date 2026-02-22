@@ -29,7 +29,9 @@ class TariffPlanAdmin(admin.ModelAdmin):
     list_filter = ("effective_from", "effective_to")
     search_fields = ("name",)
 
+    list_per_page = 25
+
     readonly_fields = ('id', 'created_at', 'updated_at')
 
     def has_add_permission(self, request):  
-        return False
+        return request.user.groups.filter(name='Admin').exists()

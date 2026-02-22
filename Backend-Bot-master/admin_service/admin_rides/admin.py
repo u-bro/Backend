@@ -39,6 +39,8 @@ class RideAdmin(admin.ModelAdmin):
     search_fields = ("pickup_address", "dropoff_address")
     actions = ["cancel_rides", "mark_anomaly_resolved"]
 
+    list_per_page = 25
+
 
     readonly_fields = ('id', 'created_at', 'updated_at', 'started_at', 'completed_at', 'canceled_at')
 

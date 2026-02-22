@@ -5,10 +5,10 @@ from .models import Transaction
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ("id", "user_id", "is_withdraw", "amount", "created_at")
-    list_editable = tuple([f for f in list_display if f != 'id'])
-    list_filter = ("is_withdraw", "created_at")
-    search_fields = ("user_id",)
+    list_display = ("id", "ride_id", "user_id", "amount", "currency", "status", "is_refund", "created_at")
+    list_filter = ("status", "is_refund", "created_at")
+    search_fields = ("user_id", "ride_id")
+    list_per_page = 25
 
     def has_add_permission(self, request):  
         return False
