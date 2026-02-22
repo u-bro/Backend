@@ -26,17 +26,20 @@ class RideAdmin(admin.ModelAdmin):
         "client_id",
         "driver_profile_id",
         "status",
+        "ride_class",
+        "ride_type",
         "pickup_address",
         "dropoff_address",
         "expected_fare",
+        "commission_amount",
         "actual_fare",
         "is_anomaly",
         "created_at",
         "updated_at",
     )
     list_editable = tuple([f for f in list_display if f != 'id' and f not in ['pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'distance_meters', 'duration_seconds', 'status', 'cancellation_reason']])
-    list_filter = ("status", "is_anomaly", "created_at")
-    search_fields = ("pickup_address", "dropoff_address")
+    list_filter = ("status", "ride_class", "ride_type", "is_anomaly", "created_at")
+    search_fields = ("pickup_address", "dropoff_address", "client_id", "driver_profile_id")
     actions = ["cancel_rides", "mark_anomaly_resolved"]
 
     list_per_page = 25

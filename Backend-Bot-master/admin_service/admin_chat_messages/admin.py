@@ -12,11 +12,12 @@ class ChatMessageAdmin(admin.ModelAdmin):
         "receiver_id",
         "message_type",
         "is_moderated",
+        "is_read",
         "created_at",
         "edited_at",
     )
     list_editable = tuple([f for f in list_display if f != 'id'])
-    list_filter = ("message_type", "is_moderated", "created_at")
+    list_filter = ("message_type", "is_moderated", "is_read", "created_at")
     search_fields = ("text",)
 
     list_per_page = 25
