@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, Request
-from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import HTTPException
 from fastapi.exceptions import ResponseValidationError, RequestValidationError
@@ -10,7 +10,7 @@ from app.backend.middlewares import install_db_middleware
 from app.backend.deps.get_current_user_id import get_current_user_id
 from app.backend.routers import *
 from app.logger import logger
-from app.const import HTTP_ERROR_MESSAGES
+from app.const import HTTP_ERROR_MESSAGES, get_swagger_page
 from app.config import ENABLE_PUBLIC_API_DOCS
 
 
@@ -30,14 +30,12 @@ if not ENABLE_PUBLIC_API_DOCS:
 
 
     @app.get('/docs', include_in_schema=False)
-    async def swagger_ui_html(_: int = Depends(get_current_user_id)):
-        return get_swagger_ui_html(openapi_url='/openapi.json', title='API docs')
+    async def swagger_ui_html(request: Request, _: int = Depends(get_current_user_id)):
+        auth_header = request.headers.get('authorization')
+        if not auth_header:
+            return get_swagger_ui_html(openapi_url='/openapi.json', title='API docs')
 
-
-    @app.get('/redoc', include_in_schema=False)
-    async def redoc_html(_: int = Depends(get_current_user_id)):
-        return get_redoc_html(openapi_url='/openapi.json', title='API docs')
-
+        return HTMLResponse(get_swagger_page(auth_header=auth_header))
 
 app.add_middleware(
     CORSMiddleware,

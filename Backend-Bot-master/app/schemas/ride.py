@@ -31,6 +31,14 @@ class RideSchemaCreate(RideSchemaIn):
     client_id: int = Field(..., gt=0)
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+    @model_validator(mode="after")
+    def check_route(self):
+        if self.pickup_lat == self.dropoff_lat and self.pickup_lng == self.dropoff_lng:
+            raise ValueError('Incorrect route: pickup and dropoff coordinates are equal')
+        if self.pickup_address == self.dropoff_address:
+            raise ValueError('Incorrect route: pickup and dropoff addresses are equal')
+        return self
+
 
 class RideSchema(RideSchemaCreate):
     id: int = Field(..., gt=0)

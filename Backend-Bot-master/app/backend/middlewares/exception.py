@@ -4,6 +4,7 @@ from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from typing import Union, Any
 from pydantic import ValidationError
 from app.logger import logger
+from app.const import HTTP_ERROR_MESSAGES
 
 
 class ErrorHandlingMiddleware:
@@ -17,15 +18,17 @@ class ErrorHandlingMiddleware:
             raise
         except ValidationError as exc:
             logger.error(f"Validation error occurred: {exc}")
+            error_messages = HTTP_ERROR_MESSAGES.get(400, ('VALIDATION_ERROR',))
             return JSONResponse(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                content={"detail": "Unprocessable content"}
+                content={"detail": error_messages[0]}
             )
         except Exception as exc:
             logger.error(f"Unexpected error occurred: {exc}")
+            error_messages = HTTP_ERROR_MESSAGES.get(500, ('UNKNOWN',))
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={"detail": "Internal server error."}
+                content={"detail": error_messages[0]}
             )
 
 
