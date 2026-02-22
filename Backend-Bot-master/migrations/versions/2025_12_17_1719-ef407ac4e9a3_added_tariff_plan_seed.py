@@ -22,11 +22,11 @@ def upgrade() -> None:
     op.execute("""
         INSERT INTO tariff_plans (name, effective_from, effective_to, base_fare, rate_per_meter, multiplier, commission_percentage)
         VALUES
-        ('Standart', NOW(), NULL, 3.0, 0.5, 1.0, 5.0);
+        ('Standard', NOW(), NULL, 3.0, 0.5, 1.0, 5.0);
     """)
 
 
 def downgrade() -> None:
     op.execute("""
-        DELETE FROM tariff_plans WHERE name = 'Standart'
+        DELETE FROM tariff_plans WHERE name = 'Standard'
     """)
