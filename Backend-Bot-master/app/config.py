@@ -18,6 +18,7 @@ DB_USER = os.environ.get('DB_USER') or os.getenv('DB_USER')
 DB_PASS = os.environ.get('DB_PASS') or os.getenv('DB_PASS')
 
 API_IGNORE = ['/docs', '/openapi.json', '']
+ENABLE_PUBLIC_API_DOCS = os.getenv('ENABLE_PUBLIC_API_DOCS', '0') in {'1', 'true', 'True', 'yes', 'YES'}
 
 DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
