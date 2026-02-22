@@ -16,6 +16,7 @@ class ChatMessage(models.Model):
     message_type = models.CharField(max_length=50, null=True, blank=True)
     attachments = models.JSONField(null=True, blank=True)
     is_moderated = models.BooleanField(default=False)
+    is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(null=True, blank=True)
     edited_at = models.DateTimeField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)

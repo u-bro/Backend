@@ -28,8 +28,11 @@ INSTALLED_APPS = [
     'admin_driver_documents.apps.AdminDriverDocumentsConfig',
     'admin_chat_messages.apps.AdminChatMessagesConfig',
     'admin_commissions.apps.AdminCommissionsConfig',
-    'admin_transactions.apps.AdminTransactionsConfig',
     'admin_ride_status_history.apps.AdminRideStatusHistoryConfig',
+    'admin_cars.apps.AdminCarsConfig',
+    'admin_car_photos.apps.AdminCarPhotosConfig',
+    'admin_driver_locations.apps.AdminDriverLocationsConfig',
+    'admin_ride_drivers_requests.apps.AdminRideDriversRequestsConfig',
 ]
 
 MIDDLEWARE = [

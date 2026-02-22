@@ -11,7 +11,7 @@ class DriverDocument(models.Model):
     id = models.AutoField(primary_key=True)
     driver_profile_id = models.IntegerField()
     doc_type = models.CharField(max_length=50)
-    file_url = models.CharField(max_length=255)
+    file_url = models.CharField(max_length=2048)
     status = models.CharField(max_length=50, null=True, blank=True)
     reviewed_by = models.IntegerField(null=True, blank=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
