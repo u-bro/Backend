@@ -26,7 +26,6 @@ class Ride(models.Model):
     cancellation_reason = models.CharField(max_length=255, null=True, blank=True)
     expected_fare = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     expected_fare_snapshot = models.JSONField(null=True, blank=True)
-    driver_fare = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     commission_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     actual_fare = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     distance_meters = models.IntegerField(null=True, blank=True)
