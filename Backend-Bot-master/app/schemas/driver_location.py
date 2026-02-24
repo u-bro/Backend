@@ -2,13 +2,14 @@ from typing import Optional, Literal
 from .base import BaseSchema
 from datetime import datetime, timezone
 from pydantic import Field
+from app.enum import DriverStatus
 
 
 class DriverLocationCreate(BaseSchema):
     driver_profile_id: int
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    status: Literal["offline", "online", "busy", "waiting_ride"] = "offline"
+    status: Literal[DriverStatus.OFFLINE, DriverStatus.ONLINE, DriverStatus.BUSY, DriverStatus.WAITING_RIDE] = DriverStatus.OFFLINE
     last_seen_at: Optional[datetime] = None
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -16,12 +17,12 @@ class DriverLocationCreate(BaseSchema):
 class DriverLocationUpdate(BaseSchema):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    status: Optional[Literal["offline", "online", "busy", "waiting_ride"]] = None
+    status: Optional[Literal[DriverStatus.OFFLINE, DriverStatus.ONLINE, DriverStatus.BUSY, DriverStatus.WAITING_RIDE]] = None
     last_seen_at: Optional[datetime] = None
 
 
 class DriverLocationUpdateMe(DriverLocationUpdate):
-    status: Optional[Literal["offline", "online"]] = None
+    status: Optional[Literal[DriverStatus.OFFLINE, DriverStatus.ONLINE]] = None
 
 
 class DriverLocationSchema(DriverLocationCreate):
