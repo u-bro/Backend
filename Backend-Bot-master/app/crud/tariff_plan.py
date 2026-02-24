@@ -3,12 +3,12 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import insert, update
-
 from app.crud.base import CrudBase
 from app.models import TariffPlan
 from app.schemas.tariff_plan import TariffPlanSchema, TariffPlanUpdate
 
-class TariffPlanCrud(CrudBase):
+
+class TariffPlanCrud(CrudBase[TariffPlan, TariffPlanSchema]):
     async def update(self, session: AsyncSession, id: int, update_obj: TariffPlanUpdate) -> TariffPlanSchema | None:
         now = datetime.now(timezone.utc)
         existing_result = await session.execute(select(self.model).where(self.model.id == id))

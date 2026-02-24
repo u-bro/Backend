@@ -7,7 +7,7 @@ from app.schemas.user import UserSchema, UserSchemaUpdate, UserSchemaWithRole
 from fastapi import HTTPException
 
 
-class UserCrud(CrudBase):
+class UserCrud(CrudBase[User, UserSchema]):
     async def delete(self, session: AsyncSession, id: int) -> UserSchema | None:
         stmt = (
             update(self.model)

@@ -18,7 +18,7 @@ class DriverProfileCreate(DriverProfileValidated):
     user_id: int
     first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    middle_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    middle_name: Optional[str] = Field(None, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]*$")
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=100)
@@ -41,7 +41,7 @@ class DriverProfileCreate(DriverProfileValidated):
 class DriverProfileUpdateMe(DriverProfileValidated):
     first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    middle_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    middle_name: Optional[str] = Field(None, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]*$")
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=100)
@@ -55,7 +55,7 @@ class DriverProfileUpdateMe(DriverProfileValidated):
 class DriverProfileUpdate(DriverProfileValidated):
     first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    middle_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    middle_name: Optional[str] = Field(None, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]*$")
     birth_date: Optional[datetime] = None
     photo_url: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=100)

@@ -41,7 +41,7 @@ ALLOWED_TRANSITIONS = {
 }
 
 
-class RideCrud(CrudBase):
+class RideCrud(CrudBase[Ride, RideSchema]):
     @staticmethod
     def _calculate_expected_fare(tariff_plan: TariffPlan, distance_meters: int | None) -> float | None:
         return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier)))
