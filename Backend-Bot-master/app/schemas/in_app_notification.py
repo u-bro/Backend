@@ -19,7 +19,6 @@ class InAppNotificationUpdate(BaseSchema):
     message: Optional[str] = Field(None, max_length=255)
     data: Optional[dict] = Field(None)
     read_at: Optional[datetime] = Field(None)
-    created_at: Optional[datetime] = Field(None)
 
 
 class InAppNotificationSchema(InAppNotificationCreate):

@@ -21,15 +21,7 @@ class DriverDocumentUpdate(BaseSchema):
     reviewed_at: Optional[datetime] = None
 
 
-class DriverDocumentSchema(BaseSchema):
+class DriverDocumentSchema(DriverDocumentCreate):
     id: int
-    driver_profile_id: int
-    doc_type: str
-    file_url: str
-    status: Optional[str] = None
-    reviewed_by: Optional[int] = None
-    reviewed_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True

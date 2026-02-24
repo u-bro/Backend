@@ -4,7 +4,10 @@ from datetime import datetime, timezone
 from .base import BaseSchema
 from .driver_rating import DriverRatingSchema
 from .driver_profile import DriverProfileSchema
+from app.enum import RideClass
 
+
+RIDE_CLASSES_LITERAL = Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]
 
 class RideSchemaIn(BaseSchema):
     status: Literal["requested"] = Field("requested", max_length=50)
@@ -22,7 +25,7 @@ class RideSchemaIn(BaseSchema):
     duration_str: str | None = Field(None, max_length=50)
     commission_id: int = Field(..., gt=0)
     tariff_plan_id: int = Field(..., gt=0)
-    ride_class: Literal["light", "pro", "vip", "elite"] = Field(..., max_length=50)
+    ride_class: RIDE_CLASSES_LITERAL = Field(..., max_length=50)
     ride_type: Literal["with_car", "without_car"] = Field("with_car", max_length=50)
     comment: str | None = Field(None, max_length=500, pattern=r"^[A-Za-zА-Яа-яЁё\-\s.,!?;:()\"]*$")
 
@@ -141,7 +144,7 @@ class RideSchemaHistory(BaseSchema):
     expected_fare: float | None = Field(None, ge=0)
     commission_amount: float | None = Field(None, ge=0)
     actual_fare: float | None = Field(None, ge=0)
-    ride_class: Literal["light", "pro", "vip", "elite"] = Field(..., max_length=50)
+    ride_class: RIDE_CLASSES_LITERAL = Field(..., max_length=50)
     created_at: datetime | None = Field(None)
 
 

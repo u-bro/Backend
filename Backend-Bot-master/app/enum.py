@@ -1,3 +1,4 @@
+from typing import Literal
 from enum import Enum
 from .config import S3_DOCUMENTS_BUCKET, S3_AVATARS_BUCKET
 
@@ -27,3 +28,10 @@ class RoleCode:
     USER = "user"
     DRIVER = "driver"
     ADMIN = "admin"
+
+class RideClass:
+    LIGHT = "light"
+    PRO = "pro"
+    VIP = "vip"
+    ELITE = "elite"
+

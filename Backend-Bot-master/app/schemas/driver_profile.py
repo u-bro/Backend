@@ -1,11 +1,22 @@
-from typing import Optional
+from typing import Optional, Literal
 from .base import BaseSchema
 from datetime import datetime, timezone
 from pydantic import Field, model_validator
 from .car import CarSchema
+from app.enum import RideClass
 
 
 class DriverProfileValidated(BaseSchema):
+    first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    middle_name: Optional[str] = Field(None, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]*$")
+    birth_date: Optional[datetime] = None
+    photo_url: Optional[str] = None
+    license_number: Optional[str] = Field(None, max_length=100)
+    license_category: Optional[str] = Field(None, max_length=20)
+    experience_years: Optional[int] = None
+    current_class: Optional[str] = None
+    current_car_id: Optional[int] = None
 
     @model_validator(mode="after")
     def check_first_name_and_last_name(self):
@@ -16,22 +27,12 @@ class DriverProfileValidated(BaseSchema):
 
 class DriverProfileCreate(DriverProfileValidated):
     user_id: int
-    first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    middle_name: Optional[str] = Field(None, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]*$")
-    birth_date: Optional[datetime] = None
-    photo_url: Optional[str] = None
-    license_number: Optional[str] = Field(None, max_length=100)
-    license_category: Optional[str] = Field(None, max_length=20)
     license_issued_at: Optional[datetime] = None
     license_expires_at: Optional[datetime] = None
-    experience_years: Optional[int] = None
     qualification_level: Optional[str] = Field(None, max_length=50)
-    classes_allowed: list[str] = []
+    classes_allowed: list[Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]] = []
     documents_status: Optional[str] = Field(None, max_length=50)
     documents_review_notes: Optional[str] = None
-    current_class: Optional[str] = None
-    current_car_id: Optional[int] = None
     ride_count: int = 0
     rating_avg: float = 0.0
     rating_count: int = 0
@@ -39,46 +40,26 @@ class DriverProfileCreate(DriverProfileValidated):
 
 
 class DriverProfileUpdateMe(DriverProfileValidated):
-    first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    middle_name: Optional[str] = Field(None, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]*$")
-    birth_date: Optional[datetime] = None
-    photo_url: Optional[str] = None
-    license_number: Optional[str] = Field(None, max_length=100)
-    license_category: Optional[str] = Field(None, max_length=20)
-    experience_years: Optional[int] = None
-    current_class: Optional[str] = None
-    current_car_id: Optional[int] = None
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DriverProfileUpdate(DriverProfileValidated):
-    first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    middle_name: Optional[str] = Field(None, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]*$")
-    birth_date: Optional[datetime] = None
-    photo_url: Optional[str] = None
-    license_number: Optional[str] = Field(None, max_length=100)
-    license_category: Optional[str] = Field(None, max_length=20)
     license_issued_at: Optional[datetime] = None
     license_expires_at: Optional[datetime] = None
-    experience_years: Optional[int] = None
     qualification_level: Optional[str] = Field(None, max_length=50)
-    classes_allowed: list[str] = []
     documents_status: Optional[str] = Field(None, max_length=50)
     documents_review_notes: Optional[str] = None
-    current_class: Optional[str] = None
-    current_car_id: Optional[int] = None
     ride_count: Optional[int] = None
     rating_avg: Optional[float] = None
     rating_count: Optional[int] = None
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
-    classes_allowed: Optional[list[str]] = None
+    classes_allowed: Optional[list[Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]]] = None
 
 
 class DriverProfileApproveIn(BaseSchema):
     approved: bool = True
     approved_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+    classes_allowed: list[Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]] = [RideClass.LIGHT]
 
 
 class DriverProfileApprove(DriverProfileApproveIn):
