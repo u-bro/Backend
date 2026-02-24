@@ -24,7 +24,7 @@ class RideSchemaIn(BaseSchema):
     tariff_plan_id: int = Field(..., gt=0)
     ride_class: Literal["light", "pro", "vip", "elite"] = Field(..., max_length=50)
     ride_type: Literal["with_car", "without_car"] = Field("with_car", max_length=50)
-    comment: str | None = Field(None, max_length=500)
+    comment: str | None = Field(None, max_length=500, pattern=r"^[A-Za-zА-Яа-яЁё\-\s.,!?;:()\"]*$")
 
 
 class RideSchemaCreate(RideSchemaIn):
@@ -83,7 +83,7 @@ class RideSchemaUpdateByClient(RideSchemaWithCanceledValidator):
     distance_str: str | None = Field(None, max_length=50)
     duration_seconds: int | None = Field(None, ge=0)
     duration_str: str | None = Field(None, max_length=50)
-    comment: str | None = Field(None, max_length=500)
+    comment: str | None = Field(None, max_length=500, pattern=r"^[A-Za-zА-Яа-яЁё\-\s.,!?;:()\"]*$")
     canceled_at: datetime | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
