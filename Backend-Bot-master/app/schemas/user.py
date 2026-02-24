@@ -7,7 +7,7 @@ from .role import RoleSchema
 class UserSchemaValidated(BaseSchema):
     first_name: str | None = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     last_name: str | None = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    middle_name: str | None = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    middle_name: str | None = Field(None, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     phone: str | None = Field(None, max_length=20)
     email: str | None = Field(None, max_length=255, pattern=r"^[A-Za-z0-9._-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}$")
     city: str | None = Field(None, max_length=100)
@@ -53,5 +53,5 @@ class UserSchemaWithRole(UserSchema):
 class UserChatReceiver(BaseSchema):
     first_name: str | None = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     last_name: str | None = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
-    middle_name: str | None = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
+    middle_name: str | None = Field(None, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     photo_url: str | None = Field(None)
