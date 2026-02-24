@@ -51,7 +51,6 @@ class RideSchema(RideSchemaCreate):
     expected_fare_snapshot: dict | None = Field(None)
     commission_amount: float | None = Field(None, ge=0)
     actual_fare: float | None = Field(None, ge=0)
-    ride_metadata: dict | None = Field(None)
     updated_at: datetime | None = Field(None)
     is_anomaly: bool | None = Field(False)
     anomaly_reason: str | None = Field(None, max_length=255)
@@ -132,7 +131,6 @@ class RideSchemaFinishByDriver(BaseSchema):
 class RideSchemaFinishWithAnomaly(RideSchemaFinishByDriver):
     is_anomaly: bool | None = Field(False)
     anomaly_reason: str | None = Field(None, max_length=255)
-    ride_metadata: dict | None = Field(None)
 
 
 class RideSchemaHistory(BaseSchema):
