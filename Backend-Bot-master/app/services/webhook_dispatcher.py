@@ -42,7 +42,7 @@ class WebhookDispatcher:
         operationId = webhook.get('operationId')
         if TOCHKA_USE_SANDBOX:
             commission_payments = await commission_payment_crud.get_by_operation_id_sandbox(session, operationId)
-            commission_payment = commission_payments[0] if len(commission_payments) else None
+            commission_payment = commission_payments[-1] if len(commission_payments) else None
         else:
             commission_payment = await commission_payment_crud.get_by_operation_id(session, operationId)
         if not commission_payment:
