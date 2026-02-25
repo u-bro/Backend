@@ -8,6 +8,7 @@ from app.crud import commission_payment_crud, ride_crud, in_app_notification_cru
 from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.ride import RideschemaUpdateAfterCommission
 from .websocket_manager import manager_driver_feed
+from app.crud.driver_location_sender import driver_location_sender
 
 
 class WebhookDispatcher:
@@ -72,6 +73,7 @@ class WebhookDispatcher:
                 driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
                 driver_id = driver_profile.user_id if driver_profile else 0
                 await manager_driver_feed.send_personal_message(driver_id, {"type": "ride_commission_paid", "message": "Клиент оплатил комиссию за поездку", "data": updated_ride.model_dump(mode="json")})
+                await driver_location_sender.start_task(updated_ride.client_id, updated_ride.driver_profile_id)
         else:
             logger.warning(f"Acquiring internet payment failed: {webhook}")
             await in_app_notification_crud.create(session, InAppNotificationCreate(
