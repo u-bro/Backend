@@ -38,7 +38,7 @@ class NotificationWebsocketRouter(BaseWebsocketRouter):
         if ride:
             await websocket.send_json({"type": "active_ride", "data": ride.model_dump(mode="json")})
 
-        if driver_profile and ride.status in ("on_the_way", "arrived"):
+        if driver_profile and ride.status in ("accepted", "on_the_way", "arrived"):
             await driver_location_sender.start_task(user_id, driver_profile.id)
 
     async def on_disconnect(self, websocket: WebSocket, **context: Any) -> None:

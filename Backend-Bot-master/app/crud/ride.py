@@ -144,9 +144,6 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         if not data:
             return await self.get_by_id(session, id)
         
-        if update_obj.status == 'on_the_way':
-            await driver_location_sender.start_task(existing.client_id, existing.driver_profile_id)
-
         if update_obj.status == 'started' or update_obj.status == 'canceled':
             await driver_location_sender.stop_task(existing.client_id)
 
