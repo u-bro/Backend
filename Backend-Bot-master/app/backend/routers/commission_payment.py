@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, Request
 from app.backend.deps import require_role, require_owner
@@ -83,20 +84,23 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
                 created_at=getattr(item, "created_at", None),
             )
             await document_crud.upload_bytes(key, pdf_bytes)
+        
+        async def _send_sandbox_webhook():
+            if TOCHKA_USE_SANDBOX:
+                await asyncio.sleep(3)
+                await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
 
         if existing:
             updated = await self.model_crud.update(session, existing.id, fields)
             if not updated:
                 raise HTTPException(status_code=500, detail="Failed to update commission payment")
-            if TOCHKA_USE_SANDBOX:
-                await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
+            asyncio.create_task(_send_sandbox_webhook())
             if generate_check:
                 await _generate_and_upload_check(updated)
             return updated
 
         created = await self.model_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
-        if TOCHKA_USE_SANDBOX:
-            await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
+        asyncio.create_task(_send_sandbox_webhook())
         if generate_check:
             await _generate_and_upload_check(created)
         return created
