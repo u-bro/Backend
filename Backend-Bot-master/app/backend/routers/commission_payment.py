@@ -12,6 +12,7 @@ from app.models import Ride, CommissionPayment
 from app.backend.routers.base import BaseRouter
 from app.services import pdf_generator
 from app.enum import RoleCode
+from app.db import async_session_maker
 
 
 class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
@@ -85,22 +86,17 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
             )
             await document_crud.upload_bytes(key, pdf_bytes)
         
-        async def _send_sandbox_webhook():
-            if TOCHKA_USE_SANDBOX:
-                await asyncio.sleep(3)
-                await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
-
         if existing:
             updated = await self.model_crud.update(session, existing.id, fields)
             if not updated:
                 raise HTTPException(status_code=500, detail="Failed to update commission payment")
-            asyncio.create_task(_send_sandbox_webhook())
+            asyncio.create_task(self._send_sandbox_webhook())
             if generate_check:
                 await _generate_and_upload_check(updated)
             return updated
 
         created = await self.model_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
-        asyncio.create_task(_send_sandbox_webhook())
+        asyncio.create_task(self._send_sandbox_webhook())
         if generate_check:
             await _generate_and_upload_check(created)
         return created
@@ -111,6 +107,13 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
         if not item:
             raise HTTPException(status_code=404, detail="Commission payment not found")
         return item
+
+    async def _send_sandbox_webhook(self):
+        if TOCHKA_USE_SANDBOX:
+            await asyncio.sleep(3)
+            async with async_session_maker() as session:
+                await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
+                await session.commit()
 
 
 commission_payment_router = CommissionPaymentRouter(commission_payment_crud, "/commissions/payments").router
