@@ -367,4 +367,9 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         item = result.scalar_one_or_none()
         return RideSchemaWithDriverProfile.model_validate(item) if item else None
 
+    async def get_last_by_client_id(self, session: AsyncSession, client_id: int):
+        result = await session.execute(select(self.model).where(self.model.client_id == client_id).order_by(text('created_at desc')).limit(1))
+        ride = result.scalar_one_or_none()
+        return self.schema.model_validate(ride) if ride else None
+
 ride_crud = RideCrud(Ride, RideSchema)

@@ -33,10 +33,10 @@ class NotificationWebsocketRouter(BaseWebsocketRouter):
         session = context["session"]
         await manager_notifications.connect(websocket, int(user_id))
         await websocket.send_json({"type": "connected", "user_id": user_id})
-        ride = await ride_crud.get_active_ride_by_client_id(session, user_id)
+        ride = await ride_crud.get_last_by_client_id(session, user_id)
         driver_profile = await driver_profile_crud.get_by_id(session, getattr(ride, "driver_profile_id", None))
         if ride:
-            await websocket.send_json({"type": "active_ride", "data": ride.model_dump(mode="json")})
+            await websocket.send_json({"type": "last_ride", "data": ride.model_dump(mode="json")})
 
         if driver_profile and ride.status in ("accepted", "on_the_way", "arrived"):
             await driver_location_sender.start_task(user_id, driver_profile.id)
