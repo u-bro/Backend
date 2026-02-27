@@ -74,14 +74,17 @@ class AuthCrud(CrudBase[User, UserSchema]):
     async def login_or_register(self, session: AsyncSession, phone: str, code_role: RoleCode | None = None) -> (UserSchema, bool):
         user = await self.get_by_phone_with_driver_profile_and_role(session, phone)
         is_registred = False
+        if user:
+            ride = await ride_crud.get_active_ride_by_client_id(session, user.id)
+            if ride:
+                code_role = RoleCode.USER
+
         if user and user.driver_profile and user.driver_profile.approved:
-            print('Driver profile approved')
             ride = await ride_crud.get_active_ride_by_driver_profile_id(session, user.driver_profile.id)
             if ride:
                 code_role = RoleCode.DRIVER
 
-        if user and code_role and code_role != user.role.code:
-            print('Updating role')
+        if user and code_role and code_role != user.role.code and user.role.code != RoleCode.ADMIN:
             role = await role_crud.get_by_code(session, code_role)
             if not role:
                 logger.warning(f"Role with code \'{code_role}\' not found")
