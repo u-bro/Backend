@@ -2,10 +2,11 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import select
+from sqlalchemy.orm import joinedload
 from app.crud.base import CrudBase
 from app.schemas import UserSchema, AuthSchemaRegister, DriverProfileCreate, RefreshTokenVerifyRequest, TokenResponse, UserSchemaCreate
 from app.schemas.refresh_token import RefreshTokenIn
-from app.schemas.user import UserSchemaUpdate
+from app.schemas.user import UserSchemaUpdate, UserSchemaWithRoleAndDriverProfile
 from app.logger import logger
 from app.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES
 from app.models import User
@@ -13,11 +14,12 @@ from .role import role_crud
 from .driver_profile import driver_profile_crud
 from .refresh_token import refresh_token_crud
 from .user import user_crud
+from .ride import ride_crud
 from fastapi import HTTPException
 from app.enum import RoleCode
 
 
-class AuthCrud(CrudBase):
+class AuthCrud(CrudBase[User, UserSchema]):
     def __init__(self, model, schema, secret_key: str, algorithm: str = "HS256"):
         super().__init__(model, schema)
         self.secret_key = secret_key
@@ -48,6 +50,11 @@ class AuthCrud(CrudBase):
         user = result.scalar_one_or_none()
         return self.schema.model_validate(user) if user else None
 
+    async def get_by_phone_with_driver_profile_and_role(self, session: AsyncSession, phone: str) -> UserSchemaWithRoleAndDriverProfile | None:
+        result = await session.execute(select(self.model).options(joinedload(self.model.driver_profile), joinedload(self.model.role)).where(self.model.phone == phone))
+        user = result.scalar_one_or_none()
+        return UserSchemaWithRoleAndDriverProfile.model_validate(user) if user else None
+
     async def register_user(self, session: AsyncSession, register_obj: AuthSchemaRegister) -> UserSchema | None:
         existing_user = await self.get_by_phone(session, register_obj.phone)
         if existing_user:
@@ -65,9 +72,16 @@ class AuthCrud(CrudBase):
         return self.schema.model_validate(new_user)
 
     async def login_or_register(self, session: AsyncSession, phone: str, code_role: RoleCode | None = None) -> (UserSchema, bool):
-        user = await self.get_by_phone(session, phone)
+        user = await self.get_by_phone_with_driver_profile_and_role(session, phone)
         is_registred = False
-        if user and code_role:
+        if user and user.driver_profile and user.driver_profile.approved:
+            print('Driver profile approved')
+            ride = await ride_crud.get_active_ride_by_driver_profile_id(session, user.driver_profile.id)
+            if ride:
+                code_role = RoleCode.DRIVER
+
+        if user and code_role and code_role != user.role.code:
+            print('Updating role')
             role = await role_crud.get_by_code(session, code_role)
             if not role:
                 logger.warning(f"Role with code \'{code_role}\' not found")
