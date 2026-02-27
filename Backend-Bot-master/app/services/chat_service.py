@@ -203,8 +203,8 @@ class ChatService:
 
     async def delete_messages_by_ride_ids(self, session: AsyncSession, ride_ids: List[int]):
         now = datetime.now(timezone.utc)
-        deleted = await session.execute(update(ChatMessage).where(and_(ChatMessage.ride_id.in_(ride_ids), ChatMessage.deleted_at.is_(None))).values(deleted_at=now).returning(ChatMessage.id))
-        return deleted.scalars().all()
+        deleted = await session.execute(update(ChatMessage).where(and_(ChatMessage.ride_id.in_(ride_ids), ChatMessage.deleted_at.is_(None))).values(deleted_at=now).returning(ChatMessage.ride_id))
+        return set(deleted.scalars().all())
 
     def get_stats(self) -> Dict[str, Any]:
         return {
