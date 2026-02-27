@@ -2,6 +2,7 @@ from pydantic import Field, model_validator
 from datetime import datetime, timezone
 from .base import BaseSchema
 from .role import RoleSchema
+from .driver_profile import DriverProfileSchema
 
 
 class UserSchemaValidated(BaseSchema):
@@ -48,6 +49,10 @@ class UserSchemaMe(UserSchema):
 
 class UserSchemaWithRole(UserSchema):
     role: RoleSchema
+
+
+class UserSchemaWithRoleAndDriverProfile(UserSchemaWithRole):
+    driver_profile: DriverProfileSchema | None = Field(None)
 
 
 class UserChatReceiver(BaseSchema):
