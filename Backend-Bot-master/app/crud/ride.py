@@ -295,7 +295,10 @@ class RideCrud(CrudBase[Ride, RideSchema]):
             select(self.model)
             .join(last_chat_at_sq, last_chat_at_sq.c.ride_id == self.model.id)
             .where(
-                self.model.client_id == user_id
+                and_(
+                    self.model.driver_profile_id.is_not(None),
+                    self.model.client_id == user_id
+                )
             )
             .order_by(last_chat_at_sq.c.last_chat_at.desc())
             .offset(offset)
