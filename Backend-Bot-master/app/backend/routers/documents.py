@@ -1,10 +1,10 @@
 from fastapi import Depends, File, HTTPException, Request, UploadFile, Query
 from fastapi.responses import Response
-from app.backend.deps import require_role, get_current_user_id
+from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id_without_approve
 from app.backend.routers.base import BaseRouter
 from app.models import User
 from app.crud.document import DocumentCrud, document_crud
-from app.crud import ride_crud
+from app.crud import ride_crud, car_crud
 from app.enum import S3Bucket, RoleCode
 from app.config import S3_AVATARS_BUCKET_UUID
 from datetime import datetime
@@ -20,6 +20,7 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.get_by_key, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/{{key:path}}/url", self.get_presigned_url, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
         self.router.add_api_route(f"{self.prefix}/avatar", self.upload_avatar, methods=["POST"], status_code=201)
+        self.router.add_api_route(f"{self.prefix}/photo/{{key:path}}", self.upload_public_photo, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.upload, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.delete_by_key, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
 
@@ -72,6 +73,27 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
     async def upload_avatar(self, request: Request, role_code: str = Query("user"), file: UploadFile = File(...), user_id = Depends(get_current_user_id)) -> dict:
         pdf_bytes = await file.read()
         key = f"user/{user_id}/{role_code}/{round(datetime.now().timestamp())}/avatar"
+        content_type = file.content_type or "image/jpeg"
+        await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type, bucket=S3Bucket.AVATAR)
+        return {"key": key, "url": self.model_crud.public_url(key, S3_AVATARS_BUCKET_UUID)}
+
+    async def upload_car_photo(self, request: Request, type: str = Query("FRONT"), car_id: int = Query(), file: UploadFile = File(...), driver_profile_id: int = Depends(get_current_driver_profile_id_without_approve)) -> dict:
+        session = request.state.session
+        car = await car_crud.get_by_id(session, car_id)
+        if not car:
+            raise HTTPException(status_code=404, detail='Car not found')
+        
+        if car.driver_profile_id != driver_profile_id:
+            raise HTTPException(status_code=403, detail='Car does not belong to this driver')
+        
+        pdf_bytes = await file.read()
+        key = f"car/{car_id}/{type}/photo"
+        content_type = file.content_type or "image/jpeg"
+        await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type, bucket=S3Bucket.AVATAR)
+        return {"key": key, "url": self.model_crud.public_url(key, S3_AVATARS_BUCKET_UUID)}
+
+    async def upload_public_photo(self, request: Request, key: str, file: UploadFile = File(...)) -> dict:
+        pdf_bytes = await file.read()
         content_type = file.content_type or "image/jpeg"
         await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type, bucket=S3Bucket.AVATAR)
         return {"key": key, "url": self.model_crud.public_url(key, S3_AVATARS_BUCKET_UUID)}
