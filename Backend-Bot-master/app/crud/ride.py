@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 from sqlalchemy import and_, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,10 +15,14 @@ from .in_app_notification import in_app_notification_crud
 from .driver_location_sender import driver_location_sender
 from .driver_tracker import driver_tracker, DriverStatus
 from app.models import Ride, TariffPlan, Commission, RideDriversRequest, ChatMessage
-from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating, RideSchemaWithDriverProfile
+from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating, RideSchemaWithDriverProfile, RideSchemaUpdateByClient
 from app.schemas.ride_status_history import RideStatusHistoryCreate
 from app.schemas.in_app_notification import InAppNotificationCreate
+from app.schemas.push import PushNotificationData
 from fastapi import HTTPException
+from app.config import RIDE_SECONDS_LIMIT
+from app.db import async_session_maker
+from app.services.fcm_service import fcm_service
 
 
 STATUSES = {
@@ -374,5 +379,15 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         result = await session.execute(select(self.model).where(self.model.client_id == client_id).order_by(text('created_at desc')).limit(1))
         ride = result.scalar_one_or_none()
         return self.schema.model_validate(ride) if ride else None
+
+    async def cancel_ride_if_timeout(self, id: int, client_id: int) -> None:
+        await asyncio.sleep(RIDE_SECONDS_LIMIT)
+        async with async_session_maker() as session:
+            ride = await self.get_by_id(session, id)
+            if ride and ride.status == 'requested':
+                updated_ride = await self.update(session, id, RideSchemaUpdateByClient(status='canceled'), client_id)
+                await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за таймаута", data=updated_ride.model_dump(mode='json'), dedup_key=f"{updated_ride.id}_canceled"))
+                await fcm_service.send_to_user(session, client_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за таймаута'))
+            await session.commit()
 
 ride_crud = RideCrud(Ride, RideSchema)

@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 from fastapi import Request, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,6 +61,7 @@ class RideRouter(BaseRouter[RideCrud]):
     async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
         ride = await super().create(request, create_obj)
+        asyncio.create_task(ride_crud.cancel_ride_if_timeout(ride.id, user_id))
         return ride
 
     async def update(self, request: Request, id: int, update_obj: RideSchema, user_id: int = Depends(get_current_user_id)) -> RideSchema:
@@ -73,6 +75,10 @@ class RideRouter(BaseRouter[RideCrud]):
         old_ride = await self.model_crud.get_by_id(session, id)
         if not old_ride:
             raise HTTPException(status_code=404, detail="Ride not found")
+        
+        if old_ride.status in ('started'):
+            raise HTTPException(status_code=400, detail="Ride is already started, client can't cancel it")
+        
         ride = await self.model_crud.update(session, id, update_obj, user_id)
 
         driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
@@ -115,7 +121,7 @@ class RideRouter(BaseRouter[RideCrud]):
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_changed", "message": "Поездка изменена вами", "data": ride.model_dump(mode="json")})
 
         if update_obj.status == 'canceled':
-            await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride.id, text="Поездка отменена клиентом", message_type="system")
+            await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride.id, text="Поездка отменена водителем", message_type="system")
             await driver_tracker.release_ride(session, ride.driver_profile_id)
         return ride
 
