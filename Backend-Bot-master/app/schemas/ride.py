@@ -127,7 +127,7 @@ class RideSchemaAcceptByDriver(BaseSchema):
 class RideSchemaFinishByDriver(BaseSchema):
     status: Literal["completed"] = Field("completed", max_length=50)
     completed_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
-    actual_fare: float = Field(0, ge=0)
+    actual_fare: float = Field(0, gt=0)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

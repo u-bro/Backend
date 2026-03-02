@@ -121,7 +121,7 @@ class RideRouter(BaseRouter[RideCrud]):
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_changed", "message": "Поездка изменена вами", "data": ride.model_dump(mode="json")})
 
         if update_obj.status == 'canceled':
-            await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride.id, text="Поездка отменена клиентом", message_type="system")
+            await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride.id, text="Поездка отменена водителем", message_type="system")
             await driver_tracker.release_ride(session, ride.driver_profile_id)
         return ride
 
