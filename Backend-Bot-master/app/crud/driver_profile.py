@@ -55,7 +55,7 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
     async def create(self, session: AsyncSession, create_obj: DriverProfileCreate) -> DriverProfileSchema | None:
         if create_obj.classes_allowed and len(create_obj.classes_allowed):
             create_obj.classes_allowed = sorted(create_obj.classes_allowed, key=lambda x: CLASS_VALUE[x])
-            create_obj.current_class = create_obj.classes_allowed[0]
+            create_obj.current_class = create_obj.classes_allowed[-1]
 
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
         result = await self.execute_get_one(session, stmt)
