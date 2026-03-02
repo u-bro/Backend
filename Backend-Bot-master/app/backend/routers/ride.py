@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any
 from fastapi import Request, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,6 +61,7 @@ class RideRouter(BaseRouter[RideCrud]):
     async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
         ride = await super().create(request, create_obj)
+        asyncio.create_task(ride_crud.cancel_ride_if_timeout(ride.id, user_id))
         return ride
 
     async def update(self, request: Request, id: int, update_obj: RideSchema, user_id: int = Depends(get_current_user_id)) -> RideSchema:
