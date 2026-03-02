@@ -73,6 +73,10 @@ class RideRouter(BaseRouter[RideCrud]):
         old_ride = await self.model_crud.get_by_id(session, id)
         if not old_ride:
             raise HTTPException(status_code=404, detail="Ride not found")
+        
+        if old_ride.status in ('started'):
+            raise HTTPException(status_code=400, detail="Ride is already started, client can't cancel it")
+        
         ride = await self.model_crud.update(session, id, update_obj, user_id)
 
         driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
