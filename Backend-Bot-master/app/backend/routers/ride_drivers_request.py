@@ -3,6 +3,7 @@ from app.backend.routers.base import BaseRouter
 from app.crud.ride_drivers_request import ride_drivers_request_crud, RideDriversRequestCrud
 from app.crud.ride import ride_crud
 from app.schemas.ride_drivers_request import RideDriversRequestSchema,RideDriversRequestSchemaDetailed, RideDriversRequestUpdate
+from app.schemas.ride import RideExpectedFareUpdate
 from app.backend.deps import require_role, require_owner
 from app.models import Ride, User
 from app.enum import RoleCode
@@ -34,7 +35,11 @@ class RideDriversRequestRouter(BaseRouter[RideDriversRequestCrud]):
         if user.id != ride.client_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
-        return await self.model_crud.update(session, id, body)
+        result = await self.model_crud.update(session, id, body)
+        if result.status == 'accepted':
+            await ride_crud.update(session, result.ride_id, RideExpectedFareUpdate(expected_fare=result.offer_fare), user.id)
+
+        return result
 
 
 ride_drivers_request_router = RideDriversRequestRouter(ride_drivers_request_crud, "/ride-requests").router

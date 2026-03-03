@@ -6,7 +6,6 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import insert, update, delete, text
 from sqlalchemy.orm import joinedload
 from app.crud.base import CrudBase
-from .tariff_plan import tariff_plan_crud
 from .commission import commission_crud
 from .ride_status_history import ride_status_history_crud
 from .driver_profile import driver_profile_crud
@@ -14,7 +13,7 @@ from .driver_location import driver_location_crud
 from .in_app_notification import in_app_notification_crud
 from .driver_location_sender import driver_location_sender
 from .driver_tracker import driver_tracker, DriverStatus
-from app.models import Ride, TariffPlan, Commission, RideDriversRequest, ChatMessage
+from app.models import Ride, Commission, RideDriversRequest, ChatMessage
 from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating, RideSchemaWithDriverProfile, RideSchemaUpdateByClient
 from app.schemas.ride_status_history import RideStatusHistoryCreate
 from app.schemas.in_app_notification import InAppNotificationCreate
@@ -47,81 +46,23 @@ ALLOWED_TRANSITIONS = {
 
 
 class RideCrud(CrudBase[Ride, RideSchema]):
-    @staticmethod
-    def _calculate_expected_fare(tariff_plan: TariffPlan, distance_meters: int | None) -> float | None:
-        return (float(tariff_plan.base_fare) + (float(distance_meters) * float(tariff_plan.rate_per_meter) * float(tariff_plan.multiplier)))
 
     @staticmethod
     def _calculate_commission_amount(expected_fare: float | None, commission: Commission) -> float | None:
-        return commission.fixed_amount + (expected_fare * commission.percentage / 100)
+        return commission.fixed_amount + (expected_fare * commission.percentage / 100) if expected_fare else 0
 
     @staticmethod
-    def _build_snapshot(tariff_plan: TariffPlan, distance_meters: int | None, expected_fare: float | None, commission: Commission, commission_amount: float | None) -> dict:
-        def _iso_utc_z(value: datetime | None) -> str | None:
-            if value is None:
-                return None
-            if value.tzinfo is None:
-                value = value.replace(tzinfo=timezone.utc)
-            value = value.astimezone(timezone.utc)
-            return value.isoformat().replace("+00:00", "Z")
-
-        effective_from = getattr(tariff_plan, "effective_from", None)
-        effective_to = getattr(tariff_plan, "effective_to", None)
-        return {
-            "input": {
-                "distance_meters": distance_meters,
-            },
-            "tariff_plan": {
-                "id": tariff_plan.id,
-                "name": tariff_plan.name,
-                "effective_from": _iso_utc_z(effective_from),
-                "effective_to": _iso_utc_z(effective_to),
-                "rules": getattr(tariff_plan, "rules", None),
-            },
-            "commission": {
-                "id": commission.id,
-                "name": commission.name,
-                "valid_from": _iso_utc_z(commission.valid_from),
-                "valid_to": _iso_utc_z(commission.valid_to)
-            },
-            "totals": {
-                "base_fare": float(tariff_plan.base_fare),
-                "rate_per_meter": float(tariff_plan.rate_per_meter),
-                "multiplier": float(tariff_plan.multiplier),
-                "commission_fixed_amount": commission.fixed_amount,
-                "commission_percentage": commission.percentage,
-                "distance_meters": distance_meters,
-                "expected_fare_formula": "(base_fare + (distance_meters * rate_per_meter * multiplier))",
-                "commission_formula": "commission_fixed_amount + (expected_fare * commission_percentage / 100)",
-                "expected_fare": expected_fare,
-                "commission_amount": commission_amount
-            },
-            "meta": {
-                "calculated_at": _iso_utc_z(datetime.now(timezone.utc)),
-            },
-        }
-
-    @staticmethod
-    def _add_expected_fare_and_snapshot(data: dict, tariff_plan: TariffPlan, distance_meters: int, commission: Commission):
-        expected_fare = RideCrud._calculate_expected_fare(tariff_plan, distance_meters)
+    def _add_commission(data: dict, commission: Commission):
+        expected_fare = data.get('expected_fare', 0)
         commission_amount = RideCrud._calculate_commission_amount(expected_fare, commission)
-        snapshot = RideCrud._build_snapshot(tariff_plan, distance_meters, expected_fare, commission, commission_amount)
-        data["expected_fare"] = expected_fare
         data["commission_amount"] = commission_amount
-        data["expected_fare_snapshot"] = snapshot
 
     async def create(self, session: AsyncSession, create_obj) -> RideSchema | None:
         data = create_obj.model_dump()
         await self.cancel_rides_by_user_id(session, data.get('client_id'))
-        tariff_plan = await tariff_plan_crud.get_by_id(session, data.get("tariff_plan_id"))
         commission = await commission_crud.get_by_id(session,  data.get("commission_id"))
 
-        if not tariff_plan:
-            raise HTTPException(status_code=404, detail="Tariff plan not found")
-        if tariff_plan.effective_to and tariff_plan.effective_to <= datetime.now(timezone.utc):
-            raise HTTPException(status_code=400, detail="This version of tariff plan has closed")
-
-        self._add_expected_fare_and_snapshot(data, tariff_plan, data.get("distance_meters"), commission)
+        self._add_commission(data, commission)
         stmt = insert(self.model).values(data).returning(self.model)
         ride = await self.execute_get_one(session, stmt)
         if not ride:
@@ -134,17 +75,11 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         existing = existing_result.scalar_one_or_none()
 
         data = update_obj.model_dump(exclude_none=True)
-        data.pop("expected_fare", None)
-        data.pop("expected_fare_snapshot", None)
 
-        should_reprice = any(key in data for key in ("distance_meters", "tariff_plan_id"))
-        if should_reprice:
-            tariff_plan_id = data.get("tariff_plan_id", existing.tariff_plan_id)
-            tariff_plan = await tariff_plan_crud.get_by_id(session, int(tariff_plan_id))
+        if data.get('expected_fare'):
             commission_id = data.get("commission_id", existing.commission_id)
             commission = await commission_crud.get_by_id(session,  int(commission_id))
-            distance_meters = data.get("distance_meters", existing.distance_meters)
-            self._add_expected_fare_and_snapshot(data, tariff_plan, distance_meters, commission)
+            self._add_commission(data, commission)
 
         if not data:
             return await self.get_by_id(session, id)
@@ -165,7 +100,7 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         )
         result = await self.execute_get_one(session, stmt)
         if not result:
-            return NoneChatMessage
+            return None
         return self.schema.model_validate(result)
 
     @staticmethod

@@ -104,8 +104,7 @@ class ChatService:
 
         if not include_deleted:
             conditions.append(ChatMessage.deleted_at.is_(None))
-        print((page - 1) * page_size)
-        print(page_size)
+
         query = (
             select(ChatMessage)
             .where(and_(*conditions))

@@ -36,7 +36,6 @@ class Ride(Base):
     anomaly_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
-    tariff_plan_id: Mapped[int] = mapped_column(Integer, ForeignKey('tariff_plans.id'))
     ride_class: Mapped[str] = mapped_column(Text, nullable=False)
     comment = mapped_column(Text, nullable=True)
     ride_type: Mapped[str] = mapped_column(Text, nullable=False)
@@ -44,4 +43,3 @@ class Ride(Base):
     client = relationship('User', foreign_keys=[client_id])
     driver_profile = relationship('DriverProfile', foreign_keys=[driver_profile_id])
     driver_rating = relationship('DriverRating', foreign_keys='DriverRating.ride_id', back_populates='ride', uselist=False)
-    tariff_plan = relationship('TariffPlan', foreign_keys=[tariff_plan_id])
