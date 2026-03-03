@@ -13,6 +13,7 @@ class RideDriversRequest(models.Model):
     driver_profile_id = models.IntegerField()
     car_id = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=50)
+    offer_fare = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     eta = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)

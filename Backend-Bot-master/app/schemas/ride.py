@@ -24,7 +24,6 @@ class RideSchemaIn(BaseSchema):
     duration_seconds: int | None = Field(None, ge=0)
     duration_str: str | None = Field(None, max_length=50)
     commission_id: int = Field(..., gt=0)
-    tariff_plan_id: int = Field(..., gt=0)
     ride_class: RIDE_CLASSES_LITERAL = Field(..., max_length=50)
     ride_type: Literal["with_car", "without_car"] = Field("with_car", max_length=50)
     comment: str | None = Field(None, max_length=500)
@@ -32,6 +31,7 @@ class RideSchemaIn(BaseSchema):
 
 class RideSchemaCreate(RideSchemaIn):
     client_id: int = Field(..., gt=0)
+    expected_fare: float | None = Field(None, gt=0)
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @model_validator(mode="after")
@@ -50,10 +50,8 @@ class RideSchema(RideSchemaCreate):
     started_at: datetime | None = Field(None)
     completed_at: datetime | None = Field(None)
     canceled_at: datetime | None = Field(None)
-    expected_fare: float | None = Field(None, ge=0)
-    expected_fare_snapshot: dict | None = Field(None)
     commission_amount: float | None = Field(None, ge=0)
-    actual_fare: float | None = Field(None, ge=0)
+    actual_fare: float | None = Field(None, gt=0)
     updated_at: datetime | None = Field(None)
     is_anomaly: bool | None = Field(False)
     anomaly_reason: str | None = Field(None, max_length=255)
@@ -121,6 +119,7 @@ class RideSchemaAcceptByDriver(BaseSchema):
     driver_profile_id: int | None = Field(None, gt=0)
     status_reason: str | None = Field(None, max_length=255)
     eta: dict | None = Field(None)
+    offer_fare: float | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -141,9 +140,9 @@ class RideSchemaHistory(BaseSchema):
     status: Literal["requested", "canceled", "waiting_commission", "accepted", "on_the_way", "arrived", "started", "completed"] = Field("requested", max_length=50)
     pickup_address: str | None = Field(None, max_length=500)
     dropoff_address: str | None = Field(None, max_length=500)
-    expected_fare: float | None = Field(None, ge=0)
+    expected_fare: float | None = Field(None, gt=0)
     commission_amount: float | None = Field(None, ge=0)
-    actual_fare: float | None = Field(None, ge=0)
+    actual_fare: float | None = Field(None, gt=0)
     ride_class: RIDE_CLASSES_LITERAL = Field(..., max_length=50)
     created_at: datetime | None = Field(None)
 
@@ -153,3 +152,8 @@ class RideSchemaWithRating(RideSchema):
 
 class RideSchemaWithDriverProfile(RideSchema):
     driver_profile: DriverProfileSchema | None = None
+
+
+class RideExpectedFareUpdate(BaseSchema):
+    status: None = None
+    expected_fare: float | None = Field(None, gt=0)

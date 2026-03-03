@@ -98,7 +98,7 @@ class RideRouter(BaseRouter[RideCrud]):
         driver_profile = await driver_profile_crud.get_by_id(session, driver_profile_id)
         if not driver_profile:
             raise HTTPException(status_code=404, detail="Driver profile not found")
-        request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, car_id=driver_profile.current_car_id, eta=update_obj.eta, status="requested"))
+        request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, car_id=driver_profile.current_car_id, eta=update_obj.eta, offer_fare=update_obj.offer_fare, status="requested"))
         ride = await ride_crud.get_by_id(session, id)
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_request_sent", "data": ride.model_dump(mode="json")})
         return request

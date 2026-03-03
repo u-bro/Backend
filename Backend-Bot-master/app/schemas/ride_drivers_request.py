@@ -12,6 +12,7 @@ class RideDriversRequestCreate(BaseSchema):
     car_id: int | None = Field(None, gt=0)
     status: Literal['requested'] | None = Field("requested")
     eta: dict | None = Field(None)
+    offer_fare: float | None = Field(None)
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, TIMESTAMP, func, ForeignKey
+from sqlalchemy import Integer, String, TIMESTAMP, func, ForeignKey, DECIMAL
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
@@ -13,6 +13,7 @@ class RideDriversRequest(Base):
     car_id: Mapped[int] = mapped_column(Integer, ForeignKey('cars.id'), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     eta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    offer_fare: Mapped[float | None] = mapped_column(DECIMAL(15, 2), nullable=True)
     created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 

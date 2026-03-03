@@ -51,8 +51,6 @@ class ChatWebsocketRouter(BaseWebsocketRouter):
         await manager.connect(websocket, user_id)
         ride = await ride_crud.get_by_id_with_driver_profile(session, ride_id)
         driver_profile = ride.driver_profile
-        print(getattr(ride, 'client_id', 0))
-        print(getattr(driver_profile, 'user_id', 0))
         manager.join_ride(ride_id, getattr(ride, 'client_id', 0))
         manager.join_ride(ride_id, getattr(driver_profile, 'user_id', 0))
 
