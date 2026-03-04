@@ -119,7 +119,7 @@ class RideSchemaAcceptByDriver(BaseSchema):
     driver_profile_id: int | None = Field(None, gt=0)
     status_reason: str | None = Field(None, max_length=255)
     eta: dict | None = Field(None)
-    offer_fare: float = Field(...)
+    offer_fare: float = Field(..., gt=0)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

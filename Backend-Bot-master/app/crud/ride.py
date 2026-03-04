@@ -321,6 +321,9 @@ class RideCrud(CrudBase[Ride, RideSchema]):
             ride = await self.get_by_id(session, id)
             if ride and ride.status == 'requested':
                 updated_ride = await self.update(session, id, RideSchemaUpdateByClient(status='canceled'), client_id)
+                requests = await session.execute(update(RideDriversRequest).where(RideDriversRequest.ride_id == updated_ride.id).values(status="rejected").returning(RideDriversRequest))
+                for request in requests.scalars().all():
+                    await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
                 await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за таймаута", data=updated_ride.model_dump(mode='json'), dedup_key=f"{updated_ride.id}_canceled"))
                 await fcm_service.send_to_user(session, client_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за таймаута'))
             await session.commit()
