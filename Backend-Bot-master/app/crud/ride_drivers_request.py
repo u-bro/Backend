@@ -10,6 +10,7 @@ from .driver_profile import driver_profile_crud
 from .ride import ride_crud
 from .in_app_notification import in_app_notification_crud
 from .commission_payment import commission_payment_crud
+from .commission import commission_crud
 from .driver_tracker import driver_tracker, DriverStatus
 from app.services.websocket_manager import manager_driver_feed
 from app.schemas.in_app_notification import InAppNotificationCreate
@@ -67,7 +68,13 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         if ride.status != "requested":
             raise HTTPException(status_code=400, detail="Ride is not in \"requested\" status")
 
-        stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
+        commission = await commission_crud.get_by_id(session, ride.commission_id)
+        if not commission:
+            raise HTTPException(status_code=404, detail="Commission not found")
+
+        insert_dict = create_obj.model_dump()
+        insert_dict['commission_amount'] = ride_crud._calculate_commission_amount(create_obj.offer_fare, commission)
+        stmt = insert(self.model).values(insert_dict).returning(self.model)
         result = await self.execute_get_one(session, stmt)
         if not result:
             return None
