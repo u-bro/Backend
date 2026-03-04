@@ -119,7 +119,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Отклик на поездку отменен", message="Отклик на поездку отменен водителем", data=request.model_dump(mode="json"), dedup_key=str(request.id)))
 
     async def _dispatch_accepted(self, session: AsyncSession, result: RideDriversRequestSchema, driver_profile: DriverProfileSchema, ride: RideSchema, **kwargs):
-        accepted = await ride_crud.accept(session, result.ride_id, RideSchemaAcceptByDriver(driver_profile_id=result.driver_profile_id), driver_profile.user_id)
+        accepted = await ride_crud.accept(session, result.ride_id, RideSchemaAcceptByDriver(driver_profile_id=result.driver_profile_id), driver_profile.user_id, offer_fare=0)
         if not accepted:
             raise HTTPException(status_code=400, detail="Ride request is not accepted. Perhaps, ride is already accepted")
         await driver_tracker.assign_ride(session, driver_profile.id, accepted.id)
