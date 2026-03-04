@@ -14,6 +14,7 @@ class RideDriversRequest(Base):
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     eta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     offer_fare: Mapped[float | None] = mapped_column(DECIMAL(15, 2), nullable=True)
+    commission_amount: Mapped[float | None] = mapped_column(DECIMAL(15, 2), nullable=True)
     created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 

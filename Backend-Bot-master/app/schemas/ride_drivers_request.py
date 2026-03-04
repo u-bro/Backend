@@ -25,6 +25,7 @@ class RideDriversRequestUpdate(BaseSchema):
 class RideDriversRequestSchema(RideDriversRequestCreate):
     id: int = Field(..., gt=0)
     status: Literal['requested', 'accepted', 'rejected', 'canceled'] = Field(...)
+    commission_amount: float | None = Field(None)
     updated_at: datetime | None = None
 
 
