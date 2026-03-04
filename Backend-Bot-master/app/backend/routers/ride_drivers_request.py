@@ -35,11 +35,7 @@ class RideDriversRequestRouter(BaseRouter[RideDriversRequestCrud]):
         if user.id != ride.client_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
-        result = await self.model_crud.update(session, id, body)
-        if result.status == 'accepted':
-            await ride_crud.update(session, result.ride_id, RideExpectedFareUpdate(expected_fare=result.offer_fare), user.id)
-
-        return result
+        return await self.model_crud.update(session, id, body)
 
 
 ride_drivers_request_router = RideDriversRequestRouter(ride_drivers_request_crud, "/ride-requests").router

@@ -116,10 +116,20 @@ class RideCrud(CrudBase[Ride, RideSchema]):
             raise HTTPException(status_code=404, detail="Driver location not found")
         if driver_location.status == 'busy':
             raise HTTPException(status_code=409, detail="Driver already have accepted ride")
+        
+        ride = await self.get_by_id(session, id)
+        if not ride:
+            raise HTTPException(status_code=404, detail='Ride not found')
+        
+        commission = await commission_crud.get_by_id(session, ride.commission_id)
+        if not commission:
+            raise HTTPException(status_code=404, detail='Commission not found')
+
+        expected_fare = update_obj.offer_fare
         stmt = (
             update(self.model)
             .where(and_(self.model.id == id, self.model.driver_profile_id.is_(None)))
-            .values(driver_profile_id=update_obj.driver_profile_id, status=update_obj.status)
+            .values(driver_profile_id=update_obj.driver_profile_id, status=update_obj.status, expected_fare=expected_fare, commission_amount=self._calculate_commission_amount(expected_fare, commission))
             .returning(self.model)
         )
         result = await self.execute_get_one(session, stmt)
