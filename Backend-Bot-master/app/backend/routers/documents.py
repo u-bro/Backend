@@ -17,12 +17,17 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/avatar/{{id}}", self.get_avatar_by_user_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
         self.router.add_api_route(f"{self.prefix}/avatar/{{id}}/url", self.get_public_avatar_url, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
-        self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.get_by_key, methods=["GET"], status_code=200)
-        self.router.add_api_route(f"{self.prefix}/{{key:path}}/url", self.get_presigned_url, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
         self.router.add_api_route(f"{self.prefix}/avatar", self.upload_avatar, methods=["POST"], status_code=201)
         self.router.add_api_route(f"{self.prefix}/photo/{{key:path}}", self.upload_public_photo, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+
+        self.router.add_api_route(f"{self.prefix}/policy/{{key:path}}", self.upload_policy, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/public/policy/{{key:path}}", self.get_public_policy, methods=["GET"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/policy/{{key:path}}", self.get_public_policy, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
+
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.upload, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
         self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.delete_by_key, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{key:path}}", self.get_by_key, methods=["GET"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/{{key:path}}/url", self.get_presigned_url, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
 
     async def get_by_key(self, request: Request, key: str, download: bool = False, user: User = Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))) -> Response:
         filename = key.split("/")[-1] or "document.pdf"
@@ -97,6 +102,39 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
         content_type = file.content_type or "image/jpeg"
         await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type, bucket=S3Bucket.AVATAR)
         return {"key": key, "url": self.model_crud.public_url(key, S3_AVATARS_BUCKET_UUID)}
+
+    async def upload_policy(self, request: Request, key: str, file: UploadFile = File(...)) -> dict:
+        pdf_bytes = await file.read()
+        content_type = file.content_type or "application/octet-stream"
+        policy_key = f"policy/{key}"
+        await self.model_crud.upload_bytes(policy_key, pdf_bytes, content_type=content_type, bucket=S3Bucket.AVATAR)
+        return {"key": policy_key, "url": self.model_crud.public_url(policy_key, S3_AVATARS_BUCKET_UUID)}
+
+    async def get_public_policy(self, request: Request, key: str, download: bool = False) -> Response:
+        if key not in ('privacy-policy', 'confidentiality-policy', 'terms-of-service'):
+            raise HTTPException(status_code=404, detail='Public policy document not found')
+
+        filename = key.split("/")[-1] or "document.pdf"
+        policy_key = f"policy/{key}"
+        print(policy_key)
+        pdf_bytes = await self.model_crud.get_by_key(policy_key, S3Bucket.AVATAR)
+        disposition = "attachment" if download else "inline"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"{disposition}; filename={filename}"},
+        )
+
+    async def get_policy(self, request: Request, key: str, download: bool = False) -> Response:
+        filename = key.split("/")[-1] or "document.pdf"
+        policy_key = f"policy/{key}"
+        pdf_bytes = await self.model_crud.get_by_key(policy_key, S3Bucket.AVATAR)
+        disposition = "attachment" if download else "inline"
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"{disposition}; filename={filename}"},
+        )
 
     async def delete_by_key(self, request: Request, key: str) -> dict:
         await self.model_crud.delete_by_key(key)
