@@ -21,7 +21,7 @@ class ChatMessageSchema(BaseSchema):
 
 
 class SendMessageRequest(BaseModel):
-    text: str = Field(..., min_length=1, max_length=2000)
+    text: str = Field(..., min_length=1, max_length=1000000)
     message_type: str = Field(default="text")
     attachments: Optional[Dict[str, Any]] = None
 
