@@ -70,14 +70,16 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
         await asyncio.sleep(COMMISSION_PAY_SECONDS_LIMIT)
         async with async_session_maker() as session:
             payment = await self.get_by_ride_and_user(session, ride_id, user_id)
-            if not payment or payment.status != 'APPROVED':
-                updated_ride = await ride_crud.update(session, ride_id, RideSchemaUpdateByClient(status='canceled'), user_id)
-                driver_profile = await driver_profile_crud.get_by_id(session, updated_ride.driver_profile_id)
-                await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride_id, text="Клиент не оплатил комиссию вовремя", message_type="system")
-                await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_canceled", "message": "Клиент не оплатил комиссию вовремя"})
-                await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за истечения срока оплаты комиссии", data=updated_ride.model_dump(mode='json'), dedup_key=f"{updated_ride.id}_canceled"))
-                await fcm_service.send_to_user(session, user_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за истечения срока оплаты комиссии'))
-                await driver_tracker.release_ride(session, updated_ride.driver_profile_id)
+            if payment and payment.status == 'APPROVED':
+                return
+
+            updated_ride = await ride_crud.update(session, ride_id, RideSchemaUpdateByClient(status='canceled'), user_id)
+            driver_profile = await driver_profile_crud.get_by_id(session, updated_ride.driver_profile_id)
+            await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride_id, text="Клиент не оплатил комиссию вовремя", message_type="system")
+            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_canceled", "message": "Клиент не оплатил комиссию вовремя"})
+            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за истечения срока оплаты комиссии", data=updated_ride.model_dump(mode='json'), dedup_key=f"{updated_ride.id}_canceled"))
+            await fcm_service.send_to_user(session, user_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за истечения срока оплаты комиссии'))
+            await driver_tracker.release_ride(session, updated_ride.driver_profile_id)
             await session.commit()
 
 commission_payment_crud = CommissionPaymentCrud()
