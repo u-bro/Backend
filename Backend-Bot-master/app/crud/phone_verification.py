@@ -43,18 +43,6 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
 
     async def verify_by_user_id(self, session: AsyncSession, verify_obj: PhoneVerificationVerifyRequest) -> TokenResponseRegister:        
         item = await self.get_by_phone(session, verify_obj.phone)
-
-        if item.phone in TEST_PHONES:
-            if verify_obj.code != TEST_PHONE_OTP:
-                raise HTTPException(status_code=401, detail='CODE_INVALID')
-
-            access_token = auth_crud.create_access_token(item.user_id, timedelta(minutes=JWT_EXPIRATION_MINUTES))
-            refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=item.user_id))
-            return TokenResponseRegister(
-                access_token=access_token,
-                refresh_token=refresh_token.token,
-                is_registred=item.is_registred
-            )
         
         if item.expires_at <= datetime.now(timezone.utc):
             raise HTTPException(status_code=401, detail='CODE_EXPIRED')
