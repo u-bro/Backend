@@ -8,6 +8,9 @@ HTTP_ERROR_MESSAGES = {
     429: ("RATE_LIMIT_EXCEEDED",),
 }
 
+TEST_PHONES = ('79999999997', '79999999999')
+TEST_PHONE_OTP = '111111'
+
 def get_swagger_page(auth_header: str = ""):
     return f"""<!DOCTYPE html>
 <html>

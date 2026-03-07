@@ -8,6 +8,7 @@ from app.backend.routers.base import BaseRouter
 from app.models import User
 from app.backend.deps import get_current_user_id
 from app.config import OTP_TTL, OTP_NEXT_SENDING_SECONDS
+from app.const import TEST_PHONES, TEST_PHONE_OTP
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -26,7 +27,7 @@ class AuthRouter(BaseRouter[AuthCrud]):
         return await self.send_otp(request, user, is_registred)
 
     async def send_otp(self, request: Request, user: User, is_registred: bool) -> PhoneVerificationSchema:
-        code = self.generate_otp()
+        code = TEST_PHONE_OTP if user.phone in TEST_PHONES else self.generate_otp()
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=OTP_TTL)
         next_sending_at = datetime.now(timezone.utc) + timedelta(seconds=OTP_NEXT_SENDING_SECONDS)
         create_obj = PhoneVerificationSchemaCreate(
