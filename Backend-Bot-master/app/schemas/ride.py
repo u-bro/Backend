@@ -50,6 +50,7 @@ class RideSchema(RideSchemaCreate):
     started_at: datetime | None = Field(None)
     completed_at: datetime | None = Field(None)
     canceled_at: datetime | None = Field(None)
+    commission_paid_at: datetime | None = Field(None)
     commission_amount: float | None = Field(None, ge=0)
     actual_fare: float | None = Field(None, gt=0, lt=1_000_000_000_000)
     updated_at: datetime | None = Field(None)
@@ -92,6 +93,7 @@ class RideSchemaUpdateByClient(RideSchemaWithCanceledValidator):
 class RideschemaUpdateAfterCommission(BaseSchema):
     status: Literal["accepted"] = Field("accepted", max_length=50)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+    commission_paid_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class RideSchemaUpdateByDriver(RideSchemaWithCanceledValidator):
