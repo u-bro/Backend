@@ -36,6 +36,7 @@ class Ride(Base):
     anomaly_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
+    commission_paid_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     ride_class: Mapped[str] = mapped_column(Text, nullable=False)
     comment = mapped_column(Text, nullable=True)
     ride_type: Mapped[str] = mapped_column(Text, nullable=False)
