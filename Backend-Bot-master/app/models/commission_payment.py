@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, TIMESTAMP, func, ForeignKey, DECIMAL, Boolean, UniqueConstraint
+from sqlalchemy import BigInteger, String, TIMESTAMP, func, ForeignKey, DECIMAL, Boolean, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,7 +12,7 @@ class CommissionPayment(Base):
         UniqueConstraint("ride_id", "user_id", "is_refund", name="uq_commission_payment_ride_user_refund"),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
     ride_id: Mapped[int] = mapped_column(ForeignKey("rides.id"), nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)

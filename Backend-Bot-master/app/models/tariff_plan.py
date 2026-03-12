@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, TIMESTAMP, func, Float
+from sqlalchemy import BigInteger, String, TIMESTAMP, func, Float
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base, metadata
@@ -7,7 +7,7 @@ from app.db import Base, metadata
 class TariffPlan(Base):
     __tablename__ = 'tariff_plans'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=True)
     updated_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
