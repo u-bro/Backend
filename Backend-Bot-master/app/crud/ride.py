@@ -50,7 +50,8 @@ class RideCrud(CrudBase[Ride, RideSchema]):
     @staticmethod
     def _calculate_commission_amount(expected_fare: float | None, commission: Commission) -> float | None:
         fixed_amount = max(commission.fixed_amount, 20)
-        return fixed_amount + (expected_fare * commission.percentage / 100) if expected_fare else fixed_amount
+        percentage_amount = expected_fare * commission.percentage / 100 if expected_fare else 0
+        return max(fixed_amount, percentage_amount)
 
     @staticmethod
     def _add_commission(data: dict, commission: Commission):
