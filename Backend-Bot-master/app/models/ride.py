@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, TIMESTAMP, func, DECIMAL, Boolean, ForeignKey, Text
+from sqlalchemy import BigInteger, Integer, String, TIMESTAMP, func, DECIMAL, Boolean, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base, metadata
@@ -7,9 +7,9 @@ from app.db import Base, metadata
 class Ride(Base):
     __tablename__ = 'rides'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    client_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
-    driver_profile_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('driver_profiles.id'), nullable=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    client_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=False)
+    driver_profile_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('driver_profiles.id'), nullable=True)
     status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     status_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     pickup_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -31,7 +31,7 @@ class Ride(Base):
     distance_str: Mapped[str | None] = mapped_column(String(50), nullable=True)
     duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     duration_str: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    commission_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('commissions.id'), nullable=True)
+    commission_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('commissions.id'), nullable=True)
     is_anomaly: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     anomaly_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())

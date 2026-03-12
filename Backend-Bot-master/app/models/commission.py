@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, TIMESTAMP, func, DECIMAL
+from sqlalchemy import BigInteger, String, TIMESTAMP, func, DECIMAL
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
 
@@ -6,7 +6,7 @@ from app.db import Base
 class Commission(Base):
     __tablename__ = 'commissions'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     percentage: Mapped[float | None] = mapped_column(DECIMAL(5, 2), nullable=True)
     fixed_amount: Mapped[float | None] = mapped_column(DECIMAL(15, 2), nullable=True)

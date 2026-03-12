@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, TIMESTAMP, func, Boolean, ForeignKey, DECIMAL
+from sqlalchemy import BigInteger, Integer, String, TIMESTAMP, func, Boolean, ForeignKey, DECIMAL
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
@@ -7,8 +7,8 @@ from app.db import Base
 class DriverProfile(Base):
     __tablename__ = 'driver_profiles'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False, unique=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=False, unique=True)
     first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     middle_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -20,12 +20,12 @@ class DriverProfile(Base):
     license_expires_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     experience_years: Mapped[int | None] = mapped_column(Integer, nullable=True)
     approved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    approved_by: Mapped[int | None] = mapped_column(Integer, ForeignKey('users.id'), nullable=True)
+    approved_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=True)
     approved_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     qualification_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     classes_allowed = mapped_column(JSONB, nullable=False)
     current_class = mapped_column(String(50), nullable=True)
-    current_car_id: Mapped[int | None] = mapped_column(Integer, ForeignKey('cars.id'), nullable=True)
+    current_car_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('cars.id'), nullable=True)
     documents_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     documents_review_notes: Mapped[str | None] = mapped_column(String, nullable=True)
     rating_avg = mapped_column(DECIMAL(3,2), nullable=True)

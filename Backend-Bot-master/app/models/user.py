@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, TIMESTAMP, Boolean, func, ForeignKey
+from sqlalchemy import BigInteger, String, TIMESTAMP, Boolean, func, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base, metadata
 
@@ -6,7 +6,7 @@ from app.db import Base, metadata
 class User(Base):
     __tablename__ = 'users'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
     created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
