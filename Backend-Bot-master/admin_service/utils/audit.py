@@ -57,16 +57,6 @@ class AuditLogger:
         )
 
     @staticmethod
-    def log_tariff_action(admin_user_id: int, tariff_id: int, action: str, data: Dict[str, Any]):
-        AuditLogger.log_action(
-            admin_user_id=admin_user_id,
-            action=f"{action}_tariff",
-            target_type="tariff_plan",
-            target_id=tariff_id,
-            new_values=data
-        )
-
-    @staticmethod
     def log_anomaly_review(admin_user_id: int, anomaly_id: int):
         AuditLogger.log_action(
             admin_user_id=admin_user_id,

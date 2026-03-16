@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
         content_types = ContentType.objects.filter(
             app_label__in=[
-                'admin_users', 'admin_drivers', 'admin_tariffs', 'admin_rides',
+                'admin_users', 'admin_drivers', 'admin_rides',
                 'admin_roles', 'admin_driver_documents', 'admin_chat_messages',
                 'admin_commissions', 'admin_ride_status_history'
             ]
