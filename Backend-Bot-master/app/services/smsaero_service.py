@@ -20,6 +20,17 @@ class SmsaeroService:
         except Exception as e:
             logger.error(f"Error sending SMS: {e}")
     
+    async def send_code_in_telegram_or_sms(self, phone: str, code: int, sign: str | None, smsText: str | None) -> None:
+        try:
+            await self._request("POST", "/telegram/send", params={
+                "number": phone,
+                "code": code,
+                "sign": sign,
+                "text": smsText
+            })
+        except Exception as e:
+            logger.error(f"Error sending SMS: {e}")
+
     async def _request(self, method: str, path: str, *, json_body: Any | None = None, params: dict | None = None) -> Any:
         url = self.api_url + path.lstrip("/")
         headers = {
