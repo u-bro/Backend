@@ -23,7 +23,6 @@ INSTALLED_APPS = [
     'axes',
     'admin_users.apps.AdminUsersConfig',
     'admin_drivers.apps.AdminDriversConfig',
-    'admin_tariffs.apps.AdminTariffsConfig',
     'admin_rides.apps.AdminRidesConfig',
     'admin_roles.apps.AdminRolesConfig',
     'admin_driver_documents.apps.AdminDriverDocumentsConfig',

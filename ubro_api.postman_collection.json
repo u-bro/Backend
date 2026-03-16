@@ -393,7 +393,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"pickup_address\": \"Москва, ул. Ленина 1\",\n  \"pickup_lat\": 55.751244,\n  \"pickup_lng\": 37.618423,\n  \"dropoff_address\": \"Москва, ул. Пушкина 10\",\n  \"dropoff_lat\": 55.760000,\n  \"dropoff_lng\": 37.620000,\n  \"distance_meters\": 12000,\n  \"duration_seconds\": 1500,\n  \"commission_id\": 1,\n  \"tariff_plan_id\": 1\n}",
+              "raw": "{\n  \"pickup_address\": \"Москва, ул. Ленина 1\",\n  \"pickup_lat\": 55.751244,\n  \"pickup_lng\": 37.618423,\n  \"dropoff_address\": \"Москва, ул. Пушкина 10\",\n  \"dropoff_lat\": 55.760000,\n  \"dropoff_lng\": 37.620000,\n  \"distance_meters\": 12000,\n  \"duration_seconds\": 1500,\n  \"commission_id\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -434,7 +434,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"id\": {{rideId}},\n  \"client_id\": 1,\n  \"status\": \"requested\",\n  \"pickup_lat\": 55.751244,\n  \"pickup_lng\": 37.618423,\n  \"dropoff_lat\": 55.760000,\n  \"dropoff_lng\": 37.620000,\n  \"distance_meters\": 12000,\n  \"tariff_plan_id\": 1\n}",
+              "raw": "{\n  \"id\": {{rideId}},\n  \"client_id\": 1,\n  \"status\": \"requested\",\n  \"pickup_lat\": 55.751244,\n  \"pickup_lng\": 37.618423,\n  \"dropoff_lat\": 55.760000,\n  \"dropoff_lng\": 37.620000,\n  \"distance_meters\": 12000\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1455,108 +1455,6 @@
               }
             ],
             "url": "{{baseUrl}}/api/v1/transactions/1",
-            "description": "Требуется роль: admin, телефон подтверждён."
-          }
-        }
-      ]
-    },
-    {
-      "name": "TariffPlan",
-      "description": "Тарифные планы и правила расчёта стоимости: базовая стоимость, ставка за метр, множитель, период действия и % комиссии.",
-      "item": [
-        {
-          "name": "GET /tariff_plans",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/tariff_plans?page=1&page_size=10",
-            "description": "Требуется роль: user/driver/admin, телефон подтверждён."
-          }
-        },
-        {
-          "name": "POST /tariff_plans (admin)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Economy\",\n  \"base_fare\": 150,\n  \"rate_per_meter\": 0.02,\n  \"multiplier\": 1.0\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/tariff_plans",
-            "description": "Требуется роль: admin, телефон подтверждён."
-          }
-        },
-        {
-          "name": "GET /tariff_plans/{id}",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/tariff_plans/1",
-            "description": "Требуется роль: user/driver/admin, телефон подтверждён."
-          }
-        },
-        {
-          "name": "PUT /tariff_plans/{id} (admin)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Economy\",\n  \"base_fare\": 200,\n  \"rate_per_meter\": 0.02,\n  \"multiplier\": 1.0\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/tariff_plans/1",
-            "description": "Требуется роль: admin, телефон подтверждён."
-          }
-        },
-        {
-          "name": "DELETE /tariff_plans/{id} (admin)",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/api/v1/tariff_plans/1",
             "description": "Требуется роль: admin, телефон подтверждён."
           }
         }

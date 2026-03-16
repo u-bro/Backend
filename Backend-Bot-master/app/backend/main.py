@@ -56,7 +56,6 @@ app.include_router(driver_profile_router, tags=['DriverProfiles'], prefix=API_PR
 app.include_router(driver_document_router, tags=['DriverDocuments'], prefix=API_PREFIX)
 app.include_router(phone_verification_router, tags=['PhoneVerifications'], prefix=API_PREFIX)
 app.include_router(commission_router, tags=['Commissions'], prefix=API_PREFIX)
-app.include_router(tariff_plan_router, tags=['TariffPlan'], prefix=API_PREFIX)
 app.include_router(matching_ws_router, tags=['Matching(WebSocket)'], prefix=API_PREFIX)
 app.include_router(documents_router, tags=['Documents'], prefix=API_PREFIX)
 app.include_router(matching_http_router, tags=['Matching(HTTP)'], prefix=API_PREFIX)
