@@ -44,11 +44,11 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
     async def verify_by_user_id(self, session: AsyncSession, verify_obj: PhoneVerificationVerifyRequest) -> TokenResponseRegister:        
         item = await self.get_by_phone(session, verify_obj.phone)
         
-        if item.expires_at <= datetime.now(timezone.utc):
-            raise HTTPException(status_code=401, detail='CODE_EXPIRED')
-
         if item is None or verify_obj.code != item.code or item.status == 'confirmed':
             raise HTTPException(status_code=401, detail='CODE_INVALID')
+
+        if item.expires_at <= datetime.now(timezone.utc):
+            raise HTTPException(status_code=401, detail='CODE_EXPIRED')
 
         stmt = (
             update(self.model)

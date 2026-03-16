@@ -74,6 +74,10 @@ class AuthCrud(CrudBase[User, UserSchema]):
     async def login_or_register(self, session: AsyncSession, phone: str, code_role: RoleCode | None = None) -> (UserSchema, bool):
         user = await self.get_by_phone_with_driver_profile_and_role(session, phone)
         is_registred = False
+        if code_role == RoleCode.DRIVER:
+            if user and (not user.driver_profile or not user.driver_profile.approved) or not user:
+                raise HTTPException(status_code=403, detail="Driver profile is not approved")
+
         if user:
             ride = await ride_crud.get_active_ride_by_client_id(session, user.id)
             if ride:
