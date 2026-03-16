@@ -22,8 +22,8 @@ ENABLE_PUBLIC_API_DOCS = os.getenv('ENABLE_PUBLIC_API_DOCS', '0') in {'1', 'true
 
 DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-TELEGRAM_OTP_BASE_URL = 'https://gatewayapi.telegram.org/'
-TELEGRAM_OTP_TOKEN = 'AAEDMAAATZrglNKgaX0kPyOE5krqBpx-M09H3bJM7Q-AdA'
+SMSAERO_EMAIL = os.environ.get('SMSAERO_EMAIL') or 'test-smsaero-email'
+SMSAERO_API_KEY = os.environ.get('SMSAERO_API_KEY') or 'test-smsaero-api-key'
 OTP_TTL = int(os.environ.get('OTP_TTL', 120))
 OTP_MAX_ATTEMPTS = int(os.environ.get('OTP_MAX_ATTEMPTS', 3))
 OTP_NEXT_SENDING_SECONDS = int(os.environ.get('OTP_NEXT_SENDING_SECONDS', 30))

@@ -11,6 +11,7 @@ from app.config import OTP_TTL, OTP_NEXT_SENDING_SECONDS
 from app.const import TEST_PHONES, TEST_PHONE_OTP
 import secrets
 from datetime import datetime, timedelta, timezone
+from app.services.smsaero_service import smsaero_service
 
 class AuthRouter(BaseRouter[AuthCrud]):
     def __init__(self, model_crud: AuthCrud, prefix: str) -> None:
@@ -38,7 +39,9 @@ class AuthRouter(BaseRouter[AuthCrud]):
             next_sending_at=next_sending_at,
             is_registred=is_registred
         )
-        return await phone_verification_crud.create(request.state.session, create_obj)
+        result = await phone_verification_crud.create(request.state.session, create_obj)
+        await smsaero_service.send_sms(user.phone, "U-BRO", f"Ваш код подтверждения: {code}. Не передавайте его никому.")
+        return result
 
     async def verify_otp(self, request: Request, verify_obj: PhoneVerificationVerifyRequest) -> TokenResponseRegister:
         await phone_verification_crud.attempts_increment(request.state.session, verify_obj.phone)
