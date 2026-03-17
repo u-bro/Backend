@@ -56,8 +56,8 @@ class AuthRouter(BaseRouter[AuthCrud]):
 
     @staticmethod
     def generate_otp(length: int = 6) -> str:
-        if not length:
-            return
+        if length <= 0:
+            raise ValueError("Length must be greater than 0")
         
         result = str(secrets.randbelow(9) + 1)
         return result + ''.join([str(secrets.randbelow(10)) for _ in range(length - 1)])
