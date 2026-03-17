@@ -79,7 +79,10 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     logger.error(f"HTTP exception occurred: {exc}")
     error_messages = HTTP_ERROR_MESSAGES.get(exc.status_code, ('UNKNOWN',))
     detail = exc.detail if exc.detail in error_messages else error_messages[0]
-    return JSONResponse(status_code=exc.status_code, content={"detail": detail})
+    response_content = {"detail": detail}
+    if exc.status_code == 403 and detail == "FORBIDDEN_DRIVER_SEARCH":
+        response_content["message"] = "+7 937 885 29 05"
+    return JSONResponse(status_code=exc.status_code, content=response_content)
 
 
 @app.exception_handler(RequestValidationError)

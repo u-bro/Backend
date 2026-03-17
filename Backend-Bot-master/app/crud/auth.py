@@ -76,7 +76,7 @@ class AuthCrud(CrudBase[User, UserSchema]):
         is_registred = False
         if code_role == RoleCode.DRIVER:
             if user and (not user.driver_profile or not user.driver_profile.approved) or not user:
-                raise HTTPException(status_code=403, detail="Driver profile is not approved")
+                raise HTTPException(status_code=403, detail="FORBIDDEN_DRIVER_SEARCH")
 
         if user:
             ride = await ride_crud.get_active_ride_by_client_id(session, user.id)
