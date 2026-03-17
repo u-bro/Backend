@@ -40,7 +40,7 @@ class AuthRouter(BaseRouter[AuthCrud]):
             is_registred=is_registred
         )
         result = await phone_verification_crud.create(request.state.session, create_obj)
-        await smsaero_service.send_code_in_telegram_or_sms(user.phone, int(code), "U-BRO", f"Ваш код подтверждения: {code}. Не передавайте его никому.")
+        await smsaero_service.send_code_in_telegram_or_sms(user.phone, int(code), "SMS Aero", f"Ваш код подтверждения У-БРО: {code}. Не передавайте его никому.")
         return result
 
     async def verify_otp(self, request: Request, verify_obj: PhoneVerificationVerifyRequest) -> TokenResponseRegister:
