@@ -81,7 +81,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     detail = exc.detail if exc.detail in error_messages else error_messages[0]
     response_content = {"detail": detail}
     if exc.status_code == 403 and detail == "FORBIDDEN_DRIVER_SEARCH":
-        response_content["message"] = "+7 937 885 29 05"
+        response_content["message"] = "Не нашли вас в списке наших водителей! Для того, чтобы стать водителем свяжитесь с нами по номеру +7(937)-885-29-05"
     return JSONResponse(status_code=exc.status_code, content=response_content)
 
 
