@@ -35,9 +35,9 @@ class DriverProfileCreate(DriverProfileValidated):
     classes_allowed: list[RIDE_CLASSES_LITERAL] = []
     documents_status: Optional[str] = Field(None, max_length=50)
     documents_review_notes: Optional[str] = None
-    ride_count: int = 0
-    rating_avg: float = 0.0
-    rating_count: int = 0
+    ride_count: int = Field(0, ge=0)
+    rating_avg: float = Field(0, ge=0)
+    rating_count: int = Field(0, ge=0)
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -51,9 +51,9 @@ class DriverProfileUpdate(DriverProfileValidated):
     qualification_level: Optional[str] = Field(None, max_length=50)
     documents_status: Optional[str] = Field(None, max_length=50)
     documents_review_notes: Optional[str] = None
-    ride_count: Optional[int] = None
-    rating_avg: Optional[float] = None
-    rating_count: Optional[int] = None
+    ride_count: Optional[int] = Field(None, ge=0)
+    rating_avg: Optional[float] = Field(None, ge=0)
+    rating_count: Optional[int] = Field(None, ge=0)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = None
 

@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.core.validators import MinValueValidator
 
 class DriverProfile(models.Model):
     class Meta:
@@ -24,14 +24,14 @@ class DriverProfile(models.Model):
     approved_by = models.IntegerField(null=True, blank=True)
     approved_at = models.DateTimeField(null=True, blank=True)
     qualification_level = models.CharField(max_length=50, null=True, blank=True)
-    classes_allowed = models.JSONField(null=False, blank=True, default=list)
+    classes_allowed = models.JSONField(null=False, blank=True, default=['light'])
     current_class = models.CharField(max_length=50, null=True, blank=True)
     current_car_id = models.IntegerField(null=True, blank=True)
     documents_status = models.CharField(max_length=50, null=True, blank=True)
     documents_review_notes = models.TextField(null=True, blank=True)
-    rating_avg = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    rating_count = models.IntegerField(null=True, blank=True)
-    ride_count = models.IntegerField(null=True, blank=True)
+    rating_avg = models.DecimalField(max_digits=3, decimal_places=2, null=False, blank=False, default=5.0, validators=[MinValueValidator(0)])
+    rating_count = models.IntegerField(null=False, blank=False, default=0, validators=[MinValueValidator(0)])
+    ride_count = models.IntegerField(null=False, blank=False, default=0, validators=[MinValueValidator(0)])
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
 

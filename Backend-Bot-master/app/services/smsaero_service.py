@@ -1,5 +1,5 @@
 import aiohttp
-from app.config import SMSAERO_EMAIL, SMSAERO_API_KEY
+from app.config import SMSAERO_EMAIL, SMSAERO_API_KEY, ENABLE_SMSAERO
 from fastapi import HTTPException
 from typing import Any
 from app.logger import logger
@@ -11,6 +11,8 @@ class SmsaeroService:
         self.api_url = "https://gate.smsaero.ru/v2/"
     
     async def send_sms(self, phone: str, sign: str, message: str) -> None:
+        if not ENABLE_SMSAERO:
+            return
         try:
             await self._request("GET", "/sms/send", params={
                 "number": phone,
@@ -21,6 +23,8 @@ class SmsaeroService:
             logger.error(f"Error sending SMS: {e}")
     
     async def send_code_in_telegram_or_sms(self, phone: str, code: int, sign: str | None, smsText: str | None) -> None:
+        if not ENABLE_SMSAERO:
+            return
         try:
             await self._request("GET", "/telegram/send", params={
                 "number": phone,
