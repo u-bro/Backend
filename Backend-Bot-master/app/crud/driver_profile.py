@@ -57,6 +57,10 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
             create_obj.classes_allowed = sorted(create_obj.classes_allowed, key=lambda x: CLASS_VALUE[x])
             create_obj.current_class = create_obj.classes_allowed[-1]
 
+        existing = await session.execute(select(self.model).where(self.model.user_id == create_obj.user_id))
+        if existing:
+            raise HTTPException(status_code=409, detail=f"Driver profile for user {create_obj.user_id} already created")
+
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
         result = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(result) if result else None
