@@ -1,5 +1,9 @@
+from django import forms
 from django.contrib import admin
 from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from django.db.models import OuterRef, Subquery
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.mixins import PermissionRequiredMixin
@@ -9,11 +13,36 @@ from utils.api_client import api_client
 from .models import DriverProfile
 
 
+class DriverProfileAdminForm(forms.ModelForm):
+    class Meta:
+        model = DriverProfile
+        fields = "__all__"
+
+    def clean_user_id(self):
+        user_id = self.cleaned_data.get("user_id")
+        if user_id is None:
+            return user_id
+
+        existing = (
+            DriverProfile.objects.filter(user_id=user_id)
+            .exclude(pk=getattr(self.instance, "pk", None))
+            .only("id")
+            .first()
+        )
+        if existing:
+            raise ValidationError(
+                f"Профиль водителя для user_id={user_id} уже существует (id профиля: {existing.id})."
+            )
+        return user_id
+
+
 @admin.register(DriverProfile)
 class DriverProfileAdmin(admin.ModelAdmin):
+    form = DriverProfileAdminForm
     list_display = (
         "id",
         "user_id",
+        "user_phone",
         "display_name",
         "first_name",
         "last_name",
@@ -34,9 +63,30 @@ class DriverProfileAdmin(admin.ModelAdmin):
 
     readonly_fields = ('id', 'created_at', 'updated_at', 'approved_at')
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        try:
+            from admin_users.models import User
+            phone_sq = User.objects.filter(id=OuterRef("user_id")).values("phone")[:1]
+            return qs.annotate(_user_phone=Subquery(phone_sq))
+        except Exception:
+            return qs
+
     def display_name(self, obj):
         name_parts = [p for p in [getattr(obj, 'first_name', None), getattr(obj, 'last_name', None)] if p]
         return " ".join(name_parts) if name_parts else f"Driver {obj.id}"
+
+    def user_phone(self, obj):
+        phone = getattr(obj, "_user_phone", None)
+        if phone:
+            return phone
+        try:
+            from admin_users.models import User
+            user = User.objects.filter(id=obj.user_id).only("phone").first()
+            return getattr(user, "phone", None) or ""
+        except Exception:
+            return ""
+    user_phone.short_description = "Phone"
 
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)
@@ -61,6 +111,21 @@ class DriverProfileAdmin(admin.ModelAdmin):
         except:
             return "Unknown"
     user_is_active.short_description = "User Status"
+
+    def save_model(self, request, obj, form, change):
+        try:
+            return super().save_model(request, obj, form, change)
+        except IntegrityError:
+            existing = DriverProfile.objects.filter(user_id=getattr(obj, "user_id", None)).only("id").first()
+            if existing:
+                form.add_error(
+                    "user_id",
+                    ValidationError(
+                        f"Профиль водителя для user_id={obj.user_id} уже существует (id профиля: {existing.id})."
+                    ),
+                )
+                return
+            raise
 
     def approve_drivers(self, request, queryset):  
         if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
