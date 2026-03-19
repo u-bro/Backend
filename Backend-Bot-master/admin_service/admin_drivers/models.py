@@ -24,7 +24,7 @@ class DriverProfile(models.Model):
     approved_by = models.IntegerField(null=True, blank=True)
     approved_at = models.DateTimeField(null=True, blank=True)
     qualification_level = models.CharField(max_length=50, null=True, blank=True)
-    classes_allowed = models.JSONField(null=True, blank=True)
+    classes_allowed = models.JSONField(null=False, blank=True, default=list)
     current_class = models.CharField(max_length=50, null=True, blank=True)
     current_car_id = models.IntegerField(null=True, blank=True)
     documents_status = models.CharField(max_length=50, null=True, blank=True)

@@ -6,6 +6,8 @@ from .car import CarSchema
 from app.enum import RideClass
 
 
+RIDE_CLASSES_LITERAL = Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]
+
 class DriverProfileValidated(BaseSchema):
     first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
     last_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
@@ -30,7 +32,7 @@ class DriverProfileCreate(DriverProfileValidated):
     license_issued_at: Optional[datetime] = None
     license_expires_at: Optional[datetime] = None
     qualification_level: Optional[str] = Field(None, max_length=50)
-    classes_allowed: list[Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]] = []
+    classes_allowed: list[RIDE_CLASSES_LITERAL] = []
     documents_status: Optional[str] = Field(None, max_length=50)
     documents_review_notes: Optional[str] = None
     ride_count: int = 0
@@ -53,13 +55,13 @@ class DriverProfileUpdate(DriverProfileValidated):
     rating_avg: Optional[float] = None
     rating_count: Optional[int] = None
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
-    classes_allowed: Optional[list[Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]]] = None
+    classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = None
 
 
 class DriverProfileApproveIn(BaseSchema):
     approved: bool = True
     approved_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
-    classes_allowed: list[Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]] = [RideClass.LIGHT]
+    classes_allowed: list[RIDE_CLASSES_LITERAL] = [RideClass.LIGHT]
 
 
 class DriverProfileApprove(DriverProfileApproveIn):
