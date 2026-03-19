@@ -24,6 +24,7 @@ DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{D
 
 SMSAERO_EMAIL = os.environ.get('SMSAERO_EMAIL') or 'test-smsaero-email'
 SMSAERO_API_KEY = os.environ.get('SMSAERO_API_KEY') or 'test-smsaero-api-key'
+ENABLE_SMSAERO = os.environ.get('ENABLE_SMSAERO')
 OTP_TTL = int(os.environ.get('OTP_TTL', 120))
 OTP_MAX_ATTEMPTS = int(os.environ.get('OTP_MAX_ATTEMPTS', 3))
 OTP_NEXT_SENDING_SECONDS = int(os.environ.get('OTP_NEXT_SENDING_SECONDS', 30))

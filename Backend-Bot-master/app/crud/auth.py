@@ -67,13 +67,17 @@ class AuthCrud(CrudBase[User, UserSchema]):
             raise HTTPException(status_code=404, detail="Role not found")
         
         new_user = await super().create(session, UserSchemaCreate(phone=register_obj.phone, is_active=True, role_id=role.id))
-        await driver_profile_crud.create(session, DriverProfileCreate(user_id=new_user.id, approved=False, rating_avg=5.0))
-        
-        return self.schema.model_validate(new_user)
+
+        return UserSchemaWithRoleAndDriverProfile.model_validate(UserSchemaWithRoleAndDriverProfile(**new_user.model_dump(), role=role))
 
     async def login_or_register(self, session: AsyncSession, phone: str, code_role: RoleCode | None = None) -> (UserSchema, bool):
         user = await self.get_by_phone_with_driver_profile_and_role(session, phone)
         is_registred = False
+        if not user:
+            role_code = code_role if code_role else RoleCode.USER
+            user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code=role_code))
+            is_registred = True
+
         if code_role == RoleCode.DRIVER:
             if user and (not user.driver_profile or not user.driver_profile.approved) or not user:
                 raise HTTPException(status_code=403, detail="FORBIDDEN_DRIVER_SEARCH")
@@ -94,11 +98,6 @@ class AuthCrud(CrudBase[User, UserSchema]):
                 logger.warning(f"Role with code \'{code_role}\' not found")
                 raise HTTPException(status_code=404, detail="Role not found")
             user = await user_crud.update(session, user.id, UserSchemaUpdate(role_id=role.id))
-
-        if not user:
-            role_code = code_role if code_role else RoleCode.DRIVER
-            user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code=role_code))
-            is_registred = True
             
         return user, is_registred
 
