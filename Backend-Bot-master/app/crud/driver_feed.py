@@ -66,8 +66,7 @@ class DriverFeed:
         rides = await self.get_requested_rides(session, limit=limit * 2)
         relevant_rides = []
         for ride in rides:
-            ride_class = ride.ride_class
-            if not driver.has_permit(ride_class):
+            if not driver.has_permit(ride.ride_class, ride.ride_type):
                 continue
 
             pickup_lat = ride.pickup_lat

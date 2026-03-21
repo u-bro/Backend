@@ -60,7 +60,7 @@ class RideRouter(BaseRouter[RideCrud]):
 
     async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
-        ride = await super().create(request, create_obj)
+        ride = await self.model_crud.create(request.state.session, create_obj)
         asyncio.create_task(ride_crud.cancel_ride_if_timeout(ride.id, user_id))
         return ride
 

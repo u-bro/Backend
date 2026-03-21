@@ -67,7 +67,10 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         
         if ride.status != "requested":
             raise HTTPException(status_code=400, detail="Ride is not in \"requested\" status")
-
+        
+        if ride.ride_type == "with_car" and not create_obj.car_id:
+            raise HTTPException(status_code=400, detail="Car ID is required for rides with car")
+        
         commission = await commission_crud.get_by_id(session, ride.commission_id)
         if not commission:
             raise HTTPException(status_code=404, detail="Commission not found")

@@ -18,6 +18,7 @@ class DriverStateStorage:
     async def register_driver(self, session: AsyncSession, driver_profile: DriverProfileSchema) -> DriverState:
         classes_set = driver_profile.classes_allowed
         driver_profile_id = driver_profile.id
+        car_id = driver_profile.current_car_id
         driver_location = await driver_location_crud.get_by_driver_profile_id(session, driver_profile_id)
         if not driver_location:
             driver_location = DriverLocationUpdateMe(status=DriverStatus.OFFLINE)
@@ -28,6 +29,7 @@ class DriverStateStorage:
             state.status=DriverStatus(driver_location.status)
             state.latitude=driver_location.latitude
             state.longitude=driver_location.longitude
+            state.car_id=car_id
         else:
             state = DriverState(
                 driver_profile_id=driver_profile_id,
@@ -35,7 +37,8 @@ class DriverStateStorage:
                 classes_allowed=classes_set,
                 status=DriverStatus(driver_location.status),
                 latitude=driver_location.latitude,
-                longitude=driver_location.longitude
+                longitude=driver_location.longitude,
+                car_id=car_id
             )
             self._drivers[driver_profile_id] = state
             self._user_to_driver[driver_profile.user_id] = driver_profile_id
