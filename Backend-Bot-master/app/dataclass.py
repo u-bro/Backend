@@ -13,6 +13,7 @@ class DriverState:
     longitude: Optional[float] = None
     classes_allowed: Set[str] = field(default_factory=set)
     current_ride_id: Optional[int] = None
+    car_id: Optional[int] = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_available(self) -> bool:
@@ -22,5 +23,8 @@ class DriverState:
             and self.latitude is not None
         )
 
-    def has_permit(self, ride_class: str) -> bool:
+    def has_permit(self, ride_class: str, ride_type: str) -> bool:
+        if ride_type == "with_car":
+            return ride_class.lower() in {c.lower() for c in self.classes_allowed} and self.car_id is not None
+
         return ride_class.lower() in {c.lower() for c in self.classes_allowed}
