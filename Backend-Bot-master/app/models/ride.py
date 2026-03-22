@@ -40,6 +40,8 @@ class Ride(Base):
     ride_class: Mapped[str] = mapped_column(Text, nullable=False)
     comment = mapped_column(Text, nullable=True)
     ride_type: Mapped[str] = mapped_column(Text, nullable=False)
+    delivery_receiver_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    delivery_receiver_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     client = relationship('User', foreign_keys=[client_id])
     driver_profile = relationship('DriverProfile', foreign_keys=[driver_profile_id])
