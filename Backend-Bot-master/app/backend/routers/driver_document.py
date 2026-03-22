@@ -1,10 +1,11 @@
 from fastapi import Request, Depends
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_document import driver_document_crud, DriverDocumentCrud
-from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverDocumentUpdate
-from app.backend.deps import require_role, require_driver_profile, require_driver_verification
-from app.models import DriverDocument
+from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverDocumentAdminUpdate, DriverDocumentDriverUpdate, DriverDocumentAdminUpdateIn
+from app.backend.deps import require_role, require_driver_profile_or_admin
+from app.models import DriverDocument, User
 from app.enum import RoleCode
+from datetime import datetime
 
 
 class DriverDocumentRouter(BaseRouter[DriverDocumentCrud]):
@@ -13,10 +14,11 @@ class DriverDocumentRouter(BaseRouter[DriverDocumentCrud]):
 
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}", self.get_paginated, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
-        self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN])), Depends(require_driver_verification)])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN])), Depends(require_driver_verification), Depends(require_driver_profile(DriverDocument))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.update, methods=["PUT"], status_code=200, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN])), Depends(require_driver_verification), Depends(require_driver_profile(DriverDocument))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN])), Depends(require_driver_verification), Depends(require_driver_profile(DriverDocument))])
+        self.router.add_api_route(f"{self.prefix}", self.create, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN]))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN])), Depends(require_driver_profile_or_admin(DriverDocument))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/driver", self.update_driver, methods=["PUT"], status_code=200, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN])), Depends(require_driver_profile_or_admin(DriverDocument))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}/admin", self.update_admin, methods=["PUT"], status_code=200)
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.delete, methods=["DELETE"], status_code=202, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN])), Depends(require_driver_profile_or_admin(DriverDocument))])
 
     async def get_paginated(self, request: Request, page: int = 1, page_size: int = 10) -> list[DriverDocumentSchema]:
         return await self.model_crud.get_paginated(request.state.session, page, page_size)
@@ -27,8 +29,11 @@ class DriverDocumentRouter(BaseRouter[DriverDocumentCrud]):
     async def create(self, request: Request, body: DriverDocumentCreate) -> DriverDocumentSchema:
         return await self.model_crud.create(request.state.session, body)
 
-    async def update(self, request: Request, id: int, body: DriverDocumentUpdate) -> DriverDocumentSchema:
+    async def update_driver(self, request: Request, id: int, body: DriverDocumentDriverUpdate) -> DriverDocumentSchema:
         return await self.model_crud.update(request.state.session, id, body)
+
+    async def update_admin(self, request: Request, id: int, body: DriverDocumentAdminUpdateIn, user: User = Depends(require_role([RoleCode.ADMIN]))) -> DriverDocumentSchema:
+        return await self.model_crud.update(request.state.session, id, DriverDocumentAdminUpdate(**body.model_dump(), reviewed_by=user.id, reviewed_at=datetime.now()))
 
     async def delete(self, request: Request, id: int):
         return await self.model_crud.delete(request.state.session, id)

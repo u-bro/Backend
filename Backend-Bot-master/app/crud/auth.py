@@ -79,7 +79,7 @@ class AuthCrud(CrudBase[User, UserSchema]):
             is_registred = True
 
         if code_role == RoleCode.DRIVER:
-            if user and (not user.driver_profile or not user.driver_profile.approved) or not user:
+            if user and not user.driver_profile:
                 raise HTTPException(status_code=403, detail="FORBIDDEN_DRIVER_SEARCH")
 
         if user:

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Literal
 from .base import BaseSchema
 from datetime import datetime
 
@@ -7,21 +7,26 @@ class DriverDocumentCreate(BaseSchema):
     driver_profile_id: int
     doc_type: str
     file_url: str
-    status: Optional[str] = None
-    reviewed_by: Optional[int] = None
-    reviewed_at: Optional[datetime] = None
+    status: Optional[Literal['created']] = 'created'
 
 
-class DriverDocumentUpdate(BaseSchema):
-    driver_profile_id: Optional[int] = None
+class DriverDocumentDriverUpdate(BaseSchema):
     doc_type: Optional[str] = None
     file_url: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[Literal['sent']] = None
+
+class DriverDocumentAdminUpdateIn(BaseSchema):
+    status: Optional[Literal['approved', 'rejected']] = None
+
+class DriverDocumentAdminUpdate(DriverDocumentAdminUpdateIn):
     reviewed_by: Optional[int] = None
     reviewed_at: Optional[datetime] = None
 
 
 class DriverDocumentSchema(DriverDocumentCreate):
     id: int
+    status: Optional[Literal['created', 'sent', 'approved', 'rejected']] = None
     created_at: Optional[datetime] = None
+    reviewed_by: Optional[int] = None
+    reviewed_at: Optional[datetime] = None
 
