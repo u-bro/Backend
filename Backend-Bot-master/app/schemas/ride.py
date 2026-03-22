@@ -25,8 +25,20 @@ class RideSchemaIn(BaseSchema):
     duration_str: str | None = Field(None, max_length=50)
     commission_id: int = Field(..., gt=0)
     ride_class: RIDE_CLASSES_LITERAL = Field(..., max_length=50)
-    ride_type: Literal["with_car", "without_car"] = Field("with_car", max_length=50)
+    ride_type: Literal["with_car", "without_car", "delivery"] = Field("with_car", max_length=50)
     comment: str | None = Field(None, max_length=500)
+    delivery_receiver_name: str | None = Field(None, max_length=100)
+    delivery_receiver_phone: str | None = Field(None, max_length=20)
+
+    @model_validator(mode="after")
+    def check_delivery_fields(self):
+        if self.ride_type != "delivery" and (self.delivery_receiver_name or self.delivery_receiver_phone):
+            raise ValueError('Ride type is not \"delivery\", delivery_receiver_name and delivery_receiver_phone must be null')
+        
+        if self.ride_type == "delivery" and (not self.delivery_receiver_name or not self.delivery_receiver_phone):
+            raise ValueError('delivery_receiver_name and delivery_receiver_phone must be filled')
+          
+        return self
 
 
 class RideSchemaCreate(RideSchemaIn):

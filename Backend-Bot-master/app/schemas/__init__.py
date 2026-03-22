@@ -2,7 +2,7 @@ from .base import BaseSchema
 from .user import UserSchema, UserSchemaCreate
 from .role import RoleSchema, RoleCreate, RoleUpdate
 from .driver_profile import DriverProfileSchema, DriverProfileCreate, DriverProfileUpdate
-from .driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverDocumentUpdate
+from .driver_document import DriverDocumentSchema, DriverDocumentCreate
 from .phone_verification import PhoneVerificationSchema, PhoneVerificationUpdate
 from .commission import CommissionSchema, CommissionCreate, CommissionUpdate
 from .driver_location import DriverLocationSchema, DriverLocationCreate, DriverLocationUpdate
