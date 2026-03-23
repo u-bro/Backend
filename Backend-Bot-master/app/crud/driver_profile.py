@@ -23,7 +23,7 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
 
     async def get_paginated_with_cars(self, session: AsyncSession, page: int = 1, page_size: int = 10):
         offset = (page - 1) * page_size
-        result = await session.execute(select(self.model).options(selectinload(self.model.cars)).offset(offset).limit(page_size))
+        result = await session.execute(select(self.model).options(selectinload(self.model.cars), selectinload(self.model.moderation_info)).offset(offset).limit(page_size))
         items = result.scalars().all()
         return [DriverProfileWithCars.model_validate(item) for item in items]
 
@@ -33,12 +33,12 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         return self.schema.model_validate(item) if item else None
 
     async def get_by_id_with_cars(self, session: AsyncSession, id: int):
-        result = await session.execute(select(self.model).options(selectinload(self.model.cars)).where(self.model.id == id))
+        result = await session.execute(select(self.model).options(selectinload(self.model.cars), selectinload(self.model.moderation_info)).where(self.model.id == id))
         item = result.scalar_one_or_none()
         return DriverProfileWithCars.model_validate(item) if item else None
 
     async def get_by_user_id_with_cars(self, session: AsyncSession, user_id: int):
-        result = await session.execute(select(self.model).options(selectinload(self.model.cars)).where(self.model.user_id == user_id))
+        result = await session.execute(select(self.model).options(selectinload(self.model.cars), selectinload(self.model.moderation_info)).where(self.model.user_id == user_id))
         item = result.scalar_one_or_none()
         return DriverProfileWithCars.model_validate(item) if item else None
 

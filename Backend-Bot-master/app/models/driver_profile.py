@@ -35,3 +35,4 @@ class DriverProfile(Base):
     user = relationship('User', back_populates="driver_profile", foreign_keys=[user_id])
     cars = relationship("Car", back_populates="driver_profile", foreign_keys="Car.driver_profile_id")
     approved_by_user = relationship('User', foreign_keys=[approved_by])
+    moderation_info = relationship("DriverModerationInfo", secondary="driver_profile_moderation", back_populates="driver_profiles")

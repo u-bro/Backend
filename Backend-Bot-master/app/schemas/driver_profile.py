@@ -3,6 +3,7 @@ from .base import BaseSchema
 from datetime import datetime, timezone
 from pydantic import Field, model_validator
 from .car import CarSchema
+from .driver_moderation_info import DriverModerationInfoSchema
 from app.enum import RideClass
 
 
@@ -77,3 +78,4 @@ class DriverProfileSchema(DriverProfileCreate):
 
 class DriverProfileWithCars(DriverProfileSchema):
     cars: list[CarSchema]
+    moderation_info: list[DriverModerationInfoSchema]

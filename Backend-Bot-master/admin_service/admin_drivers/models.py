@@ -40,7 +40,7 @@ class DriverProfile(models.Model):
     classes_allowed = models.JSONField(null=False, blank=False, default=['light'])
     current_class = models.CharField(max_length=50, null=True, blank=True)
     current_car_id = models.BigIntegerField(null=True, blank=True)
-    rating_avg = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)])
+    rating_avg = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, default=5.0, validators=[MinValueValidator(0)])
     rating_count = models.IntegerField(null=True, blank=True, default=0, validators=[MinValueValidator(0)])
     ride_count = models.IntegerField(null=True, blank=True, default=0, validators=[MinValueValidator(0)])
     created_at = models.DateTimeField(null=True, blank=True)

@@ -45,7 +45,7 @@ class DriverProfileRouter(BaseRouter[DriverProfileCrud]):
     async def update_me(self, request: Request, body: DriverProfileUpdateMe, id = Depends(get_current_driver_profile_id_without_approve)) -> DriverProfileSchema:
         return await self.model_crud.update(request.state.session, id, body)
 
-    async def get_me(self, request: Request, id: int = Depends(get_current_driver_profile_id_without_approve)) -> DriverProfileSchema:
+    async def get_me(self, request: Request, id: int = Depends(get_current_driver_profile_id_without_approve)) -> DriverProfileWithCars:
         return await self.model_crud.get_by_id_with_cars(request.state.session, id)
 
 driver_profile_router = DriverProfileRouter(driver_profile_crud, "/driver-profiles").router
