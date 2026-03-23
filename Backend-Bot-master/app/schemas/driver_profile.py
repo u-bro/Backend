@@ -50,6 +50,7 @@ class DriverProfileUpdate(DriverProfileValidated):
     ride_count: Optional[int] = Field(None, ge=0)
     rating_avg: Optional[float] = Field(None, ge=0)
     rating_count: Optional[int] = Field(None, ge=0)
+    status: Literal['waiting_moderation'] | None = Field(None, max_length=50)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = None
 
@@ -70,7 +71,7 @@ class DriverProfileSchema(DriverProfileCreate):
     approved: bool = False
     approved_by: Optional[int] = None
     approved_at: Optional[datetime] = None
-    status: Literal['waiting_register', 'waiting_approved', 'approved'] | None = Field(None, max_length=50)
+    status: Literal['waiting_register', 'waiting_approved', 'waiting_moderation', 'approved'] | None = Field(None, max_length=50)
     updated_at: Optional[datetime] = None
 
 

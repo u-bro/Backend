@@ -46,6 +46,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
         "display_name",
         "first_name",
         "last_name",
+        "status",
         "approved",
         "user_is_active",
         "rating_avg",
@@ -56,7 +57,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
     list_editable = tuple(
         [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'classes_allowed']]
     )
-    list_filter = ("approved")
+    list_filter = ("approved", "status")
     search_fields = ("user_id", "first_name", "last_name")
     actions = ["approve_drivers", "reject_drivers", "block_drivers", "unblock_drivers"]
 
