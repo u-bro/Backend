@@ -10,7 +10,7 @@ from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.utils import timezone
 from utils.api_client import api_client
 
-from .models import DriverProfile
+from .models import DriverModerationInfo, DriverProfile, DriverProfileModeration
 
 
 class DriverProfileAdminForm(forms.ModelForm):
@@ -36,9 +36,48 @@ class DriverProfileAdminForm(forms.ModelForm):
         return user_id
 
 
+@admin.register(DriverModerationInfo)
+class DriverModerationInfoAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "code",
+        "message",
+        "created_at",
+    )
+    search_fields = ("code", "message")
+
+
+class DriverProfileModerationInline(admin.TabularInline):
+    model = DriverProfileModeration
+    extra = 0
+    autocomplete_fields = ("driver_moderation_info",)
+    fields = ("driver_moderation_info", "created_at")
+    readonly_fields = ("created_at",)
+
+    def has_add_permission(self, request, obj=None):
+        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+
+
+@admin.register(DriverProfileModeration)
+class DriverProfileModerationAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "driver_profile",
+        "driver_moderation_info",
+        "created_at",
+    )
+    list_filter = ("driver_moderation_info",)
+    search_fields = ("driver_profile__id", "driver_profile__user_id", "driver_moderation_info__code")
+    autocomplete_fields = ("driver_profile", "driver_moderation_info")
+
+
 @admin.register(DriverProfile)
 class DriverProfileAdmin(admin.ModelAdmin):
     form = DriverProfileAdminForm
+    inlines = (DriverProfileModerationInline,)
     list_display = (
         "id",
         "user_id",
@@ -47,6 +86,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
         "first_name",
         "last_name",
         "status",
+        "moderation_reasons",
         "approved",
         "user_is_active",
         "rating_avg",
@@ -87,6 +127,14 @@ class DriverProfileAdmin(admin.ModelAdmin):
         except Exception:
             return ""
     user_phone.short_description = "Phone"
+
+    def moderation_reasons(self, obj):
+        try:
+            items = obj.moderation_info.all()
+            return ", ".join(str(i) for i in items)
+        except Exception:
+            return ""
+    moderation_reasons.short_description = "Moderation reasons"
 
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)

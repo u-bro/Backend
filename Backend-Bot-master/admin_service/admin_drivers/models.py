@@ -1,6 +1,25 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 
+
+class DriverModerationInfo(models.Model):
+    class Meta:
+        db_table = 'driver_moderation_info'
+        managed = False
+        verbose_name = 'Причина модерации'
+        verbose_name_plural = 'Причины модерации'
+
+    id = models.BigAutoField(primary_key=True)
+    code = models.CharField(max_length=50)
+    message = models.CharField(max_length=255)
+    created_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        code = getattr(self, "code", "") or ""
+        message = getattr(self, "message", "") or ""
+        return f"{code}: {message}".strip(": ")
+
+
 class DriverProfile(models.Model):
     STATUS_WAITING_REGISTER = "waiting_register"
     STATUS_WAITING_APPROVED = "waiting_approved"
@@ -36,7 +55,6 @@ class DriverProfile(models.Model):
     approved_by = models.BigIntegerField(null=True, blank=True)
     approved_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES)
-    message_error = models.CharField(max_length=255, null=True, blank=True)
     classes_allowed = models.JSONField(null=False, blank=False, default=['light'])
     current_class = models.CharField(max_length=50, null=True, blank=True)
     current_car_id = models.BigIntegerField(null=True, blank=True)
@@ -46,6 +64,39 @@ class DriverProfile(models.Model):
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
 
+    moderation_info = models.ManyToManyField(
+        DriverModerationInfo,
+        through="DriverProfileModeration",
+        related_name="driver_profiles",
+        blank=True,
+    )
+
     def __str__(self) -> str: 
         name_parts = [p for p in [self.first_name, self.last_name] if p]
         return " ".join(name_parts) or f"Driver {self.id}"
+
+
+class DriverProfileModeration(models.Model):
+    class Meta:
+        db_table = 'driver_profile_moderation'
+        managed = False
+        verbose_name = 'Модерация профиля водителя'
+        verbose_name_plural = 'Модерации профилей водителей'
+
+    id = models.BigAutoField(primary_key=True)
+    driver_profile = models.ForeignKey(
+        DriverProfile,
+        on_delete=models.DO_NOTHING,
+        db_column='driver_profile_id',
+        related_name='moderations',
+    )
+    driver_moderation_info = models.ForeignKey(
+        DriverModerationInfo,
+        on_delete=models.DO_NOTHING,
+        db_column='driver_moderation_info_id',
+        related_name='moderations',
+    )
+    created_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return str(getattr(self, "driver_moderation_info", ""))
