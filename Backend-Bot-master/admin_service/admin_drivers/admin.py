@@ -47,7 +47,6 @@ class DriverProfileAdmin(admin.ModelAdmin):
         "first_name",
         "last_name",
         "approved",
-        "documents_status",
         "user_is_active",
         "rating_avg",
         "created_at",
@@ -55,9 +54,9 @@ class DriverProfileAdmin(admin.ModelAdmin):
     )
     list_per_page = 25
     list_editable = tuple(
-        [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'qualification_level', 'classes_allowed']]
+        [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'classes_allowed']]
     )
-    list_filter = ("approved", "documents_status")
+    list_filter = ("approved")
     search_fields = ("user_id", "first_name", "last_name")
     actions = ["approve_drivers", "reject_drivers", "block_drivers", "unblock_drivers"]
 
@@ -91,7 +90,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)
         if obj and obj.approved:
-            readonly.extend(['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'qualification_level', 'classes_allowed'])
+            readonly.extend(['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'classes_allowed'])
         return readonly
 
     def has_add_permission(self, request): 

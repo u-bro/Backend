@@ -75,6 +75,9 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         if not update_data:
             return existing_result
         
+        if existing_result.status == 'waiting_register':
+            update_obj.status = 'waiting_approved'
+
         if "current_car_id" in update_data:
             car = await session.execute(select(Car).where(Car.id == update_data["current_car_id"]))
             car_result = car.scalar_one_or_none()
