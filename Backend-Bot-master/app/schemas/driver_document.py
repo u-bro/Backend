@@ -24,7 +24,7 @@ class DriverDocumentAdminUpdate(DriverDocumentAdminUpdateIn):
 
 
 class DriverDocumentSchema(DriverDocumentCreate):
-    id: int
+    id: int | None
     status: Optional[Literal['created', 'sent', 'approved', 'rejected']] = None
     created_at: Optional[datetime] = None
     reviewed_by: Optional[int] = None
