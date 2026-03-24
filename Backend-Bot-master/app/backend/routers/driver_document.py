@@ -1,7 +1,7 @@
 from fastapi import Request, Depends
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_document import driver_document_crud, DriverDocumentCrud
-from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverDocumentAdminUpdate, DriverDocumentDriverUpdate, DriverDocumentAdminUpdateIn
+from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverDocumentAdminUpdate, DriverDocumentDriverUpdate, DriverDocumentAdminUpdateIn, DriverDocumentSchemaWithURL
 from app.backend.deps import require_role, require_driver_profile_or_admin, get_current_driver_profile_id_without_approve
 from app.models import DriverDocument, User
 from app.enum import RoleCode
@@ -27,7 +27,7 @@ class DriverDocumentRouter(BaseRouter[DriverDocumentCrud]):
     async def get_by_id(self, request: Request, id: int) -> DriverDocumentSchema:
         return await super().get_by_id(request, id)
 
-    async def get_me(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id_without_approve)) -> list[DriverDocumentSchema]:
+    async def get_me(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id_without_approve)) -> list[DriverDocumentSchemaWithURL]:
         return await self.model_crud.get_by_driver_profile_id(request.state.session, driver_profile_id)
 
     async def create(self, request: Request, body: DriverDocumentCreate) -> DriverDocumentSchema:
