@@ -8,7 +8,7 @@ class User(models.Model):
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
     last_active_at = models.DateTimeField(null=True, blank=True)
@@ -20,7 +20,8 @@ class User(models.Model):
     city = models.CharField(max_length=100, null=True, blank=True)
     photo_url = models.CharField(max_length=2048, null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    role_id = models.IntegerField(null=True, blank=True)
+    status = models.CharField(max_length=50, default="active")
+    role_id = models.IntegerField()
 
     def __str__(self) -> str: 
         if self.phone:

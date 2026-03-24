@@ -12,6 +12,7 @@ class CarPhoto(Base):
     type: Mapped[str] = mapped_column(String(50), nullable=True)
     description: Mapped[str] = mapped_column(String(255), nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=True)
     created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 

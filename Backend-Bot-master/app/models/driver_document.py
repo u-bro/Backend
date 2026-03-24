@@ -9,7 +9,7 @@ class DriverDocument(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     driver_profile_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('driver_profiles.id'), nullable=False)
     doc_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    file_url: Mapped[str] = mapped_column(String, nullable=False)
+    file_bucket_key: Mapped[str] = mapped_column(String, nullable=True)
     status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     reviewed_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=True)
     reviewed_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)

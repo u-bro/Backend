@@ -15,6 +15,7 @@ class UserAdmin(admin.ModelAdmin):
         "first_name",
         "last_name",
         "is_active",
+        "status",
         "role_id",
         "created_at",
         "last_active_at",
@@ -44,7 +45,7 @@ class UserAdmin(admin.ModelAdmin):
             return qs.only(*actual_fields)
         except Exception:
             return qs
-    list_filter = ("is_active", "role_id")
+    list_filter = ("is_active", "status", "role_id")
     search_fields = ("phone", "first_name", "last_name")
     actions = ["block_users", "unblock_users"]
 

@@ -1,5 +1,6 @@
 from pydantic import Field, model_validator
 from datetime import datetime, timezone
+from typing import Literal
 from .base import BaseSchema
 from .role import RoleSchema
 from .driver_profile import DriverProfileSchema
@@ -23,6 +24,7 @@ class UserSchemaValidated(BaseSchema):
 
 class UserSchemaCreate(UserSchemaValidated):
     role_id: int = Field(..., gt=0)
+    status: Literal["waiting_register"] | None = Field("waiting_register", max_length=50)
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -35,11 +37,13 @@ class UserSchemaUpdate(UserSchemaCreate):
 
 class UserSchemaUpdateMe(UserSchemaValidated):
     role_id: int | None = Field(None, gt=0)
+    status: Literal["active"] | None = Field("active", max_length=50)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class UserSchema(UserSchemaUpdate):
     id: int = Field(..., gt=0)
+    status: Literal["waiting_register", "active"] | None = Field(None, max_length=50)
 
 
 class UserSchemaMe(UserSchema):
