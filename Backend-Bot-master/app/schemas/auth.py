@@ -20,7 +20,7 @@ class TokenResponse(BaseSchema):
 
 
 class TokenResponseRegister(TokenResponse):
-    is_registred: bool = Field(...)
+    pass
     
 
 class RefreshTokenVerifyRequest(BaseSchema):
