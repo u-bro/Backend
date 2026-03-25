@@ -76,10 +76,6 @@ class AuthCrud(CrudBase[User, UserSchema]):
             role_code = code_role if code_role else RoleCode.USER
             user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code=role_code))
 
-        if code_role == RoleCode.DRIVER:
-            if user and not user.driver_profile:
-                raise HTTPException(status_code=403, detail="FORBIDDEN_DRIVER_SEARCH")
-
         if user:
             ride = await ride_crud.get_active_ride_by_client_id(session, user.id)
             if ride:
