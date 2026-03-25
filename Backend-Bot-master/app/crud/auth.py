@@ -67,16 +67,14 @@ class AuthCrud(CrudBase[User, UserSchema]):
             raise HTTPException(status_code=404, detail="Role not found")
         
         new_user = await super().create(session, UserSchemaCreate(phone=register_obj.phone, is_active=True, role_id=role.id))
-        await driver_profile_crud.create(session, DriverProfileCreate(user_id=new_user.id), status='waiting_register')
+        await driver_profile_crud.create(session, DriverProfileCreate(user_id=new_user.id, status='waiting_register'))
         return UserSchemaWithRoleAndDriverProfile.model_validate(UserSchemaWithRoleAndDriverProfile(**new_user.model_dump(), role=role))
 
     async def login_or_register(self, session: AsyncSession, phone: str, code_role: RoleCode | None = None) -> (UserSchema, bool):
         user = await self.get_by_phone_with_driver_profile_and_role(session, phone)
-        is_registred = False
         if not user:
             role_code = code_role if code_role else RoleCode.USER
             user = await self.register_user(session, AuthSchemaRegister(phone=phone, role_code=role_code))
-            is_registred = True
 
         if code_role == RoleCode.DRIVER:
             if user and not user.driver_profile:
@@ -99,7 +97,7 @@ class AuthCrud(CrudBase[User, UserSchema]):
                 raise HTTPException(status_code=404, detail="Role not found")
             user = await user_crud.update(session, user.id, UserSchemaUpdate(role_id=role.id))
             
-        return user, is_registred
+        return user
 
     async def refresh(self, session: AsyncSession, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse | None: 
         old_token = await refresh_token_crud.revoke(session, refresh_obj.refresh_token)

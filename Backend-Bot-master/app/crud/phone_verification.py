@@ -11,7 +11,6 @@ from sqlalchemy.sql import update, desc, insert
 from app.schemas.phone_verification import PhoneVerificationVerifyRequest
 from datetime import datetime, timedelta, timezone
 from app.config import JWT_EXPIRATION_MINUTES, OTP_MAX_ATTEMPTS
-from app.const import TEST_PHONES, TEST_PHONE_OTP
 from .auth import auth_crud
 from .refresh_token import refresh_token_crud
 from fastapi import HTTPException
@@ -63,8 +62,7 @@ class PhoneVerificationCrud(CrudBase[PhoneVerification, PhoneVerificationSchema]
         refresh_token = await refresh_token_crud.create(session, RefreshTokenIn(user_id=item.user_id))
         return TokenResponseRegister(
             access_token=access_token,
-            refresh_token=refresh_token.token,
-            is_registred=item.is_registred
+            refresh_token=refresh_token.token
         )
 
     async def attempts_increment(self, session: AsyncSession, phone: str) -> PhoneVerificationSchema | None:

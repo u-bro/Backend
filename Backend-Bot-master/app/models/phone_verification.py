@@ -14,7 +14,6 @@ class PhoneVerification(Base):
     next_sending_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    is_registred: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[TIMESTAMP | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
 
     user = relationship('User')

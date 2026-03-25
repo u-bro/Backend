@@ -12,7 +12,6 @@ class PhoneVerificationUpdate(BaseSchema):
     next_sending_at: datetime | None = Field(None)
     status: Optional[str] = None
     attempts: Optional[int] = None
-    is_registred: Optional[bool] = None
 
 
 class PhoneVerificationSchemaCreate(BaseSchema):
@@ -23,7 +22,6 @@ class PhoneVerificationSchemaCreate(BaseSchema):
     next_sending_at: datetime | None = Field(None)
     status: Optional[str] = None
     attempts: Optional[int] = 0
-    is_registred: Optional[bool] = None
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 

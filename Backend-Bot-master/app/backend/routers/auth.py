@@ -24,10 +24,10 @@ class AuthRouter(BaseRouter[AuthCrud]):
         self.router.add_api_route(f"{self.prefix}/logout", self.logout, methods=["POST"], status_code=200, dependencies=[Depends(get_current_user_id)])
 
     async def login_or_register(self, request: Request, login_obj: AuthSchemaLogin) -> PhoneVerificationSchema:
-        user, is_registred = await self.model_crud.login_or_register(request.state.session, login_obj.phone, login_obj.code_role)
-        return await self.send_otp(request, user, is_registred)
+        user = await self.model_crud.login_or_register(request.state.session, login_obj.phone, login_obj.code_role)
+        return await self.send_otp(request, user)
 
-    async def send_otp(self, request: Request, user: User, is_registred: bool) -> PhoneVerificationSchema:
+    async def send_otp(self, request: Request, user: User) -> PhoneVerificationSchema:
         code = TEST_PHONE_OTP if user.phone in TEST_PHONES else self.generate_otp()
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=OTP_TTL)
         next_sending_at = datetime.now(timezone.utc) + timedelta(seconds=OTP_NEXT_SENDING_SECONDS)
@@ -36,11 +36,11 @@ class AuthRouter(BaseRouter[AuthCrud]):
             phone=user.phone,
             code=code,
             expires_at=expires_at,
-            next_sending_at=next_sending_at,
-            is_registred=is_registred
+            next_sending_at=next_sending_at
         )
         result = await phone_verification_crud.create(request.state.session, create_obj)
-        await smsaero_service.send_code_in_telegram_or_sms(user.phone, int(code), "SMS Aero", f"Ваш код подтверждения У-БРО: {code}. Не передавайте его никому.")
+        if user.phone not in TEST_PHONES:
+            await smsaero_service.send_code_in_telegram_or_sms(user.phone, int(code), "SMS Aero", f"Ваш код подтверждения У-БРО: {code}. Не передавайте его никому.") 
         return result
 
     async def verify_otp(self, request: Request, verify_obj: PhoneVerificationVerifyRequest) -> TokenResponseRegister:
