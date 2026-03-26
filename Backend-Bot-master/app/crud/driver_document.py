@@ -1,8 +1,8 @@
 from app.crud.base import CrudBase
 from app.models.driver_document import DriverDocument
-from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentSchemaWithURL
+from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentSchemaWithURL, DriverDocumentCreate
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_, insert, update
 from .car_photo import car_photo_crud
 from .car import driver_profile_crud
 from .document import document_crud
@@ -31,5 +31,31 @@ class DriverDocumentCrud(CrudBase[DriverDocument, DriverDocumentSchema]):
 
         return [DriverDocumentSchemaWithURL.model_validate(document) for document in documents]
 
+    async def get_by_driver_profile_id_and_doc_type(self, session: AsyncSession, driver_profile_id: int, doc_type: str, **kwargs):
+        result = await session.execute(select(self.model).where(and_(self.model.driver_profile_id == driver_profile_id, self.model.doc_type == doc_type)))
+        item = result.scalar_one_or_none()
+        return self.schema.model_validate(item) if item else None
+
+    async def upsert(self, session: AsyncSession, upsert_obj: DriverDocumentCreate, **kwargs) -> DriverDocumentSchema:
+        existing = await self.get_by_driver_profile_id_and_doc_type(session, upsert_obj.driver_profile_id, upsert_obj.doc_type)
+
+        if existing:
+            update_data = upsert_obj.model_dump(exclude_none=True)
+            if not update_data:
+                return existing
+            
+            update_data['status'] = 'updated'
+            stmt = (
+                update(self.model)
+                .where(self.model.id == existing.id)
+                .values(update_data)
+                .returning(self.model)
+            )
+            result = await self.execute_get_one(session, stmt)
+            return self.schema.model_validate(result) if result else None
+
+        stmt = insert(self.model).values(upsert_obj.model_dump()).returning(self.model)
+        result = await self.execute_get_one(session, stmt)
+        return self.schema.model_validate(result) if result else None
 
 driver_document_crud = DriverDocumentCrud()
