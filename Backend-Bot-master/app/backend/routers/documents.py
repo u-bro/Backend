@@ -4,10 +4,13 @@ from app.backend.deps import require_role, get_current_user_id, get_current_driv
 from app.backend.routers.base import BaseRouter
 from app.models import User
 from app.crud.document import DocumentCrud, document_crud
+from app.crud.driver_document import driver_document_crud
+from app.schemas.driver_document import DriverDocumentCreate
 from app.crud import ride_crud, car_crud
 from app.enum import S3Bucket, RoleCode
 from app.config import S3_AVATARS_BUCKET_UUID
 from datetime import datetime
+from app.enum import DriverDocumentType
 
 
 class DocumentRouter(BaseRouter[DocumentCrud]):
@@ -20,6 +23,8 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
         self.router.add_api_route(f"{self.prefix}/avatar", self.upload_avatar, methods=["POST"], status_code=201)
         self.router.add_api_route(f"{self.prefix}/photo/{{key:path}}", self.upload_public_photo, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
 
+        self.router.add_api_route(f"{self.prefix}/driver/me/{{doc_type}}", self.upload_driver_document_me, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.DRIVER, RoleCode.ADMIN]))])
+
         self.router.add_api_route(f"{self.prefix}/policy/{{key:path}}", self.upload_policy, methods=["POST"], status_code=201, dependencies=[Depends(require_role([RoleCode.ADMIN]))])
         self.router.add_api_route(f"{self.prefix}/public/policy/{{key:path}}", self.get_public_policy, methods=["GET"], status_code=200)
         self.router.add_api_route(f"{self.prefix}/policy/{{key:path}}", self.get_public_policy, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
@@ -30,21 +35,7 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
         self.router.add_api_route(f"{self.prefix}/{{key:path}}/url", self.get_presigned_url, methods=["GET"], status_code=200, dependencies=[Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))])
 
     async def get_by_key(self, request: Request, key: str, download: bool = False, user: User = Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN]))) -> Response:
-        filename = key.split("/")[-1] or "document.pdf"
-        path_parts = key.split("/")
-        if len(path_parts) >= 4:
-            ride_id = int(path_parts[2])
-            ride = await ride_crud.get_by_id_with_driver_profile(request.state.session, ride_id)
-            if not ride:
-                raise HTTPException(status_code=404, detail="Ride not found")
-
-            driver_profile = ride.driver_profile
-            if not driver_profile:
-                raise HTTPException(status_code=404, detail="Driver_profile not found")
-            
-            if ride.client_id != user.id and driver_profile.user_id != user.id:
-                raise HTTPException(status_code=403, detail="Forbidden")
-        
+        filename = key.split("/")[-1] or "document.pdf"        
         pdf_bytes = await self.model_crud.get_by_key(key)
         disposition = "attachment" if download else "inline"
         return Response(
@@ -139,6 +130,19 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
     async def delete_by_key(self, request: Request, key: str) -> dict:
         await self.model_crud.delete_by_key(key)
         return {"key": key}
+
+    async def upload_driver_document_me(self, request: Request, doc_type: str, file: UploadFile = File(...), driver_profile_id: int = Depends(get_current_driver_profile_id_without_approve)) -> dict:
+        if doc_type not in DriverDocumentType:
+            raise HTTPException(status_code=400, detail="INCORRECT_DRIVER_DOCUMENT_TYPE")
+
+        document_bytes = await file.read()
+        content_type = file.content_type or "image/jpeg"
+        document_key = f"driver/{driver_profile_id}/{doc_type}"
+        await self.model_crud.upload_bytes(document_key, document_bytes, content_type=content_type, bucket=S3Bucket.DOCUMENT)
+
+        driver_document = await driver_document_crud.upsert(request.state.session, DriverDocumentCreate(driver_profile_id=driver_profile_id, doc_type=doc_type, file_bucket_key=document_key))
+        return {"document": driver_document, "key": document_key, "url": self.model_crud.presigned_get_url(document_key)}
+
 
 
 documents_router = DocumentRouter(document_crud, "/documents").router
