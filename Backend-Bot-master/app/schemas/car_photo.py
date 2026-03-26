@@ -16,12 +16,12 @@ class CarPhotoCreate(BaseSchema):
 class CarPhotoUpdate(BaseSchema):
     type: str | None = Field(None, max_length=50)
     description: str | None = Field(None, max_length=255)
-    status: Literal['sent'] | None = 'sent'
+    status: Literal['updated'] | None = 'updated'
     photo_url: str | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class CarPhotoSchema(CarPhotoCreate):
     id: int = Field(..., gt=0)
-    status: Literal['created', 'sent', 'approved', 'rejected'] | None = None
+    status: Literal['created', 'updated', 'approved', 'rejected'] | None = None
     updated_at: datetime | None = None
