@@ -61,9 +61,13 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         existing_item = existing.scalar_one_or_none()
         if existing_item:
             raise HTTPException(status_code=409, detail=f"Driver profile for user {create_obj.user_id} already created")
-
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
         result = await self.execute_get_one(session, stmt)
+
+        driver_location = await driver_location_crud.get_by_driver_profile_id(session, result.id)
+        if not driver_location:
+            await driver_location_crud.create(session, DriverLocationCreate(driver_profile_id=result.id))
+
         return self.schema.model_validate(result) if result else None
 
     async def update(self, session: AsyncSession, id: int, update_obj):
