@@ -104,6 +104,10 @@ JAZZMIN_SETTINGS = {
     "site_header": "Admin Panel",
     "site_brand": "Admin",
     "welcome_sign": "Добро пожаловать в админ панель",
+    "topmenu_links": [
+        {"name": "Главная", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Политики", "url": "admin-policies", "permissions": ["auth.view_user"]},
+    ],
 }
 
 CSRF_TRUSTED_ORIGINS = [

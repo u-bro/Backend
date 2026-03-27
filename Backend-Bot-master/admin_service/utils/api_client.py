@@ -1,6 +1,7 @@
-import requests
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -11,10 +12,28 @@ class FastAPIClient:
         self.base_url = base_url
         self.timeout = 10
 
-    def _make_request(self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None) -> requests.Response:
+    def _make_request(
+        self,
+        method: str,
+        endpoint: str,
+        data: Optional[Dict[str, Any]] = None,
+        *,
+        files: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> requests.Response:
         url = f"{self.base_url}{endpoint}"
         try:
-            response = requests.request(method, url, json=data, timeout=self.timeout)
+            request_kwargs: Dict[str, Any] = {
+                "timeout": self.timeout,
+                "headers": headers,
+            }
+            if files is not None:
+                request_kwargs["data"] = data
+                request_kwargs["files"] = files
+            else:
+                request_kwargs["json"] = data
+
+            response = requests.request(method, url, **request_kwargs)
             logger.info(f"API {method} {url} - Status: {response.status_code}")
             if response.status_code >= 400:
                 logger.error(f"API Error: {response.text}")

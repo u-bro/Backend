@@ -1,0 +1,47 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div id="content-main">
+  <div class="app-admin module">
+    <table>
+      <caption>Управление политиками</caption>
+      <thead>
+        <tr>
+          <th>Тип</th>
+          <th>Просмотр</th>
+          <th>Перезапись</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for policy in policy_items %}
+        <tr>
+          <td>
+            <strong>{{ policy.label }}</strong><br>
+            <code>{{ policy.key }}</code>
+          </td>
+          <td style="width: 35%;">
+            <iframe
+              src="{{ policy.preview_url }}"
+              title="{{ policy.label }}"
+              style="width: 100%; min-height: 420px; border: 1px solid #ddd; background: #fff;"
+            ></iframe>
+          </td>
+          <td style="width: 25%;">
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %}
+              <input type="hidden" name="policy_key" value="{{ policy.key }}">
+              <p>
+                <input type="file" name="file" accept="application/pdf,.pdf" required>
+              </p>
+              <p>
+                <button type="submit" class="default">Загрузить PDF</button>
+              </p>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
