@@ -136,7 +136,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
         [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years']]
     )
     list_filter = ("approved", "status")
-    search_fields = ("user_id", "first_name", "last_name")
+    search_fields = ("user_id", "first_name", "last_name", "_user_phone")
     actions = ["approve_drivers", "reject_drivers", "block_drivers", "unblock_drivers"]
 
     readonly_fields = ('id', 'created_at', 'updated_at', 'approved_at')
