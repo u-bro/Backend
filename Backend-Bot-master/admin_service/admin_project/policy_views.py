@@ -3,6 +3,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from utils.policy_storage import policy_storage
 
@@ -74,6 +75,7 @@ def policy_management_view(request):
 
 
 @staff_member_required
+@xframe_options_sameorigin
 def policy_preview_view(request, policy_key: str):
     if not _has_policy_access(request.user):
         raise Http404("Policy not found")
