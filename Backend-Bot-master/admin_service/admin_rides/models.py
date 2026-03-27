@@ -1,4 +1,5 @@
 from django.db import models
+from utils.schema_choices import RIDE_CLASS_CHOICES, RIDE_STATUS_CHOICES, RIDE_TYPE_CHOICES
 
 
 class Ride(models.Model):
@@ -11,7 +12,7 @@ class Ride(models.Model):
     id = models.AutoField(primary_key=True)
     client_id = models.IntegerField()
     driver_profile_id = models.IntegerField(null=True, blank=True)
-    status = models.CharField(max_length=50, null=True, blank=True)
+    status = models.CharField(max_length=50, null=True, blank=True, choices=RIDE_STATUS_CHOICES)
     status_reason = models.CharField(max_length=255, null=True, blank=True)
     pickup_address = models.CharField(max_length=500, null=True, blank=True)
     pickup_lat = models.DecimalField(max_digits=12, decimal_places=8)
@@ -36,9 +37,9 @@ class Ride(models.Model):
     anomaly_reason = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
-    ride_class = models.TextField()
+    ride_class = models.TextField(choices=RIDE_CLASS_CHOICES)
     comment = models.TextField(null=True, blank=True)
-    ride_type = models.TextField()
+    ride_type = models.TextField(choices=RIDE_TYPE_CHOICES)
 
     def __str__(self) -> str:  
         return f"Ride {self.id}"

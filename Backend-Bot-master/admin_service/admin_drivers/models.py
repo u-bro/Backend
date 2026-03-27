@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from utils.schema_choices import DRIVER_PROFILE_STATUS_CHOICES, RIDE_CLASS_CHOICES
 
 
 class DriverModerationInfo(models.Model):
@@ -26,12 +27,7 @@ class DriverProfile(models.Model):
     STATUS_WAITING_MODERATION = "waiting_moderation"
     STATUS_APPROVED = "approved"
 
-    STATUS_CHOICES = (
-        (STATUS_WAITING_REGISTER, "waiting_register"),
-        (STATUS_WAITING_APPROVED, "waiting_approved"),
-        (STATUS_WAITING_MODERATION, "waiting_moderation"),
-        (STATUS_APPROVED, "approved"),
-    )
+    STATUS_CHOICES = DRIVER_PROFILE_STATUS_CHOICES
 
     class Meta:
         db_table = 'driver_profiles'
@@ -56,7 +52,7 @@ class DriverProfile(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES)
     classes_allowed = models.JSONField(null=False, blank=False, default=['light'])
-    current_class = models.CharField(max_length=50, null=True, blank=True)
+    current_class = models.CharField(max_length=50, null=True, blank=True, choices=RIDE_CLASS_CHOICES)
     current_car_id = models.BigIntegerField(null=True, blank=True)
     rating_avg = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, default=5.0, validators=[MinValueValidator(0)])
     rating_count = models.IntegerField(null=True, blank=True, default=0, validators=[MinValueValidator(0)])

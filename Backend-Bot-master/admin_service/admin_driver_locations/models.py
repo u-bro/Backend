@@ -1,4 +1,5 @@
 from django.db import models
+from utils.schema_choices import DRIVER_LOCATION_STATUS_CHOICES
 
 
 class DriverLocation(models.Model):
@@ -12,7 +13,7 @@ class DriverLocation(models.Model):
     driver_profile_id = models.IntegerField()
     latitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
     longitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, choices=DRIVER_LOCATION_STATUS_CHOICES)
     last_seen_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(null=True, blank=True)
 

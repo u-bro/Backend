@@ -1,4 +1,5 @@
 from django.db import models
+from utils.schema_choices import USER_STATUS_CHOICES
 
 
 class User(models.Model):
@@ -20,7 +21,7 @@ class User(models.Model):
     city = models.CharField(max_length=100, null=True, blank=True)
     photo_url = models.CharField(max_length=2048, null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    status = models.CharField(max_length=50, default="active")
+    status = models.CharField(max_length=50, default="active", choices=USER_STATUS_CHOICES)
     role_id = models.IntegerField()
 
     def __str__(self) -> str: 

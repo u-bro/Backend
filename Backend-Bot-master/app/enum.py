@@ -35,7 +35,7 @@ class RideClass:
     VIP = "vip"
     ELITE = "elite"
 
-class DriverDocumentType(str, Enum):
+class DriverDocumentType(Enum):
     PASSPORT_FRONT = "PASSPORT_FRONT"
     PASSPORT_REGISTRATION = "PASSPORT_REGISTRATION"
     DRIVER_LICENSE_FRONT = "DRIVER_LICENSE_FRONT"

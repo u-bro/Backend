@@ -107,7 +107,6 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
 
         filename = key.split("/")[-1] or "document.pdf"
         policy_key = f"policy/{key}"
-        print(policy_key)
         pdf_bytes = await self.model_crud.get_by_key(policy_key, S3Bucket.AVATAR)
         disposition = "attachment" if download else "inline"
         return Response(
