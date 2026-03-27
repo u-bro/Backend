@@ -9,14 +9,27 @@ from django.urls import reverse
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.utils import timezone
 from utils.api_client import api_client
+from utils.schema_choices import RIDE_CLASS_CHOICES
 
 from .models import DriverModerationInfo, DriverProfile, DriverProfileModeration
 
 
 class DriverProfileAdminForm(forms.ModelForm):
+    classes_allowed = forms.MultipleChoiceField(
+        choices=RIDE_CLASS_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+
     class Meta:
         model = DriverProfile
         fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        classes_allowed = getattr(self.instance, "classes_allowed", None)
+        if isinstance(classes_allowed, list):
+            self.initial["classes_allowed"] = classes_allowed
 
     def clean_user_id(self):
         user_id = self.cleaned_data.get("user_id")
@@ -34,6 +47,30 @@ class DriverProfileAdminForm(forms.ModelForm):
                 f"Профиль водителя для user_id={user_id} уже существует (id профиля: {existing.id})."
             )
         return user_id
+
+    def clean_classes_allowed(self):
+        return self.cleaned_data.get("classes_allowed", [])
+
+
+class DriverProfileChangelistForm(forms.ModelForm):
+    classes_allowed = forms.MultipleChoiceField(
+        choices=RIDE_CLASS_CHOICES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+
+    class Meta:
+        model = DriverProfile
+        fields = ("status", "approved", "classes_allowed")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        classes_allowed = getattr(self.instance, "classes_allowed", None)
+        if isinstance(classes_allowed, list):
+            self.initial["classes_allowed"] = classes_allowed
+
+    def clean_classes_allowed(self):
+        return self.cleaned_data.get("classes_allowed", [])
 
 
 @admin.register(DriverModerationInfo)
@@ -86,6 +123,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
         "first_name",
         "last_name",
         "status",
+        "classes_allowed",
         "moderation_reasons",
         "approved",
         "user_is_active",
@@ -95,13 +133,17 @@ class DriverProfileAdmin(admin.ModelAdmin):
     )
     list_per_page = 25
     list_editable = tuple(
-        [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'classes_allowed']]
+        [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years']]
     )
     list_filter = ("approved", "status")
     search_fields = ("user_id", "first_name", "last_name")
     actions = ["approve_drivers", "reject_drivers", "block_drivers", "unblock_drivers"]
 
     readonly_fields = ('id', 'created_at', 'updated_at', 'approved_at')
+
+    def get_changelist_form(self, request, **kwargs):
+        kwargs["form"] = DriverProfileChangelistForm
+        return super().get_changelist_form(request, **kwargs)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -139,7 +181,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)
         if obj and obj.approved:
-            readonly.extend(['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years', 'classes_allowed'])
+            readonly.extend(['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years'])
         return readonly
 
     def has_add_permission(self, request): 

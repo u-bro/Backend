@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django.contrib import messages
+from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+import re
 from utils.api_client import api_client
 
 from .models import User
@@ -48,6 +50,17 @@ class UserAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "status", "role_id")
     search_fields = ("phone", "first_name", "last_name")
     actions = ["block_users", "unblock_users"]
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+
+        normalized_phone = re.sub(r"\D", "", search_term or "")
+        if normalized_phone:
+            queryset = queryset | self.model.objects.filter(
+                Q(phone__icontains=search_term) | Q(phone__iregex=rf"[^0-9]*{'[^0-9]*'.join(normalized_phone)}[^0-9]*")
+            )
+
+        return queryset.distinct(), use_distinct
 
     def has_add_permission(self, request):  
         return request.user.groups.filter(name='Admin').exists()

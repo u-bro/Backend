@@ -1,22 +1,9 @@
-import os
-
-import boto3
-from botocore.config import Config
-from botocore.exceptions import ClientError
-
-
-S3_AVATARS_BUCKET = os.getenv("S3_AVATARS_BUCKET", "ubro-avatar")
+from .s3_storage import S3_AVATARS_BUCKET, s3_storage
 
 
 class PolicyStorage:
     def __init__(self) -> None:
-        self.client = boto3.client(
-            "s3",
-            endpoint_url="https://s3.selcdn.ru",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "test-aws-access-key-id"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_KEY", "test-aws-secret-access-key"),
-            config=Config(signature_version="s3v4"),
-        )
+        self.client = s3_storage.client
 
     def upload(self, policy_key: str, content: bytes, content_type: str = "application/pdf") -> None:
         storage_key = f"policy/{policy_key}"
