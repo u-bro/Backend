@@ -6,7 +6,7 @@ from datetime import datetime
 class DriverDocumentCreate(BaseSchema):
     driver_profile_id: int
     doc_type: str
-    file_bucket_key: str
+    file_bucket_key: str | None
     status: Optional[Literal['created']] = 'created'
 
 

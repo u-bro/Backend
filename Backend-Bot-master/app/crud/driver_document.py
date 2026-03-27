@@ -19,8 +19,8 @@ class DriverDocumentCrud(CrudBase[DriverDocument, DriverDocumentSchema]):
 
         for item in items:
             item_validated = DriverDocumentSchema.model_validate(item)
-            file_url = await document_crud.presigned_get_url(item.file_bucket_key) if item.file_bucket_key else None
-            documents.append(DriverDocumentSchemaWithURL(**item_validated.model_dump(), file_url=file_url))
+            file_url = document_crud.presigned_get_url(item.file_bucket_key) if item.file_bucket_key else None
+            documents.append(DriverDocumentSchemaWithURL(**item_validated.model_dump(), file_url=file_url, car_photo_id=None))
 
         driver_profile = await driver_profile_crud.get_by_id_with_cars(session, driver_profile_id)
         if len(driver_profile.cars):
