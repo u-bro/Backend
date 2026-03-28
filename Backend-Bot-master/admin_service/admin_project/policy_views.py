@@ -9,9 +9,10 @@ from utils.policy_storage import policy_storage
 
 
 POLICY_TYPES = (
-    ("privacy-policy", "Политика конфиденциальности"),
+    ("privacy-policy", "Политика обработки персональных данных"),
     ("confidentiality-policy", "Политика конфиденциальности данных"),
     ("terms-of-service", "Пользовательское соглашение"),
+    ("public-offer", "Оферта"),
 )
 ALLOWED_POLICY_TYPES = {key for key, _ in POLICY_TYPES}
 
