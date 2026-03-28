@@ -67,7 +67,6 @@ class AuthCrud(CrudBase[User, UserSchema]):
             raise HTTPException(status_code=404, detail="Role not found")
         
         new_user = await super().create(session, UserSchemaCreate(phone=register_obj.phone, is_active=True, role_id=role.id))
-        await driver_profile_crud.create(session, DriverProfileCreate(user_id=new_user.id, status='waiting_register'))
         return UserSchemaWithRoleAndDriverProfile.model_validate(UserSchemaWithRoleAndDriverProfile(**new_user.model_dump(), role=role))
 
     async def login_or_register(self, session: AsyncSession, phone: str, code_role: RoleCode | None = None) -> (UserSchema, bool):
@@ -85,6 +84,9 @@ class AuthCrud(CrudBase[User, UserSchema]):
             ride = await ride_crud.get_active_ride_by_driver_profile_id(session, user.driver_profile.id)
             if ride:
                 code_role = RoleCode.DRIVER
+        
+        if code_role == RoleCode.DRIVER:
+            await driver_profile_crud.create(session, DriverProfileCreate(user_id=user.id, status='waiting_register'))
 
         if user and code_role and code_role != user.role.code and user.role.code != RoleCode.ADMIN:
             role = await role_crud.get_by_code(session, code_role)
