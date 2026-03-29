@@ -86,7 +86,9 @@ class AuthCrud(CrudBase[User, UserSchema]):
                 code_role = RoleCode.DRIVER
         
         if code_role == RoleCode.DRIVER:
-            await driver_profile_crud.create(session, DriverProfileCreate(user_id=user.id, status='waiting_register'))
+            existing = await driver_profile_crud.get_by_user_id(session, user.id)
+            if not existing:
+                await driver_profile_crud.create(session, DriverProfileCreate(user_id=user.id, status='waiting_register'))
 
         if user and code_role and code_role != user.role.code and user.role.code != RoleCode.ADMIN:
             role = await role_crud.get_by_code(session, code_role)
