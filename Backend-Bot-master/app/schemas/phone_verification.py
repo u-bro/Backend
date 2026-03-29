@@ -1,7 +1,7 @@
 from typing import Optional
 from datetime import datetime, timezone
 from . import BaseSchema
-from pydantic import Field
+from pydantic import Field, model_validator
 
 
 class PhoneVerificationUpdate(BaseSchema):
@@ -29,6 +29,10 @@ class PhoneVerificationVerifyRequest(BaseSchema):
     code: str = Field(..., max_length=10)
     phone: str | None = Field(None, max_length=20)
 
+    @model_validator(mode="after")
+    def phone_remove_plus(self):
+        self.phone = self.phone.replace("+", "")
+        return self
 
 class PhoneVerificationSchema(PhoneVerificationSchemaCreate):
     id: int

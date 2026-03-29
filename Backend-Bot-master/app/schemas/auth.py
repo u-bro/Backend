@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, model_validator
 from . import BaseSchema
 from typing import Literal
 from app.enum import RoleCode
@@ -12,6 +12,11 @@ class AuthSchemaRegister(BaseSchema):
 class AuthSchemaLogin(BaseSchema):
     phone: str = Field(..., max_length=20)
     code_role: Literal[RoleCode.DRIVER, RoleCode.USER] | None = Field(None)
+
+    @model_validator(mode="after")
+    def phone_remove_plus(self):
+        self.phone = self.phone.replace("+", "")
+        return self
 
 
 class TokenResponse(BaseSchema):

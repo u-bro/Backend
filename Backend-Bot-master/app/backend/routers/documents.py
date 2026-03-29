@@ -102,7 +102,7 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
         return {"key": policy_key, "url": self.model_crud.public_url(policy_key, S3_AVATARS_BUCKET_UUID)}
 
     async def get_public_policy(self, request: Request, key: str, download: bool = False) -> Response:
-        if key not in ('privacy-policy', 'confidentiality-policy', 'terms-of-service'):
+        if key not in ('privacy-policy', 'confidentiality-policy', 'terms-of-service', 'public-offer'):
             raise HTTPException(status_code=404, detail='Public policy document not found')
 
         filename = key.split("/")[-1] or "document.pdf"
