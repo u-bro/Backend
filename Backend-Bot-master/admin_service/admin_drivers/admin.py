@@ -2,7 +2,7 @@ from django import forms
 from django.contrib import admin
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
 from django.db.models import OuterRef, Subquery
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -11,6 +11,12 @@ from django.utils import timezone
 from utils.api_client import api_client
 from utils.schema_choices import RIDE_CLASS_CHOICES
 
+from admin_car_photos.models import CarPhoto
+from admin_cars.models import Car
+from admin_driver_documents.models import DriverDocument
+from admin_driver_locations.models import DriverLocation
+from admin_ride_drivers_requests.models import RideDriversRequest
+from admin_rides.models import Ride
 from .models import DriverModerationInfo, DriverProfile, DriverProfileModeration
 
 
@@ -204,7 +210,13 @@ class DriverProfileAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         try:
-            return super().save_model(request, obj, form, change)
+            super().save_model(request, obj, form, change)
+            if not change and obj.pk:
+                DriverLocation.objects.get_or_create(
+                    driver_profile_id=obj.pk,
+                    defaults={"status": "offline"},
+                )
+            return
         except IntegrityError:
             existing = DriverProfile.objects.filter(user_id=getattr(obj, "user_id", None)).only("id").first()
             if existing:
@@ -216,6 +228,31 @@ class DriverProfileAdmin(admin.ModelAdmin):
                 )
                 return
             raise
+
+    def delete_model(self, request, obj):
+        self._delete_related_records(obj)
+        super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            self._delete_related_records(obj)
+        super().delete_queryset(request, queryset)
+
+    def _delete_related_records(self, obj):
+        car_ids = list(Car.objects.filter(driver_profile_id=obj.pk).values_list("id", flat=True))
+
+        DriverLocation.objects.filter(driver_profile_id=obj.pk).delete()
+        DriverDocument.objects.filter(driver_profile_id=obj.pk).delete()
+        RideDriversRequest.objects.filter(driver_profile_id=obj.pk).delete()
+        DriverProfileModeration.objects.filter(driver_profile_id=obj.pk).delete()
+        Ride.objects.filter(driver_profile_id=obj.pk).update(driver_profile_id=None)
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM driver_ratings WHERE driver_profile_id = %s", [obj.pk])
+
+        if car_ids:
+            CarPhoto.objects.filter(car_id__in=car_ids).delete()
+            RideDriversRequest.objects.filter(car_id__in=car_ids).delete()
+            Car.objects.filter(id__in=car_ids).delete()
 
     def approve_drivers(self, request, queryset):  
         if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
