@@ -5,6 +5,7 @@ from app.backend.routers.base import BaseRouter
 from app.models import User
 from app.crud.document import DocumentCrud, document_crud
 from app.crud.driver_document import driver_document_crud
+from app.crud.driver_moderation_info import driver_moderation_info_crud
 from app.schemas.driver_document import DriverDocumentCreate
 from app.crud import ride_crud, car_crud
 from app.enum import S3Bucket, RoleCode
@@ -134,12 +135,14 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
         if doc_type not in DriverDocumentType:
             raise HTTPException(status_code=400, detail="INCORRECT_DRIVER_DOCUMENT_TYPE")
 
+        session = request.state.session
         document_bytes = await file.read()
         content_type = file.content_type or "image/jpeg"
         document_key = f"driver/{driver_profile_id}/{doc_type}"
         await self.model_crud.upload_bytes(document_key, document_bytes, content_type=content_type, bucket=S3Bucket.DOCUMENT)
 
-        driver_document = await driver_document_crud.upsert(request.state.session, DriverDocumentCreate(driver_profile_id=driver_profile_id, doc_type=doc_type, file_bucket_key=document_key))
+        driver_document = await driver_document_crud.upsert(session, DriverDocumentCreate(driver_profile_id=driver_profile_id, doc_type=doc_type, file_bucket_key=document_key))
+        await driver_moderation_info_crud.delete_by_driver_profile_id_and_doc_type(session, driver_profile_id, doc_type)
         return {"document": driver_document, "key": document_key, "url": self.model_crud.presigned_get_url(document_key)}
 
 
