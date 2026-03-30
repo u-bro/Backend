@@ -1,134 +1,92 @@
-from fastapi.testclient import TestClient
-import random
-import pytest
+import importlib
 import sys
-sys.path.append("../app/backend")
-from app.backend.main import app
+import types
+from pathlib import Path
+from types import SimpleNamespace
 
-@pytest.fixture(scope="function")
-def client():
-    with TestClient(app) as c:
-        yield c
-
-@pytest.fixture
-def test_user(client):
-    telegram_id = random.randint(100000, 999999)
-    response = client.post(f"/api/v1/users/{telegram_id}", json={
-        "telegram_id": telegram_id,
-        "first_name": "TestUser",
-    })
-    assert response.status_code == 401
-    return     {
-        "first_name": None,
-        "last_name": None,
-        "phone": "+375295447082",
-        "id": 2,
-        "created_at": "2025-12-17T17:11:22.946612",
-        "last_active": None,
-        "is_active": None
-    }
-
-@pytest.fixture
-def test_role(client):
-    code = f"role_{random.randint(10000, 99999)}"
-    response = client.post("/api/v1/roles", json={
-        "code": code,
-        "name": "Test Role"
-    })
-    assert response.status_code == 201
-    return response.json()
+import pytest
+from fastapi.testclient import TestClient
 
 
-@pytest.fixture
-def test_ride(client, test_user):
-    """Создаёт тестовую поездку"""
-    response = client.post("/api/v1/rides", json={
-        "client_id": test_user["id"],
-        "pickup_address": "Test Pickup",
-        "pickup_lat": 50.45,
-        "pickup_lng": 30.52,
-        "dropoff_address": "Test Dropoff",
-        "dropoff_lat": 50.46,
-        "dropoff_lng": 30.53,
-        "expected_fare": 100.0,
-        "expected_fare_snapshot": {}
-    })
-    assert response.status_code == 201
-    return response.json()
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+
+class _DummyAsyncSession:
+    async def commit(self) -> None:
+        return None
+
+    async def execute(self, query) -> None:
+        return None
+
+    async def rollback(self) -> None:
+        return None
+
+
+class _DummySessionContext:
+    def __init__(self) -> None:
+        self._session = _DummyAsyncSession()
+
+    async def __aenter__(self):
+        return self._session
+
+    async def __aexit__(self, exc_type, exc, tb) -> bool:
+        return False
+
+
+class _DummyFCMService:
+    async def send_to_token(self, payload):
+        return "message-id"
+
+    async def send_to_topic(self, payload):
+        return "message-id"
+
+    async def send_to_user(self, session, user_id, payload):
+        return SimpleNamespace(success_count=1, failure_count=0)
+
+
+class _DummyWebhookDispatcher:
+    async def dispatch_webhook(self, session, payload):
+        return None
 
 
 @pytest.fixture
-def test_driver_profile(client):
-    """Создаёт тестовый профиль водителя"""
-    telegram_id = random.randint(100000, 999999)
-    user_response = client.post(f"/api/v1/users/{telegram_id}", json={
-        "telegram_id": telegram_id,
-        "first_name": "TestDriver",
-    })
-    user_id = user_response.json()["id"]
-    
-    response = client.post("/api/v1/driver-profiles", json={
-        "user_id": user_id
-    })
-    assert response.status_code == 201
-    return response.json()
+def app_instance(monkeypatch):
+    monkeypatch.setenv("DB_HOST", "localhost")
+    monkeypatch.setenv("DB_PORT", "5432")
+    monkeypatch.setenv("DB_NAME", "test")
+    monkeypatch.setenv("DB_USER", "test")
+    monkeypatch.setenv("DB_PASS", "test")
+    monkeypatch.setenv(
+        "TOCHKA_WEBHOOK_OPEN_KEY",
+        '{"kty":"oct","k":"c2VjcmV0","kid":"test","alg":"HS256"}',
+    )
+    monkeypatch.setenv("TOCHKA_WEBHOOK_EXAMPLE", "dummy")
+
+    fake_fcm_module = types.ModuleType("app.services.fcm_service")
+    fake_fcm_module.fcm_service = _DummyFCMService()
+    monkeypatch.setitem(sys.modules, "app.services.fcm_service", fake_fcm_module)
+
+    fake_webhook_module = types.ModuleType("app.services.webhook_dispatcher")
+    fake_webhook_module.webhook_dispatcher = _DummyWebhookDispatcher()
+    monkeypatch.setitem(sys.modules, "app.services.webhook_dispatcher", fake_webhook_module)
+
+    sys.modules.pop("app.backend.main", None)
+    main_module = importlib.import_module("app.backend.main")
+
+    db_middleware_module = importlib.import_module("app.backend.middlewares.db")
+    monkeypatch.setattr(
+        db_middleware_module,
+        "async_session_maker",
+        lambda *args, **kwargs: _DummySessionContext(),
+    )
+
+    return main_module.app
 
 
 @pytest.fixture
-def test_driver_location(client, test_driver_profile):
-    """Создаёт тестовую локацию водителя"""
-    response = client.post("/api/v1/driver-locations", json={
-        "driver_profile_id": test_driver_profile["id"],
-        "latitude": 50.45,
-        "longitude": 30.52
-    })
-    assert response.status_code == 201
-    return response.json()
-
-
-@pytest.fixture
-def test_driver_document(client, test_driver_profile):
-    """Создаёт тестовый документ водителя"""
-    response = client.post("/api/v1/driver-documents", json={
-        "driver_profile_id": test_driver_profile["id"],
-        "doc_type": "license",
-        "file_url": "https://example.com/doc.pdf"
-    })
-    assert response.status_code == 201
-    return response.json()
-
-
-@pytest.fixture
-def test_commission(client):
-    """Создаёт тестовую комиссию"""
-    response = client.post("/api/v1/commissions", json={
-        "name": f"Commission {random.randint(1000, 9999)}",
-        "percentage": 15.0
-    })
-    assert response.status_code == 201
-    return response.json()
-
-
-@pytest.fixture
-def test_phone_verification(client, test_user):
-    """Создаёт тестовую верификацию телефона"""
-    response = client.post("/api/v1/phone-verifications", json={
-        "user_id": test_user["id"],
-        "phone": f"+38099{random.randint(1000000, 9999999)}",
-        "code": str(random.randint(100000, 999999))
-    })
-    assert response.status_code == 201
-    return response.json()
-
-
-@pytest.fixture
-def test_transaction(client, test_user):
-    """Создаёт тестовую транзакцию"""
-    response = client.post("/api/v1/transactions", json={
-        "user_id": test_user["id"],
-        "is_withdraw": False,
-        "amount": 100.0
-    })
-    assert response.status_code == 201
-    return response.json()
-
+def client(app_instance):
+    with TestClient(app_instance) as test_client:
+        yield test_client
+    app_instance.dependency_overrides.clear()

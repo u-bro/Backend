@@ -1,5 +1,5 @@
 from sqlalchemy import BigInteger, TIMESTAMP, func, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 
 
