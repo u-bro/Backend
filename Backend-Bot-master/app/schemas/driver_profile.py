@@ -17,7 +17,7 @@ class DriverProfileValidated(BaseSchema):
     photo_url: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=100)
     license_category: Optional[str] = Field(None, max_length=20)
-    experience_years: Optional[int] = Field(None, gt=0)
+    experience_years: Optional[int] = Field(None, ge=0)
     current_class: Optional[RIDE_CLASSES_LITERAL] = None
     current_car_id: Optional[int] = None
 
