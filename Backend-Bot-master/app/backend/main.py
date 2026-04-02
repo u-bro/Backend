@@ -1,6 +1,6 @@
 from fastapi import Depends, FastAPI, Request
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import HTTPException
 from fastapi.exceptions import ResponseValidationError, RequestValidationError
@@ -108,11 +108,6 @@ async def validation_exception_handler(request: Request, exc: ResponseValidation
             "detail": error_messages[0],
         },
     )
-
-
-@app.get("/", include_in_schema=False)
-async def root():
-    return PlainTextResponse("API is running")
 
 
 @app.get(f"{API_PREFIX}/health", tags=["General"]) 
