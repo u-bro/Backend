@@ -112,6 +112,7 @@ JAZZMIN_SETTINGS = {
 
 CSRF_TRUSTED_ORIGINS = [
     'https://api.dev.u-bro.ru',
+    'https://u-bro.ru'
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
