@@ -18,7 +18,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
       PGDATA: /var/lib/postgresql/data/db-files
     volumes:
-      - postgres_data_prod:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./config/postgresql.conf:/var/lib/postgresql/data/postgresql.conf
       - ./logs/postgres-prod:/var/log/postgresql
 
