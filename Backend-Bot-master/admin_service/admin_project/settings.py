@@ -10,7 +10,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-test-key-for-admin-
 
 DEBUG = os.getenv('DJANGO_DEBUG', '0') in {'1', 'true', 'True', 'yes', 'YES'}
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'api.dev.u-bro.ru']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'api.dev.u-bro.ru', 'u-bro.ru']
 
 INSTALLED_APPS = [
     'jazzmin',
