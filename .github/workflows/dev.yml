@@ -1,8 +1,8 @@
-name: Deploy
+name: Deploy-dev
 
 on:
   push:
-    branches: [ master ]
+    branches: [ dev ]
 
 jobs:
   build:
@@ -18,6 +18,6 @@ jobs:
         port: 22
         script: |
           cd /home/deploy-dev/ubro_backend
-          git pull origin master
+          git pull origin dev
           cd Backend-Bot-master/
-          docker compose -p ubro-prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+          docker compose -p ubro-dev -f docker-compose.yml -f docker-compose.dev.yml up -d --build
