@@ -58,11 +58,8 @@ def app_instance(monkeypatch):
     monkeypatch.setenv("DB_NAME", "test")
     monkeypatch.setenv("DB_USER", "test")
     monkeypatch.setenv("DB_PASS", "test")
-    monkeypatch.setenv(
-        "TOCHKA_WEBHOOK_OPEN_KEY",
-        '{"kty":"oct","k":"c2VjcmV0","kid":"test","alg":"HS256"}',
-    )
-    monkeypatch.setenv("TOCHKA_WEBHOOK_EXAMPLE", "dummy")
+    monkeypatch.setenv("TBANK_TERMINAL_KEY", "terminal")
+    monkeypatch.setenv("TBANK_TERMINAL_PASSWORD", "password")
 
     fake_fcm_module = types.ModuleType("app.services.fcm_service")
     fake_fcm_module.fcm_service = _DummyFCMService()

@@ -2,11 +2,11 @@ import asyncio
 from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, Request
 from app.backend.deps import require_role, require_owner
-from app.config import TOCHKA_ACQUIRING_FAIL_REDIRECT_URL, TOCHKA_ACQUIRING_REDIRECT_URL, TOCHKA_USE_SANDBOX, TOCHKA_WEBHOOK_EXAMPLE
+from app.config import TBANK_PAYMENT_FAIL_REDIRECT_URL, TBANK_PAYMENT_NOTIFICATION_URL, TBANK_PAYMENT_REDIRECT_URL, TBANK_USE_SANDBOX
 from app.crud.commission_payment import commission_payment_crud, CommissionPaymentCrud
 from app.crud import ride_crud, document_crud, user_crud
 from app.schemas.commission_payment import CommissionPaymentCreateRequest, CommissionPaymentSchema
-from app.services.tochka_acquiring import TochkaAPIError, tochka_acquiring_client
+from app.services.tbank_acquiring import TBankAPIError, amount_to_minor_units, tbank_acquiring_client
 from app.services.webhook_dispatcher import webhook_dispatcher
 from app.models import Ride, CommissionPayment
 from app.backend.routers.base import BaseRouter
@@ -15,13 +15,16 @@ from app.enum import RoleCode
 from app.db import async_session_maker
 
 
+REUSABLE_PAYMENT_STATUSES = {"NEW", "FORM_SHOWED", "AUTHORIZED", "CONFIRMED"}
+
+
 class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
     def __init__(self, model_crud: CommissionPaymentCrud, prefix: str) -> None:
         super().__init__(model_crud, prefix)
         
     def setup_routes(self) -> None:
         self.router.add_api_route(f"{self.prefix}/{{id}}/payment-link", self.create_payment_link, methods=["POST"], status_code=201, dependencies=[Depends(require_owner(Ride, "client_id"))])
-        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_by_id, methods=["GET"], status_code=200, dependencies=[Depends(require_owner(CommissionPayment, "user_id"))])
+        self.router.add_api_route(f"{self.prefix}/{{id}}", self.get_commission_payment, methods=["GET"], status_code=200, dependencies=[Depends(require_owner(CommissionPayment, "user_id"))])
 
     async def create_payment_link(self, request: Request, id: int, body: CommissionPaymentCreateRequest, user=Depends(require_role([RoleCode.USER, RoleCode.DRIVER, RoleCode.ADMIN])), generate_check: bool = False) -> CommissionPaymentSchema:
         session = request.state.session
@@ -31,37 +34,41 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
             raise HTTPException(status_code=404, detail="Ride not found")
 
         existing = await self.model_crud.get_by_ride_and_user(session, id, user.id, is_refund=False)
-        if existing and existing.payment_link:
+        if existing and existing.payment_link and existing.status in REUSABLE_PAYMENT_STATUSES:
             return existing
 
         amount = ride.commission_amount
+        if amount is None:
+            raise HTTPException(status_code=400, detail="Commission amount is not set")
+
         purpose = f"Commission for ride #{id}"
-        redirect_url = body.redirect_url or TOCHKA_ACQUIRING_REDIRECT_URL
-        fail_redirect_url = body.fail_redirect_url or TOCHKA_ACQUIRING_FAIL_REDIRECT_URL
+        redirect_url = body.redirect_url or TBANK_PAYMENT_REDIRECT_URL
+        fail_redirect_url = body.fail_redirect_url or TBANK_PAYMENT_FAIL_REDIRECT_URL
+        notification_url = TBANK_PAYMENT_NOTIFICATION_URL
+        order_id = f"cp-{id}-{user.id}-{int(datetime.now(timezone.utc).timestamp())}"
 
         try:
-            resp = await tochka_acquiring_client.create_payment_link(
+            resp = await tbank_acquiring_client.init_payment(
                 amount=float(amount),
-                purpose=purpose,
-                payment_mode=list(body.payment_mode),
-                redirect_url=redirect_url,
-                fail_redirect_url=fail_redirect_url,
+                order_id=order_id,
+                description=purpose,
+                success_url=redirect_url,
+                fail_url=fail_redirect_url,
+                notification_url=notification_url,
             )
-        except TochkaAPIError as e:
+        except TBankAPIError as e:
             raise HTTPException(status_code=502, detail=str(e))
-
-        data = (resp or {}).get("Data") or {}
 
         fields = {
             "ride_id": id,
             "user_id": user.id,
             "amount": amount,
             "currency": "RUB",
-            "status": data.get("status") or "CREATED",
-            "tochka_operation_id": data.get("operationId") if not TOCHKA_USE_SANDBOX else 'beeac8a4-6047-3f38-8922-a664e6b5c43b',
-            "payment_link": data.get("paymentLink"),
-            "purpose": data.get("purpose") or purpose,
-            "payment_mode": data.get("paymentMode") or list(body.payment_mode),
+            "status": resp.get("Status") or "NEW",
+            "payment_id": str(resp.get("PaymentId")) if resp.get("PaymentId") is not None else None,
+            "payment_link": resp.get("PaymentURL"),
+            "purpose": purpose,
+            "payment_mode": list(body.payment_mode),
             "updated_at": datetime.now(timezone.utc),
         }
 
@@ -81,22 +88,22 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
                 amount=float(item.amount or 0),
                 purpose=item.purpose or purpose,
                 payment_mode=payment_mode_str,
-                operation_id=item.tochka_operation_id,
+                operation_id=item.payment_id or item.tochka_operation_id,
                 created_at=getattr(item, "created_at", None),
             )
             await document_crud.upload_bytes(key, pdf_bytes)
-        
+
         if existing:
             updated = await self.model_crud.update(session, existing.id, fields)
             if not updated:
                 raise HTTPException(status_code=500, detail="Failed to update commission payment")
-            asyncio.create_task(self._send_sandbox_webhook())
+            asyncio.create_task(self._send_sandbox_webhook(updated))
             if generate_check:
                 await _generate_and_upload_check(updated)
             return updated
 
         created = await self.model_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
-        asyncio.create_task(self._send_sandbox_webhook())
+        asyncio.create_task(self._send_sandbox_webhook(created))
         if generate_check:
             await _generate_and_upload_check(created)
         return created
@@ -106,13 +113,29 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
         item = await self.model_crud.get_by_id(session, id)
         if not item:
             raise HTTPException(status_code=404, detail="Commission payment not found")
+        if item.payment_id and item.status not in {"CONFIRMED", "REJECTED", "AUTH_FAIL", "DEADLINE_EXPIRED", "CANCELED", "CANCELLED"}:
+            try:
+                await webhook_dispatcher.sync_payment_state(session, item.payment_id)
+            except TBankAPIError as e:
+                raise HTTPException(status_code=502, detail=str(e))
+            refreshed = await self.model_crud.get_by_id(session, id)
+            if refreshed:
+                return refreshed
         return item
 
-    async def _send_sandbox_webhook(self):
-        if TOCHKA_USE_SANDBOX:
+    async def _send_sandbox_webhook(self, item: CommissionPaymentSchema):
+        if TBANK_USE_SANDBOX and item.payment_id:
             await asyncio.sleep(3)
             async with async_session_maker() as session:
-                await webhook_dispatcher.dispatch_webhook(session, TOCHKA_WEBHOOK_EXAMPLE)
+                await webhook_dispatcher.dispatch_webhook(session, {
+                    "TerminalKey": "sandbox-terminal",
+                    "OrderId": f"cp-{item.ride_id}-{item.user_id}",
+                    "Success": True,
+                    "Status": "CONFIRMED",
+                    "PaymentId": item.payment_id,
+                    "ErrorCode": "0",
+                    "Amount": amount_to_minor_units(item.amount),
+                }, verify_token=False)
                 await session.commit()
 
 

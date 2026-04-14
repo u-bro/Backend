@@ -1,89 +1,127 @@
-import jwt, json
-from jwt import exceptions, PyJWK
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from app.logger import logger
-from app.config import TOCHKA_WEBHOOK_OPEN_KEY, TOCHKA_USE_SANDBOX
 from app.crud import commission_payment_crud, ride_crud, in_app_notification_crud, driver_profile_crud
 from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.ride import RideschemaUpdateAfterCommission
 from .websocket_manager import manager_driver_feed
 from app.crud.driver_location_sender import driver_location_sender
+from .tbank_acquiring import amount_to_minor_units, tbank_acquiring_client
+
+
+SUCCESS_PAYMENT_STATUSES = {"CONFIRMED"}
+FAILED_PAYMENT_STATUSES = {"AUTH_FAIL", "REJECTED", "DEADLINE_EXPIRED", "CANCELED", "CANCELLED"}
 
 
 class WebhookDispatcher:
-
-    def __init__(self, key_json: str):
-        key = json.loads(key_json)
-        self.jwk_key = PyJWK(key)
-        self._dispatcher = {
-            'acquiringInternetPayment': self._dispatch_acquiring_internet_payment
-        }
-    
-    def decode_webhook(self, payload: str):
-        try:
-            webhook_jwt = jwt.decode(payload, self.jwk_key.key, algorithms=["RS256"])
-        except exceptions.DecodeError:
+    async def dispatch_webhook(self, session: AsyncSession, payload: dict, *, verify_token: bool = True):
+        if verify_token and not tbank_acquiring_client.verify_notification_token(payload):
             raise HTTPException(status_code=403, detail="Forbidden")
-        except Exception as e:
-            logger.error(f"Error decoding Tochka webhook: {e}")
-            raise HTTPException(status_code=500, detail="Internal server error")
+        await self._process_payment_update(session, payload)
 
-        return webhook_jwt
+    async def _process_payment_update(
+        self,
+        session: AsyncSession,
+        payload: dict,
+        *,
+        emit_success_side_effects: bool = True,
+        emit_failure_notifications: bool = True,
+    ):
+        payment_id = payload.get("PaymentId") or payload.get("paymentId")
+        status = payload.get("Status") or payload.get("status")
+        if not payment_id:
+            raise HTTPException(status_code=400, detail="PaymentId is required")
 
-    async def dispatch_webhook(self, session: AsyncSession, payload: str):
-        webhook = self.decode_webhook(payload)
-        webhook_type = webhook.get('webhookType')
-        if webhook_type in self._dispatcher:
-            await self._dispatcher[webhook_type](session, webhook)
-
-    async def _dispatch_acquiring_internet_payment(self, session: AsyncSession, webhook: dict):
-        status = webhook.get('status')
-        operationId = webhook.get('operationId')
-        if TOCHKA_USE_SANDBOX:
-            commission_payments = await commission_payment_crud.get_by_operation_id_sandbox(session, operationId)
-            commission_payment = commission_payments[-1] if len(commission_payments) else None
-        else:
-            commission_payment = await commission_payment_crud.get_by_operation_id(session, operationId)
+        commission_payment = await commission_payment_crud.get_by_payment_id(session, str(payment_id))
         if not commission_payment:
-            logger.warning(f"Commission payment not found for operationId: {operationId}")
+            logger.warning(f"Commission payment not found for payment_id: {payment_id}")
             raise HTTPException(status_code=404, detail="Commission payment not found")
 
-        updated = await commission_payment_crud.update(session, commission_payment.id, {'status': status})
-        if status == 'APPROVED':
-            ride = await ride_crud.get_by_id(session, commission_payment.ride_id)
-            if ride:
-                updated_ride = await ride_crud.update(session, ride.id, RideschemaUpdateAfterCommission(), updated.user_id)
-                await in_app_notification_crud.create(session, InAppNotificationCreate(
-                    user_id=commission_payment.user_id,
-                    type='ride_status_changed',
-                    title=f"Комиссия оплачена",
-                    message="Проверьте информацию о поездке",
-                    data=updated_ride.model_dump(mode='json'),
-                    dedup_key=None
-                ))
-                await in_app_notification_crud.create(session, InAppNotificationCreate(
-                user_id=commission_payment.user_id,
-                type='commission_payment',
-                title='Комиссия оплачена',
-                message='Ваша комиссия за поездку оплачена',
-                data=updated.model_dump(mode='json'),
-                dedup_key=str(commission_payment.id)
-            ))
-                driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
-                driver_id = driver_profile.user_id if driver_profile else 0
-                await manager_driver_feed.send_personal_message(driver_id, {"type": "ride_commission_paid", "message": "Клиент оплатил комиссию за поездку", "data": updated_ride.model_dump(mode="json")})
-                await driver_location_sender.start_task(updated_ride.client_id, updated_ride.driver_profile_id)
-        else:
-            logger.warning(f"Acquiring internet payment failed: {webhook}")
-            await in_app_notification_crud.create(session, InAppNotificationCreate(
-                    user_id=commission_payment.user_id,
-                    type='commission_payment',
-                    title='Комиссия не оплачена',
-                    message=f'Ваша комиссия за поездку не оплачена. Текущий статус платежа: {status}',
-                    data=updated.model_dump(mode='json'),
-                    dedup_key=None
-                ))
-            raise HTTPException(status_code=400, detail="Payment failed")
+        payload_amount = payload.get("Amount")
+        if payload_amount is not None:
+            expected_amount = amount_to_minor_units(commission_payment.amount)
+            if int(payload_amount) != expected_amount:
+                logger.error(
+                    "T-Bank payment amount mismatch for payment_id=%s: expected=%s got=%s",
+                    payment_id,
+                    expected_amount,
+                    payload_amount,
+                )
+                raise HTTPException(status_code=400, detail="Payment amount mismatch")
 
-webhook_dispatcher = WebhookDispatcher(TOCHKA_WEBHOOK_OPEN_KEY)
+        update_fields = {
+            "payment_id": str(payment_id),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        if status:
+            update_fields["status"] = status
+        if status in SUCCESS_PAYMENT_STATUSES and not commission_payment.paid_at:
+            update_fields["paid_at"] = datetime.now(timezone.utc)
+
+        updated = await commission_payment_crud.update(session, commission_payment.id, update_fields)
+        if not updated:
+            raise HTTPException(status_code=500, detail="Failed to update commission payment")
+
+        if status in SUCCESS_PAYMENT_STATUSES and not commission_payment.paid_at and emit_success_side_effects:
+            await self._handle_success(session, commission_payment, updated)
+        elif status in FAILED_PAYMENT_STATUSES and emit_failure_notifications:
+            await self._handle_failure(session, commission_payment, updated)
+
+    async def _handle_success(self, session: AsyncSession, commission_payment, updated) -> None:
+        ride = await ride_crud.get_by_id(session, commission_payment.ride_id)
+        if not ride:
+            return
+
+        updated_ride = await ride_crud.update(session, ride.id, RideschemaUpdateAfterCommission(), updated.user_id)
+        await in_app_notification_crud.create(session, InAppNotificationCreate(
+            user_id=commission_payment.user_id,
+            type='ride_status_changed',
+            title="Комиссия оплачена",
+            message="Проверьте информацию о поездке",
+            data=updated_ride.model_dump(mode='json'),
+            dedup_key=None,
+        ))
+        await in_app_notification_crud.create(session, InAppNotificationCreate(
+            user_id=commission_payment.user_id,
+            type='commission_payment',
+            title='Комиссия оплачена',
+            message='Ваша комиссия за поездку оплачена',
+            data=updated.model_dump(mode='json'),
+            dedup_key=str(commission_payment.id),
+        ))
+        driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
+        driver_id = driver_profile.user_id if driver_profile else 0
+        await manager_driver_feed.send_personal_message(driver_id, {"type": "ride_commission_paid", "message": "Клиент оплатил комиссию за поездку", "data": updated_ride.model_dump(mode="json")})
+        await driver_location_sender.start_task(updated_ride.client_id, updated_ride.driver_profile_id)
+
+    async def _handle_failure(self, session: AsyncSession, commission_payment, updated) -> None:
+        logger.warning("T-Bank acquiring payment failed: payment_id=%s status=%s", updated.payment_id, updated.status)
+        await in_app_notification_crud.create(session, InAppNotificationCreate(
+            user_id=commission_payment.user_id,
+            type='commission_payment',
+            title='Комиссия не оплачена',
+            message=f'Ваша комиссия за поездку не оплачена. Текущий статус платежа: {updated.status}',
+            data=updated.model_dump(mode='json'),
+            dedup_key=f"failed_{commission_payment.id}_{updated.status}",
+        ))
+
+    async def sync_payment_state(
+        self,
+        session: AsyncSession,
+        payment_id: str,
+        *,
+        emit_success_side_effects: bool = True,
+        emit_failure_notifications: bool = False,
+    ):
+        payload = await tbank_acquiring_client.get_payment_state(payment_id)
+        await self._process_payment_update(
+            session,
+            payload,
+            emit_success_side_effects=emit_success_side_effects,
+            emit_failure_notifications=emit_failure_notifications,
+        )
+        return payload
+
+
+webhook_dispatcher = WebhookDispatcher()
