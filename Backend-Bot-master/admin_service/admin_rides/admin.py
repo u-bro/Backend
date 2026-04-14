@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.contrib import messages
 from django import forms
-from django.urls import reverse
+from django.apps import apps
+from django.db import transaction
 from django.utils.safestring import mark_safe
 from django.utils import timezone
 from utils.api_client import api_client
@@ -103,3 +104,33 @@ class RideAdmin(admin.ModelAdmin):
             ride.save()
             count += 1
         self.message_user(request, f"Resolved {count} anomalies", messages.SUCCESS)
+
+    @staticmethod
+    def _detach_related_records(ride_ids):
+        if not ride_ids:
+            return
+
+        related_models = [
+            ("admin_commission_payments", "CommissionPayment"),
+            ("admin_ride_status_history", "RideStatusHistory"),
+            ("admin_ride_drivers_requests", "RideDriversRequest"),
+            ("admin_chat_messages", "ChatMessage"),
+            ("admin_driver_ratings", "DriverRating"),
+        ]
+        for app_label, model_name in related_models:
+            try:
+                model = apps.get_model(app_label, model_name)
+            except LookupError:
+                continue
+            model.objects.filter(ride_id__in=ride_ids).update(ride_id=None)
+
+    def delete_model(self, request, obj):
+        with transaction.atomic():
+            self._detach_related_records([obj.id])
+            super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        ride_ids = list(queryset.values_list("id", flat=True))
+        with transaction.atomic():
+            self._detach_related_records(ride_ids)
+            super().delete_queryset(request, queryset)

@@ -8,7 +8,7 @@ class RideStatusHistory(Base):
     __tablename__ = 'ride_status_history'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    ride_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('rides.id'), nullable=False)
+    ride_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('rides.id'), nullable=True)
     from_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     to_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     changed_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=True)

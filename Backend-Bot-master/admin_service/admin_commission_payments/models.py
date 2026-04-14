@@ -10,7 +10,7 @@ class CommissionPayment(models.Model):
 
     id = models.AutoField(primary_key=True)
 
-    ride_id = models.IntegerField()
+    ride_id = models.IntegerField(null=True, blank=True)
     user_id = models.IntegerField()
 
     amount = models.DecimalField(max_digits=15, decimal_places=2)

@@ -10,7 +10,7 @@ class RideDriversRequest(models.Model):
         verbose_name_plural = 'Запросы водителей'
 
     id = models.AutoField(primary_key=True)
-    ride_id = models.IntegerField()
+    ride_id = models.IntegerField(null=True, blank=True)
     driver_profile_id = models.IntegerField()
     car_id = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=RIDE_DRIVERS_REQUEST_STATUS_CHOICES)
