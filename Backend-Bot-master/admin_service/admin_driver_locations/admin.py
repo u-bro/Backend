@@ -14,9 +14,11 @@ class DriverLocationAdmin(admin.ModelAdmin):
         "last_seen_at",
         "created_at",
     )
+    list_editable = ("status", "latitude", "longitude")
     list_filter = ("status", "created_at")
     search_fields = ("driver_profile_id",)
     list_per_page = 25
+    readonly_fields = ("id", "created_at", "last_seen_at")
 
     def has_add_permission(self, request):
         return False
