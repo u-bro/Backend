@@ -19,7 +19,7 @@ class DriverStateStorage:
         classes_set = driver_profile.classes_allowed
         driver_profile_id = driver_profile.id
         car_id = driver_profile.current_car_id
-        driver_location = await driver_location_crud.get_by_driver_profile_id(session, driver_profile_id)
+        driver_location = await driver_location_crud.update_status_with_ride_info_by_driver_profile_id(session, driver_profile_id)
         if not driver_location:
             driver_location = DriverLocationUpdateMe(status=DriverStatus.OFFLINE)
 

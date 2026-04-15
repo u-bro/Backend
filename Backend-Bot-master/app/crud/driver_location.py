@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, and_
 from app.models import RideDriversRequest, Ride
 from .in_app_notification import in_app_notification_crud
+from app.enum import DriverStatus
 
 
 class DriverLocationCrud(CrudBase[DriverLocation, DriverLocationSchema]):
@@ -61,5 +62,21 @@ class DriverLocationCrud(CrudBase[DriverLocation, DriverLocationSchema]):
 
         await session.execute(update(RideDriversRequest).where(and_(RideDriversRequest.driver_profile_id == driver_profile_id, RideDriversRequest.status == 'requested')).values({"status": "canceled"}))
 
+    async def update_status_with_ride_info_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int) -> DriverLocationSchema | None:
+        existing = await self.get_by_driver_profile_id(session, driver_profile_id)
+        if not existing:
+            return None
+
+        driver_active_rides = await session.execute(select(Ride).where(and_(Ride.driver_profile_id == driver_profile_id, Ride.status.in_(["waiting_commission", "accepted", "on_the_way", "arrived", "started"]))))
+        driver_active_rides_result = driver_active_rides.scalars().all()
+
+        driver_active_ride_requests = await session.execute(select(RideDriversRequest).where(and_(RideDriversRequest.driver_profile_id == driver_profile_id, RideDriversRequest.status == "requested")))
+        driver_active_ride_requests_result = driver_active_ride_requests.scalars().all()
+        current_status = DriverStatus.BUSY if len(driver_active_rides_result) > 0 else DriverStatus.WAITING_RIDE if len(driver_active_ride_requests_result) > 0 else DriverStatus.ONLINE
+
+        if existing.status != current_status:
+            return await self.update(session, existing.id, DriverLocationUpdate(status=current_status))
+
+        return existing
 
 driver_location_crud = DriverLocationCrud()

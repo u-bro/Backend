@@ -7,6 +7,7 @@ from django.utils.safestring import mark_safe
 from django.utils import timezone
 from utils.api_client import api_client
 
+from admin_ride_drivers_requests.models import RideDriversRequest
 from .models import Ride
 
 
@@ -82,14 +83,17 @@ class RideAdmin(admin.ModelAdmin):
         if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
             self.message_user(request, "No permission", messages.ERROR)
             return
-            
+
+        canceled_at = timezone.now()
         count = 0
-        for ride in queryset:
-            ride.status = "canceled"
-            ride.cancellation_reason = "Cancelled by admin"
-            ride.canceled_at = timezone.now()
-            ride.save()
-            count += 1
+        with transaction.atomic():
+            for ride in queryset:
+                ride.status = "canceled"
+                ride.cancellation_reason = "Cancelled by admin"
+                ride.canceled_at = canceled_at
+                ride.save()
+                RideDriversRequest.objects.filter(ride_id=ride.id).update(status="canceled")
+                count += 1
         self.message_user(request, f"Cancelled {count} rides", messages.SUCCESS)
 
     def mark_anomaly_resolved(self, request, queryset):  
