@@ -91,7 +91,7 @@ class RideCrud(CrudBase[Ride, RideSchema]):
 
         if update_obj.status and existing.status != update_obj.status:
             if not self._is_status_transition_allowed(existing.status, update_obj.status):
-                raise HTTPException(status_code=400, detail="Incorrect ride status transition")
+                raise HTTPException(status_code=400, detail=f"Incorrect ride status transition from {existing.status} to {update_obj.status}")
             await ride_status_history_crud.create(session, RideStatusHistoryCreate(ride_id=existing.id, from_status=existing.status, to_status=update_obj.status, changed_by=int(user_id), created_at=datetime.now(timezone.utc)))
 
         stmt = (

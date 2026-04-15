@@ -177,7 +177,6 @@ class PDFGenerator:
         client_name: str,
         amount: float,
         purpose: str,
-        payment_mode: str = "Карта",
         operation_id: Optional[str] = None,
         created_at: Optional[datetime] = None,
     ) -> bytes:
@@ -205,7 +204,6 @@ class PDFGenerator:
                 <p><strong>Клиент:</strong> {client_name}</p>
                 <p><strong>Назначение:</strong> {purpose}</p>
                 {f'<p><strong>Operation ID:</strong> {operation_id}</p>' if operation_id else ''}
-                <p><strong>Способ оплаты:</strong> {payment_mode}</p>
             </div>
 
             <div class=\"receipt-info\">

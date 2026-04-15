@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, Request
 from app.backend.deps import require_role, require_owner
-from app.config import TBANK_PAYMENT_FAIL_REDIRECT_URL, TBANK_PAYMENT_NOTIFICATION_URL, TBANK_PAYMENT_REDIRECT_URL, TBANK_USE_SANDBOX
+from app.config import TBANK_PAYMENT_NOTIFICATION_URL, TBANK_USE_SANDBOX
 from app.crud.commission_payment import commission_payment_crud, CommissionPaymentCrud
 from app.crud import ride_crud, document_crud, user_crud
 from app.schemas.commission_payment import CommissionPaymentCreateRequest, CommissionPaymentSchema
@@ -42,19 +42,14 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
             raise HTTPException(status_code=400, detail="Commission amount is not set")
 
         purpose = f"Commission for ride #{id}"
-        redirect_url = body.redirect_url or TBANK_PAYMENT_REDIRECT_URL
-        fail_redirect_url = body.fail_redirect_url or TBANK_PAYMENT_FAIL_REDIRECT_URL
-        notification_url = TBANK_PAYMENT_NOTIFICATION_URL
-        order_id = f"cp-{id}-{user.id}-{int(datetime.now(timezone.utc).timestamp())}"
-
         try:
             resp = await tbank_acquiring_client.init_payment(
                 amount=float(amount),
-                order_id=order_id,
+                order_id=f"cp-{id}-{user.id}-{int(datetime.now(timezone.utc).timestamp())}",
                 description=purpose,
-                success_url=redirect_url,
-                fail_url=fail_redirect_url,
-                notification_url=notification_url,
+                success_url=body.redirect_url,
+                fail_url=body.fail_redirect_url,
+                notification_url=TBANK_PAYMENT_NOTIFICATION_URL,
             )
         except TBankAPIError as e:
             raise HTTPException(status_code=502, detail=str(e))
@@ -68,7 +63,6 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
             "payment_id": str(resp.get("PaymentId")) if resp.get("PaymentId") is not None else None,
             "payment_link": resp.get("PaymentURL"),
             "purpose": purpose,
-            "payment_mode": list(body.payment_mode),
             "updated_at": datetime.now(timezone.utc),
         }
 
@@ -76,51 +70,38 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
             key = f"receipts/commissions/{id}/receipt.pdf"
             client = await user_crud.get_by_id(session, item.user_id)
             client_full_name = [word for word in [client.first_name, client.last_name, client.middle_name] if word] if client else []
-            payment_mode_value = item.payment_mode
-            if isinstance(payment_mode_value, (list, tuple)):
-                payment_mode_str = ", ".join([str(x) for x in payment_mode_value])
-            else:
-                payment_mode_str = str(payment_mode_value) if payment_mode_value is not None else "Карта"
 
             pdf_bytes = await pdf_generator.generate_commission_receipt(
                 ride_id=id,
                 client_name=" ".join(client_full_name) or str(item.user_id),
                 amount=float(item.amount or 0),
                 purpose=item.purpose or purpose,
-                payment_mode=payment_mode_str,
-                operation_id=item.payment_id or item.tochka_operation_id,
+                operation_id=item.payment_id,
                 created_at=getattr(item, "created_at", None),
             )
             await document_crud.upload_bytes(key, pdf_bytes)
+
+        async def _send_sandbox_webhook_and_generate_check(item):
+            asyncio.create_task(self._send_sandbox_webhook(item))
+            if generate_check:
+                await _generate_and_upload_check(item)
+            return item
 
         if existing:
             updated = await self.model_crud.update(session, existing.id, fields)
             if not updated:
                 raise HTTPException(status_code=500, detail="Failed to update commission payment")
-            asyncio.create_task(self._send_sandbox_webhook(updated))
-            if generate_check:
-                await _generate_and_upload_check(updated)
-            return updated
+            return await _send_sandbox_webhook_and_generate_check(updated)
 
         created = await self.model_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
-        asyncio.create_task(self._send_sandbox_webhook(created))
-        if generate_check:
-            await _generate_and_upload_check(created)
-        return created
+        return await _send_sandbox_webhook_and_generate_check(created)
 
     async def get_commission_payment(self, request: Request, id: int) -> CommissionPaymentSchema:
         session = request.state.session
         item = await self.model_crud.get_by_id(session, id)
         if not item:
             raise HTTPException(status_code=404, detail="Commission payment not found")
-        if item.payment_id and item.status not in {"CONFIRMED", "REJECTED", "AUTH_FAIL", "DEADLINE_EXPIRED", "CANCELED", "CANCELLED"}:
-            try:
-                await webhook_dispatcher.sync_payment_state(session, item.payment_id)
-            except TBankAPIError as e:
-                raise HTTPException(status_code=502, detail=str(e))
-            refreshed = await self.model_crud.get_by_id(session, id)
-            if refreshed:
-                return refreshed
+
         return item
 
     async def _send_sandbox_webhook(self, item: CommissionPaymentSchema):

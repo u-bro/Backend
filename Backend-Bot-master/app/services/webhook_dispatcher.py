@@ -106,22 +106,5 @@ class WebhookDispatcher:
             dedup_key=f"failed_{commission_payment.id}_{updated.status}",
         ))
 
-    async def sync_payment_state(
-        self,
-        session: AsyncSession,
-        payment_id: str,
-        *,
-        emit_success_side_effects: bool = True,
-        emit_failure_notifications: bool = False,
-    ):
-        payload = await tbank_acquiring_client.get_payment_state(payment_id)
-        await self._process_payment_update(
-            session,
-            payload,
-            emit_success_side_effects=emit_success_side_effects,
-            emit_failure_notifications=emit_failure_notifications,
-        )
-        return payload
-
 
 webhook_dispatcher = WebhookDispatcher()

@@ -17,12 +17,9 @@ class CommissionPayment(models.Model):
     currency = models.CharField(max_length=10)
 
     status = models.CharField(max_length=32)
-
-    tochka_operation_id = models.CharField(max_length=64, null=True, blank=True)
     payment_link = models.CharField(max_length=2048, null=True, blank=True)
 
     purpose = models.CharField(max_length=255, null=True, blank=True)
-    payment_mode = models.JSONField(null=True, blank=True)
 
     paid_at = models.DateTimeField(null=True, blank=True)
     payment_id = models.CharField(max_length=128, null=True, blank=True)
