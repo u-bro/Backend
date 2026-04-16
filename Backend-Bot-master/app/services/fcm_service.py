@@ -48,6 +48,42 @@ class FCMService:
             base["data"] = payload.data
         return self._normalize_data(base)
 
+    def _build_notification(self, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.Notification | None:
+        if payload.title is None and payload.body is None and payload.image is None:
+            return None
+
+        return messaging.Notification(
+            title=payload.title,
+            body=payload.body,
+            image=payload.image,
+        )
+
+    def _build_apns_config(self, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.APNSConfig | None:
+        notification = self._build_notification(payload)
+        if notification is None:
+            return None
+
+        alert = messaging.ApsAlert(
+            title=payload.title,
+            body=payload.body,
+        )
+        aps = messaging.Aps(
+            alert=alert,
+            sound="default",
+            mutable_content=bool(payload.image),
+        )
+
+        return messaging.APNSConfig(
+            headers={
+                "apns-push-type": "alert",
+                "apns-priority": "10",
+            },
+            payload=messaging.APNSPayload(aps=aps),
+            fcm_options=messaging.APNSFCMOptions(
+                image=payload.image,
+            ) if payload.image else None,
+        )
+
     async def initialize(self) -> None:
         if self._initialized:
             return
@@ -75,6 +111,8 @@ class FCMService:
         message = messaging.Message(
             token=payload.token,
             data=self._build_data_payload(payload),
+            notification=self._build_notification(payload),
+            apns=self._build_apns_config(payload),
         )
 
         return await asyncio.to_thread(messaging.send, message)
@@ -89,6 +127,8 @@ class FCMService:
         message = messaging.MulticastMessage(
             tokens=tokens_list,
             data=self._build_data_payload(payload),
+            notification=self._build_notification(payload),
+            apns=self._build_apns_config(payload),
         )
 
         return await asyncio.to_thread(messaging.send_each_for_multicast, message, dry_run)
@@ -113,6 +153,8 @@ class FCMService:
         message = messaging.Message(
             topic=payload.topic,
             data=self._build_data_payload(payload),
+            notification=self._build_notification(payload),
+            apns=self._build_apns_config(payload),
         )
 
         return await asyncio.to_thread(messaging.send, message)
