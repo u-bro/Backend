@@ -113,7 +113,7 @@ class TBankAcquiringClient:
         success_url: str | None = None,
         fail_url: str | None = None,
         notification_url: str | None = None,
-        ttl_seconds: int = COMMISSION_PAY_SECONDS_LIMIT,
+        time_difference_seconds: int = 0,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "TerminalKey": self.terminal_key,
@@ -124,7 +124,7 @@ class TBankAcquiringClient:
             "DATA": {
                 "OperationInitiatorType": "0",
             },
-            "RedirectDueDate": (datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "RedirectDueDate": (datetime.now(timezone.utc) + timedelta(seconds=COMMISSION_PAY_SECONDS_LIMIT-time_difference_seconds)).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
         if success_url:

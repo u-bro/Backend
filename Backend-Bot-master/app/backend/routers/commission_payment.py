@@ -54,7 +54,7 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
                 success_url=body.redirect_url,
                 fail_url=body.fail_redirect_url,
                 notification_url=TBANK_PAYMENT_NOTIFICATION_URL,
-                ttl_seconds=int((datetime.now(timezone.utc) - ride_driver_request.updated_at).total_seconds()),
+                time_difference_seconds=int((datetime.now(timezone.utc) - ride_driver_request.updated_at).total_seconds()),
             )
         except TBankAPIError as e:
             raise HTTPException(status_code=502, detail=str(e))
