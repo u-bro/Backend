@@ -1,6 +1,7 @@
-import hashlib
-import hmac
+import hashlib, hmac
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
+from app.config import COMMISSION_PAY_SECONDS_LIMIT
 from typing import Any, Mapping
 import aiohttp
 from app.config import (
@@ -112,6 +113,7 @@ class TBankAcquiringClient:
         success_url: str | None = None,
         fail_url: str | None = None,
         notification_url: str | None = None,
+        ttl_seconds: int = COMMISSION_PAY_SECONDS_LIMIT,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "TerminalKey": self.terminal_key,
@@ -122,6 +124,7 @@ class TBankAcquiringClient:
             "DATA": {
                 "OperationInitiatorType": "0",
             },
+            "RedirectDueDate": (datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
         if success_url:

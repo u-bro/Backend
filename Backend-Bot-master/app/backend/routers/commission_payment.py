@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, Request
 from app.backend.deps import require_role, require_owner
 from app.config import TBANK_PAYMENT_NOTIFICATION_URL, TBANK_USE_SANDBOX
 from app.crud.commission_payment import commission_payment_crud, CommissionPaymentCrud
-from app.crud import ride_crud, document_crud, user_crud
+from app.crud import ride_crud, document_crud, user_crud, ride_drivers_request_crud
 from app.schemas.commission_payment import CommissionPaymentCreateRequest, CommissionPaymentSchema
 from app.services.tbank_acquiring import TBankAPIError, amount_to_minor_units, tbank_acquiring_client
 from app.services.webhook_dispatcher import webhook_dispatcher
@@ -32,6 +32,10 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
         ride = await ride_crud.get_by_id(session, id)
         if not ride:
             raise HTTPException(status_code=404, detail="Ride not found")
+        
+        ride_driver_request = await ride_drivers_request_crud.get_accepted_by_ride_id(session, id)
+        if not ride_driver_request:
+            raise HTTPException(status_code=404, detail="Ride driver request not found")
 
         existing = await self.model_crud.get_by_ride_and_user(session, id, user.id, is_refund=False)
         if existing and existing.payment_link and existing.status in REUSABLE_PAYMENT_STATUSES:
@@ -50,6 +54,7 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
                 success_url=body.redirect_url,
                 fail_url=body.fail_redirect_url,
                 notification_url=TBANK_PAYMENT_NOTIFICATION_URL,
+                ttl_seconds=int((datetime.now(timezone.utc) - ride_driver_request.updated_at).total_seconds()),
             )
         except TBankAPIError as e:
             raise HTTPException(status_code=502, detail=str(e))

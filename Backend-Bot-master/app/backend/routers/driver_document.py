@@ -5,7 +5,7 @@ from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentCrea
 from app.backend.deps import require_role, require_driver_profile_or_admin, get_current_driver_profile_id_without_approve
 from app.models import DriverDocument, User
 from app.enum import RoleCode
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class DriverDocumentRouter(BaseRouter[DriverDocumentCrud]):
@@ -37,7 +37,7 @@ class DriverDocumentRouter(BaseRouter[DriverDocumentCrud]):
         return await self.model_crud.update(request.state.session, id, body)
 
     async def update_admin(self, request: Request, id: int, body: DriverDocumentAdminUpdateIn, user: User = Depends(require_role([RoleCode.ADMIN]))) -> DriverDocumentSchema:
-        return await self.model_crud.update(request.state.session, id, DriverDocumentAdminUpdate(**body.model_dump(), reviewed_by=user.id, reviewed_at=datetime.now()))
+        return await self.model_crud.update(request.state.session, id, DriverDocumentAdminUpdate(**body.model_dump(), reviewed_by=user.id, reviewed_at=datetime.now(timezone.utc)))
 
     async def delete(self, request: Request, id: int):
         return await self.model_crud.delete(request.state.session, id)
