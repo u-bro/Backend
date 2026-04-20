@@ -55,7 +55,7 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
         await asyncio.sleep(COMMISSION_PAY_SECONDS_LIMIT)
         async with async_session_maker() as session:
             payment = await self.get_by_ride_and_user(session, ride_id, user_id)
-            if payment and payment.status == 'CONFIRMED':
+            if payment and (payment.status == 'CONFIRMED' or payment.status == 'AUTHORIZED'):
                 return
 
             updated_ride = await ride_crud.update(session, ride_id, RideSchemaUpdateByClient(status='canceled'), user_id)
