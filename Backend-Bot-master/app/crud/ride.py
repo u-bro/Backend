@@ -14,7 +14,8 @@ from .in_app_notification import in_app_notification_crud
 from .driver_location_sender import driver_location_sender
 from .driver_tracker import driver_tracker, DriverStatus
 from app.models import Ride, Commission, RideDriversRequest, ChatMessage
-from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating, RideSchemaWithDriverProfile, RideSchemaUpdateByClient
+from app.schemas.ride import RideSchema, RideSchemaHistory, RideSchemaWithRating, RideSchemaWithDriverProfile, RideSchemaUpdateByClient, RideSchemaWithChatMessage
+from app.schemas.chat_message import ChatMessageSchema
 from app.schemas.ride_status_history import RideStatusHistoryCreate
 from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.push import PushNotificationData
@@ -230,69 +231,89 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         rides = result.scalars().all()
         return [RideSchema.model_validate(ride) for ride in rides]
 
-    async def get_paginated_as_client_with_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchema]:
+    async def get_paginated_as_client_with_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchemaWithChatMessage]:
         offset = (page - 1) * page_size
 
-        last_chat_at_sq = (
+        last_chat_sq = (
             select(
+                ChatMessage.id.label("id"),
                 ChatMessage.ride_id.label("ride_id"),
-                func.max(ChatMessage.created_at).label("last_chat_at"),
+                func.row_number().over(
+                    partition_by=ChatMessage.ride_id,
+                    order_by=(ChatMessage.created_at.desc(), ChatMessage.id.desc()),
+                ).label("rn"),
             )
             .where(ChatMessage.deleted_at.is_(None))
-            .group_by(ChatMessage.ride_id)
             .subquery()
         )
 
         stmt = (
-            select(self.model)
-            .join(last_chat_at_sq, last_chat_at_sq.c.ride_id == self.model.id)
+            select(self.model, ChatMessage)
+            .join(last_chat_sq, and_(last_chat_sq.c.ride_id == self.model.id, last_chat_sq.c.rn == 1))
+            .join(ChatMessage, ChatMessage.id == last_chat_sq.c.id)
             .where(
                 and_(
                     self.model.driver_profile_id.is_not(None),
                     self.model.client_id == user_id
                 )
             )
-            .order_by(last_chat_at_sq.c.last_chat_at.desc())
+            .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
             .offset(offset)
             .limit(page_size)
         )
 
         result = await session.execute(stmt)
-        rides = result.scalars().all()
-        return [RideSchema.model_validate(ride) for ride in rides]
+        rides_with_messages = result.all()
+        return [
+            RideSchemaWithChatMessage(
+                **RideSchema.model_validate(ride).model_dump(),
+                chat_message=ChatMessageSchema.model_validate(chat_message),
+            )
+            for ride, chat_message in rides_with_messages
+        ]
     
-    async def get_paginated_as_driver_with_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchema]:
+    async def get_paginated_as_driver_with_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchemaWithChatMessage]:
         offset = (page - 1) * page_size
         driver_profile = await driver_profile_crud.get_by_user_id(session, user_id)
         driver_profile_id = getattr(driver_profile, 'id', None)
 
-        last_chat_at_sq = (
+        last_chat_sq = (
             select(
+                ChatMessage.id.label("id"),
                 ChatMessage.ride_id.label("ride_id"),
-                func.max(ChatMessage.created_at).label("last_chat_at"),
+                func.row_number().over(
+                    partition_by=ChatMessage.ride_id,
+                    order_by=(ChatMessage.created_at.desc(), ChatMessage.id.desc()),
+                ).label("rn"),
             )
             .where(ChatMessage.deleted_at.is_(None))
-            .group_by(ChatMessage.ride_id)
             .subquery()
         )
 
         stmt = (
-            select(self.model)
-            .join(last_chat_at_sq, last_chat_at_sq.c.ride_id == self.model.id)
+            select(self.model, ChatMessage)
+            .join(last_chat_sq, and_(last_chat_sq.c.ride_id == self.model.id, last_chat_sq.c.rn == 1))
+            .join(ChatMessage, ChatMessage.id == last_chat_sq.c.id)
             .where(
                 and_(
                     self.model.driver_profile_id.is_not(None),
                     self.model.driver_profile_id == driver_profile_id
                 )
             )
-            .order_by(last_chat_at_sq.c.last_chat_at.desc())
+            .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
             .offset(offset)
             .limit(page_size)
         )
 
         result = await session.execute(stmt)
-        rides = result.scalars().all()
-        return [RideSchema.model_validate(ride) for ride in rides]
+        rides_with_messages = result.all()
+        return [
+            RideSchemaWithChatMessage(
+                **RideSchema.model_validate(ride).model_dump(),
+                chat_message=ChatMessageSchema.model_validate(chat_message),
+            )
+            for ride, chat_message in rides_with_messages
+        ]
 
     async def get_by_driver_profile_id_paginated(self, session: AsyncSession, driver_profile_id: int, page: int = 1, page_size: int = 10, order_by: str | None = None) -> list[RideSchemaHistory]:
         offset = (page - 1) * page_size

@@ -86,15 +86,10 @@ class ChatService:
             raise HTTPException(status_code=404, detail='User not found')
 
         rides = await ride_crud.get_paginated_as_driver_with_chats(session, user_id, page, page_size, "updated_at desc") if user.role.code == RoleCode.DRIVER else await ride_crud.get_paginated_as_client_with_chats(session, user_id, page, page_size, "updated_at desc")
-        ride_ids = [ride.id for ride in rides if ride.driver_profile_id]
-        query = select(ChatMessage).where(and_(ChatMessage.ride_id.in_(ride_ids), ChatMessage.deleted_at.is_(None)))
-        result = await session.execute(query)
-        messages = result.scalars().all()
+
         my_chats = []
-        for ride_id in ride_ids:
-            ride_messages = [m for m in messages if m.ride_id == ride_id]
-            ride_messages.sort(key=lambda x: x.edited_at or x.created_at, reverse=True)
-            chat = ChatMessageHistory(ride_id=ride_id, last_message=ChatMessageSchema.model_validate(ride_messages[0]).model_dump(mode='json'))
+        for ride in rides:
+            chat = ChatMessageHistory(ride_id=ride.id, last_message=ride.chat_message.model_dump(mode='json'))
             my_chats.append(chat)
 
         return my_chats
