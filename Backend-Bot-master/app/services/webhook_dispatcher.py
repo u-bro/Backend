@@ -103,7 +103,7 @@ class WebhookDispatcher:
             title='Комиссия не оплачена',
             message=f'Ваша комиссия за поездку не оплачена. Текущий статус платежа: {updated.status}',
             data=updated.model_dump(mode='json'),
-            dedup_key=f"failed_{commission_payment.id}_{updated.status}",
+            dedup_key=f"failed_{commission_payment.payment_id}_{updated.status}",
         ))
 
 
