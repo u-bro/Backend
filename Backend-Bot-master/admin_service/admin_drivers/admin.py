@@ -214,8 +214,6 @@ class DriverProfileAdmin(admin.ModelAdmin):
                 obj.approved = True
                 if not obj.approved_at:
                     obj.approved_at = timezone.now()
-                if not obj.approved_by:
-                    obj.approved_by = request.user.id
             super().save_model(request, obj, form, change)
             if not change and obj.pk:
                 DriverLocation.objects.get_or_create(
@@ -266,9 +264,11 @@ class DriverProfileAdmin(admin.ModelAdmin):
             return
             
         count = 0
+        approved_by = self._resolve_backend_user_id(request)
         for driver in queryset:
             driver.approved = True
-            driver.approved_by = request.user.id
+            driver.status = DriverProfile.STATUS_APPROVED
+            driver.approved_by = approved_by
             driver.approved_at = timezone.now()
             driver.save()
             count += 1
@@ -280,9 +280,10 @@ class DriverProfileAdmin(admin.ModelAdmin):
             return
             
         count = 0
+        approved_by = self._resolve_backend_user_id(request)
         for driver in queryset:
             driver.approved = False
-            driver.approved_by = request.user.id
+            driver.approved_by = approved_by
             driver.approved_at = timezone.now()
             driver.save()
             count += 1
