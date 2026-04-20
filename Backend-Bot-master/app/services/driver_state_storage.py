@@ -19,14 +19,14 @@ class DriverStateStorage:
         classes_set = driver_profile.classes_allowed
         driver_profile_id = driver_profile.id
         car_id = driver_profile.current_car_id
-        driver_location = await driver_location_crud.update_status_with_ride_info_by_driver_profile_id(session, driver_profile_id)
+        driver_location = await driver_location_crud.get_by_driver_profile_id(session, driver_profile_id)
         if not driver_location:
             driver_location = DriverLocationUpdateMe(status=DriverStatus.OFFLINE)
 
         if driver_profile_id in self._drivers:
             state = self._drivers[driver_profile_id]
             state.classes_allowed = classes_set
-            state.status=DriverStatus(driver_location.status)
+            state.status=driver_location.status
             state.latitude=driver_location.latitude
             state.longitude=driver_location.longitude
             state.car_id=car_id
@@ -35,7 +35,7 @@ class DriverStateStorage:
                 driver_profile_id=driver_profile_id,
                 user_id=driver_profile.user_id,
                 classes_allowed=classes_set,
-                status=DriverStatus(driver_location.status),
+                status=driver_location.status,
                 latitude=driver_location.latitude,
                 longitude=driver_location.longitude,
                 car_id=car_id

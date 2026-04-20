@@ -82,7 +82,7 @@ class MatchingWebsocketRouter(BaseWebsocketRouter):
         if lat and lng:
             state = await driver_tracker.update_location_by_user_id(session, user_id=user_id, latitude=float(lat), longitude=float(lng))
             if state:
-                await websocket.send_json({"type": "location_ack", "status": state.status.value})
+                await websocket.send_json({"type": "location_ack", "status": state.status})
 
     async def handle_go_online(self, websocket: WebSocket, data: Dict[str, Any], context: Dict[str, Any]) -> None:
         session = context["session"]
