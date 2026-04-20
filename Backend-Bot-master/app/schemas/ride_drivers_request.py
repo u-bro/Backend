@@ -7,7 +7,7 @@ from .car import CarSchema
 
 
 class RideDriversRequestCreate(BaseSchema):
-    ride_id: int = Field(..., gt=0)
+    ride_id: int | None = Field(None, gt=0)
     driver_profile_id: int = Field(..., gt=0)
     car_id: int | None = Field(None, gt=0)
     status: Literal['requested'] | None = Field("requested")
