@@ -210,6 +210,12 @@ class DriverProfileAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         try:
+            if obj.status == DriverProfile.STATUS_APPROVED:
+                obj.approved = True
+                if not obj.approved_at:
+                    obj.approved_at = timezone.now()
+                if not obj.approved_by:
+                    obj.approved_by = request.user.id
             super().save_model(request, obj, form, change)
             if not change and obj.pk:
                 DriverLocation.objects.get_or_create(
