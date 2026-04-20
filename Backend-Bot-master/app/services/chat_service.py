@@ -86,12 +86,12 @@ class ChatService:
             raise HTTPException(status_code=404, detail='User not found')
 
         rides = await ride_crud.get_paginated_as_driver_with_chats(session, user_id, page, page_size, "updated_at desc") if user.role.code == RoleCode.DRIVER else await ride_crud.get_paginated_as_client_with_chats(session, user_id, page, page_size, "updated_at desc")
-
+        print("rides", rides)
         my_chats = []
         for ride in rides:
             chat = ChatMessageHistory(ride_id=ride.id, last_message=ride.chat_message.model_dump(mode='json'))
             my_chats.append(chat)
-
+        print("my_chats", my_chats)
         return my_chats
 
     async def get_chat_history(self, session: AsyncSession, ride_id: int, page_size: int = 50, page: int = 1, include_deleted: bool = False, current_user_id: int | None = None) -> List[ChatMessageSchema]:
