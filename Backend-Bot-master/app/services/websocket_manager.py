@@ -108,15 +108,18 @@ class ConnectionManager:
         ride_participants_push_notifications = [ride.client_id, ride.driver_profile.user_id]
         for user_id in ride_participants_push_notifications:
             sender_id = message.get('message', {}).get('sender_id', 0)
-            sender_role = message.get('message', {}).get('message_type', '')
+            sender_role = 'driver' if ride.driver_profile.user_id == sender_id else 'client'
             if message.get('type', '') == 'new_message' and sender_id != user_id:
                 if sender_role == 'driver':
                     sender = await session.execute(select(DriverProfile).where(DriverProfile.user_id == sender_id))
                     sender = sender.scalar_one_or_none()
+                    print("driver sender", sender)
                 else:
                     sender = await user_crud.get_by_id(session, sender_id)
+                    print("client sender", sender)
                     
                 sender_fullname = " ".join([word for word in [sender.last_name, sender.first_name] if word]) if sender else "Unknown"
+                print(sender_fullname)
                 await fcm_service.send_to_user(session, user_id, PushNotificationData(title=sender_fullname, body=message.get('message', {}).get('text', 'TEXT')))
 
         
