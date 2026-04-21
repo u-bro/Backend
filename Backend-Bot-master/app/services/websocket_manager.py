@@ -3,7 +3,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 import logging
 from datetime import datetime, timezone
 from app.crud import user_crud
-from app.models import Ride
+from app.models import Ride, DriverProfile
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -108,9 +108,15 @@ class ConnectionManager:
         ride_participants_push_notifications = [ride.client_id, ride.driver_profile.user_id]
         for user_id in ride_participants_push_notifications:
             sender_id = message.get('message', {}).get('sender_id', 0)
+            sender_role = message.get('message', {}).get('message_type', '')
             if message.get('type', '') == 'new_message' and sender_id != user_id:
-                sender = await user_crud.get_by_id(session, sender_id)
-                sender_fullname = " ".join([word for word in [sender.last_name, sender.first_name] if word])
+                if sender_role == 'driver':
+                    sender = await session.execute(select(DriverProfile).where(DriverProfile.user_id == sender_id))
+                    sender = sender.scalar_one_or_none()
+                else:
+                    sender = await user_crud.get_by_id(session, sender_id)
+                    
+                sender_fullname = " ".join([word for word in [sender.last_name, sender.first_name] if word]) if sender else "Unknown"
                 await fcm_service.send_to_user(session, user_id, PushNotificationData(title=sender_fullname, body=message.get('message', {}).get('text', 'TEXT')))
 
         
