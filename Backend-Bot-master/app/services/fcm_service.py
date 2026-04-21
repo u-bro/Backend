@@ -110,7 +110,6 @@ class FCMService:
 
         message = messaging.Message(
             token=payload.token,
-            data=self._build_data_payload(payload),
             notification=self._build_notification(payload),
             apns=self._build_apns_config(payload),
         )
@@ -126,7 +125,6 @@ class FCMService:
 
         message = messaging.MulticastMessage(
             tokens=tokens_list,
-            data=self._build_data_payload(payload),
             notification=self._build_notification(payload),
             apns=self._build_apns_config(payload),
         )
@@ -152,7 +150,6 @@ class FCMService:
 
         message = messaging.Message(
             topic=payload.topic,
-            data=self._build_data_payload(payload),
             notification=self._build_notification(payload),
             apns=self._build_apns_config(payload),
         )
