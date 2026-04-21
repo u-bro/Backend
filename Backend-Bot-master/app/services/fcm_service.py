@@ -111,7 +111,6 @@ class FCMService:
         message = messaging.Message(
             token=payload.token,
             notification=self._build_notification(payload),
-            apns=self._build_apns_config(payload),
         )
 
         return await asyncio.to_thread(messaging.send, message)
@@ -126,7 +125,6 @@ class FCMService:
         message = messaging.MulticastMessage(
             tokens=tokens_list,
             notification=self._build_notification(payload),
-            apns=self._build_apns_config(payload),
         )
 
         return await asyncio.to_thread(messaging.send_each_for_multicast, message, dry_run)
@@ -151,7 +149,6 @@ class FCMService:
         message = messaging.Message(
             topic=payload.topic,
             notification=self._build_notification(payload),
-            apns=self._build_apns_config(payload),
         )
 
         return await asyncio.to_thread(messaging.send, message)
