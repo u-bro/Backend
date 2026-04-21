@@ -113,13 +113,10 @@ class ConnectionManager:
                 if sender_role == 'driver':
                     sender = await session.execute(select(DriverProfile).where(DriverProfile.user_id == sender_id))
                     sender = sender.scalar_one_or_none()
-                    print("driver sender", sender)
                 else:
                     sender = await user_crud.get_by_id(session, sender_id)
-                    print("client sender", sender)
                     
                 sender_fullname = " ".join([word for word in [sender.last_name, sender.first_name] if word]) if sender else "Unknown"
-                print(sender_fullname)
                 await fcm_service.send_to_user(session, user_id, PushNotificationData(title=sender_fullname, body=message.get('message', {}).get('text', 'TEXT')))
 
         
