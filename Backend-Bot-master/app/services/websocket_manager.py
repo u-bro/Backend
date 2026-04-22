@@ -105,10 +105,12 @@ class ConnectionManager:
             logger.warning(f"Ride {ride_id} not found")
             return
         
-        ride_participants_push_notifications = [ride.client_id, ride.driver_profile.user_id]
+        driver_profile_user_id = ride.driver_profile.user_id if ride.driver_profile else None
+        ride_participants_push_notifications = [ride.client_id, driver_profile_user_id] if driver_profile_user_id else [ride.client_id]
+        
         for user_id in ride_participants_push_notifications:
             sender_id = message.get('message', {}).get('sender_id', 0)
-            sender_role = 'driver' if ride.driver_profile.user_id == sender_id else 'client'
+            sender_role = 'driver' if driver_profile_user_id == sender_id else 'client'
             if message.get('type', '') == 'new_message' and sender_id != user_id:
                 if sender_role == 'driver':
                     sender = await session.execute(select(DriverProfile).where(DriverProfile.user_id == sender_id))

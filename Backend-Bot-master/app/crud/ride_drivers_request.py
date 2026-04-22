@@ -123,7 +123,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         for request in ride_drivers_requests:
             await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
             state = driver_state_storage.get_driver(request.driver_profile_id)
-            await manager_driver_feed.send_personal_message(state.user_id, {"type": "ride_offer_rejected", "message": "Отклик на поездку отклонен", "data": self.schema.model_validate(request).model_dump(mode='json')})
+            if state:
+                await manager_driver_feed.send_personal_message(state.user_id, {"type": "ride_offer_rejected", "message": "Отклик на поездку отклонен", "data": self.schema.model_validate(request).model_dump(mode='json')})
 
     async def cancel_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
         requests = await self.get_requested_by_driver_profile_id(session, driver_profile_id)
