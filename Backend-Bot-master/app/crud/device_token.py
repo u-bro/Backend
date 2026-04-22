@@ -1,9 +1,8 @@
 from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.crud.base import CrudBase
 from app.models.device_token import DeviceToken
-from app.schemas.device_token import DeviceTokenCreate, DeviceTokenSchema
+from app.schemas.device_token import DeviceTokenCreate, DeviceTokenSchema, DeviceTokenUpdate
 
 
 class DeviceTokenCrud(CrudBase[DeviceToken, DeviceTokenSchema]):
@@ -23,9 +22,10 @@ class DeviceTokenCrud(CrudBase[DeviceToken, DeviceTokenSchema]):
         return self.schema.model_validate(item) if item else None
 
     async def create(self, session: AsyncSession, create_obj: DeviceTokenCreate) -> DeviceTokenSchema:
-        existing = await self.get_by_user_id_and_token(session, create_obj.user_id, create_obj.token)
-        if existing is not None:
-            return existing
+        existing = await self.get_by_user_id(session, create_obj.user_id)
+        if len(existing):
+            first_token = existing[0]
+            return await self.update(session, first_token.id, create_obj)
 
         stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
         result = await self.execute_get_one(session, stmt)
