@@ -8,7 +8,7 @@ class DriverRating(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     driver_profile_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('driver_profiles.id'), nullable=False)
-    client_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=False)
+    client_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=True)
     ride_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('rides.id'), nullable=True)
     rate: Mapped[int] = mapped_column(Integer, nullable=False)
     comment: Mapped[str | None] = mapped_column(String, nullable=True)

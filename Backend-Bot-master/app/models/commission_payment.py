@@ -15,7 +15,7 @@ class CommissionPayment(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
 
     ride_id: Mapped[int | None] = mapped_column(ForeignKey("rides.id"), nullable=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     amount: Mapped[float] = mapped_column(DECIMAL(15, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="RUB")

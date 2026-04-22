@@ -8,7 +8,7 @@ class DriverProfile(Base):
     __tablename__ = 'driver_profiles'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=False, unique=True)
+    user_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=True, unique=True)
     first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     middle_name: Mapped[str | None] = mapped_column(String(100), nullable=True)

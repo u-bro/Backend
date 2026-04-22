@@ -12,7 +12,7 @@ class CommissionPaymentCreateRequest(BaseSchema):
 class CommissionPaymentSchema(BaseSchema):
     id: int
     ride_id: int
-    user_id: int
+    user_id: int | None = None
 
     amount: float
     currency: str
