@@ -47,6 +47,7 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
 
         purpose = f"Commission for ride #{id}"
         try:
+            amount_copeiki = amount_to_minor_units(amount)
             resp = await tbank_acquiring_client.init_payment(
                 amount=float(amount),
                 order_id=f"cp-{id}-{user.id}-{int(datetime.now(timezone.utc).timestamp())}",
@@ -54,6 +55,7 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
                 success_url=body.redirect_url,
                 fail_url=body.fail_redirect_url,
                 notification_url=TBANK_PAYMENT_NOTIFICATION_URL,
+                receipt_data={"Phone": user.phone, "Taxation": "osn", "Items": [{"Name": purpose, "Price": amount_copeiki, "Quantity": 1, "Amount": amount_copeiki, "PaymentObject": "service", "Tax": "none"}]} if generate_check else None,
                 time_difference_seconds=int((datetime.now(timezone.utc) - ride_driver_request.updated_at).total_seconds()),
             )
         except TBankAPIError as e:
@@ -71,35 +73,18 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
             "updated_at": datetime.now(timezone.utc),
         }
 
-        async def _generate_and_upload_check(item: CommissionPaymentSchema) -> None:
-            key = f"receipts/commissions/{id}/receipt.pdf"
-            client = await user_crud.get_by_id(session, item.user_id)
-            client_full_name = [word for word in [client.first_name, client.last_name, client.middle_name] if word] if client else []
-
-            pdf_bytes = await pdf_generator.generate_commission_receipt(
-                ride_id=id,
-                client_name=" ".join(client_full_name) or str(item.user_id),
-                amount=float(item.amount or 0),
-                purpose=item.purpose or purpose,
-                operation_id=item.payment_id,
-                created_at=getattr(item, "created_at", None),
-            )
-            await document_crud.upload_bytes(key, pdf_bytes)
-
-        async def _send_sandbox_webhook_and_generate_check(item):
+        async def _send_sandbox_webhook(item):
             asyncio.create_task(self._send_sandbox_webhook(item))
-            if generate_check:
-                await _generate_and_upload_check(item)
             return item
 
         if existing:
             updated = await self.model_crud.update(session, existing.id, fields)
             if not updated:
                 raise HTTPException(status_code=500, detail="Failed to update commission payment")
-            return await _send_sandbox_webhook_and_generate_check(updated)
+            return await _send_sandbox_webhook(updated)
 
         created = await self.model_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
-        return await _send_sandbox_webhook_and_generate_check(created)
+        return await _send_sandbox_webhook(created)
 
     async def get_commission_payment(self, request: Request, id: int) -> CommissionPaymentSchema:
         session = request.state.session

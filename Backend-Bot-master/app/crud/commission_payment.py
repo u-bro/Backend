@@ -13,9 +13,11 @@ from app.services import manager_driver_feed
 from app.services.chat_service import chat_service
 from app.services.fcm_service import fcm_service
 from .driver_tracker import driver_tracker
+from .user import user_crud
 from app.db import async_session_maker
 from .driver_profile import driver_profile_crud
 from .in_app_notification import in_app_notification_crud
+from app.services.tbank_acquiring import tbank_acquiring_client, amount_to_minor_units
 
 
 class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]):
@@ -56,6 +58,10 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
         async with async_session_maker() as session:
             payment = await self.get_by_ride_and_user(session, ride_id, user_id)
             if payment and (payment.status == 'CONFIRMED' or payment.status == 'AUTHORIZED'):
+                amount_copeiki = amount_to_minor_units(payment.amount)
+                user = await user_crud.get_by_id(session, payment.user_id)
+                await tbank_acquiring_client.send_closing_receipt(payment.payment_id, 
+                {"Phone": user.phone, "Taxation": "osn", "Items": [{"Name": f"Commission for ride #{ride_id}", "Price": amount_copeiki, "Quantity": 1, "Amount": amount_copeiki, "PaymentObject": "service", "Tax": "none"}]})
                 return
 
             updated_ride = await ride_crud.update(session, ride_id, RideSchemaUpdateByClient(status='canceled'), user_id)
