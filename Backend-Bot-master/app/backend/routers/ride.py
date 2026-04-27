@@ -11,7 +11,7 @@ from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.ride_drivers_request import RideDriversRequestCreate, RideDriversRequestSchema, RideDriversRequestUpdate
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile, get_current_driver_profile_id_without_approve
 from app.models import Ride
-from app.crud import in_app_notification_crud, ride_drivers_request_crud
+from app.crud import in_app_notification_crud, ride_drivers_request_crud, driver_profile_crud
 from app.services.chat_service import chat_service
 from app.services import fcm_service, manager_driver_feed
 from app.crud.driver_tracker import driver_tracker
