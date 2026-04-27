@@ -61,7 +61,7 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
                 amount_copeiki = amount_to_minor_units(payment.amount)
                 user = await user_crud.get_by_id(session, payment.user_id)
                 await tbank_acquiring_client.send_closing_receipt(payment.payment_id, 
-                {"Phone": user.phone, "Taxation": "usn_income", "Items": [{"Name": f"Комиссия за поездку #{ride_id}", "Price": amount_copeiki, "Quantity": 1, "Amount": amount_copeiki, "PaymentObject": "service", "Tax": "none"}]})
+                {"Phone": f'+{user.phone}', "Taxation": "usn_income", "Items": [{"Name": f"Комиссия за поездку #{ride_id}", "Price": amount_copeiki, "Quantity": 1, "Amount": amount_copeiki, "PaymentObject": "service", "Tax": "none"}]})
                 return
 
             updated_ride = await ride_crud.update(session, ride_id, RideSchemaUpdateByClient(status='canceled'), user_id)

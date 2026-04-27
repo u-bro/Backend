@@ -55,7 +55,7 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
                 success_url=body.redirect_url,
                 fail_url=body.fail_redirect_url,
                 notification_url=TBANK_PAYMENT_NOTIFICATION_URL,
-                receipt_data={"Phone": user.phone, "Taxation": "usn_income", "Items": [{"Name": purpose, "Price": amount_copeiki, "Quantity": 1, "Amount": amount_copeiki, "PaymentObject": "service", "Tax": "none"}]} if generate_check else None,
+                receipt_data={"Phone": f'+{user.phone}', "Taxation": "usn_income", "Items": [{"Name": purpose, "Price": amount_copeiki, "Quantity": 1, "Amount": amount_copeiki, "PaymentObject": "service", "Tax": "none"}]} if generate_check else None,
                 time_difference_seconds=int((datetime.now(timezone.utc) - ride_driver_request.updated_at).total_seconds()),
             )
         except TBankAPIError as e:
