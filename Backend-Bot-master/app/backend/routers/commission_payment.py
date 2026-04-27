@@ -58,7 +58,7 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
                 time_difference_seconds=int((datetime.now(timezone.utc) - ride_driver_request.updated_at).total_seconds()),
             )
         except TBankAPIError as e:
-            raise HTTPException(status_code=502, detail=str(e))
+            raise HTTPException(status_code=e.status, detail=str(e))
 
         fields = {
             "ride_id": id,

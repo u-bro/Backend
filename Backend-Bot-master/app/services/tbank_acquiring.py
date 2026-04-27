@@ -116,6 +116,9 @@ class TBankAcquiringClient:
         receipt_data: dict[str, Any] | None = None,
         time_difference_seconds: int = 0,
     ) -> dict[str, Any]:
+        if time_difference_seconds >= COMMISSION_PAY_SECONDS_LIMIT:
+            raise TBankAPIError(400, "Слишком поздно для оплаты комиссии", {})
+
         payload: dict[str, Any] = {
             "TerminalKey": self.terminal_key,
             "Amount": amount_to_minor_units(amount),
