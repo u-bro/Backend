@@ -11,9 +11,9 @@ from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.ride_drivers_request import RideDriversRequestCreate, RideDriversRequestSchema, RideDriversRequestUpdate
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile, get_current_driver_profile_id_without_approve
 from app.models import Ride
-from app.crud import document_crud, in_app_notification_crud, driver_profile_crud, user_crud, ride_drivers_request_crud, car_crud
+from app.crud import in_app_notification_crud, ride_drivers_request_crud
 from app.services.chat_service import chat_service
-from app.services import pdf_generator, fcm_service, manager_driver_feed
+from app.services import fcm_service, manager_driver_feed
 from app.crud.driver_tracker import driver_tracker
 from app.enum import RoleCode
 
@@ -125,7 +125,7 @@ class RideRouter(BaseRouter[RideCrud]):
             await driver_tracker.release_ride(session, ride.driver_profile_id)
         return ride
 
-    async def finish_ride_by_driver(self, request: Request, id: int, update_obj: RideSchemaFinishByDriver, ride: Ride = Depends(require_driver_profile(Ride)), user_id: int = Depends(get_current_user_id), generate_check: bool = False) -> RideSchema:
+    async def finish_ride_by_driver(self, request: Request, id: int, update_obj: RideSchemaFinishByDriver, ride: Ride = Depends(require_driver_profile(Ride)), user_id: int = Depends(get_current_user_id)) -> RideSchema:
         session = request.state.session
         update_obj = RideSchemaFinishWithAnomaly(is_anomaly=str(ride.expected_fare) != str(update_obj.actual_fare), **update_obj.model_dump())
         ride = await self.model_crud.update(session, id, update_obj, user_id)
@@ -133,15 +133,6 @@ class RideRouter(BaseRouter[RideCrud]):
         await self.send_notifications(session, ride.client_id, "ride_finished", "Поездка завершена", "Не забудьте оценить поездку", ride.model_dump(mode="json"), ride.id)
         await driver_tracker.release_ride(session, ride.driver_profile_id)
 
-        if generate_check:
-            key = f"receipts/rides/{id}/receipt.pdf"
-            client = await user_crud.get_by_id(session, ride.client_id)
-            driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
-            client_full_name = [word for word in [client.first_name, client.last_name, client.middle_name] if word]
-            driver_full_name = [word for word in [driver_profile.first_name, driver_profile.last_name, driver_profile.middle_name] if word]
-            pdf_check = await pdf_generator.generate_ride_receipt(id, " ".join(client_full_name), " ".join(driver_full_name), ride.pickup_address, ride.dropoff_address, update_obj.actual_fare, ride.distance_meters / 1000, ride.duration_seconds / 60)
-            await document_crud.upload_bytes(key, pdf_check)
-        
         return ride
 
     async def send_notifications(self, session: AsyncSession, client_id: int, type: str, title: str, message: str, data: dict, dedup_key: Any):

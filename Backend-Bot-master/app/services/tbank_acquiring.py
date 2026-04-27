@@ -113,6 +113,7 @@ class TBankAcquiringClient:
         success_url: str | None = None,
         fail_url: str | None = None,
         notification_url: str | None = None,
+        receipt_data: dict[str, Any] | None = None,
         time_difference_seconds: int = 0,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -124,6 +125,7 @@ class TBankAcquiringClient:
             "DATA": {
                 "OperationInitiatorType": "0",
             },
+            **({"Receipt": receipt_data} if receipt_data else {}),
             "RedirectDueDate": (datetime.now(timezone.utc) + timedelta(seconds=COMMISSION_PAY_SECONDS_LIMIT-time_difference_seconds)).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
@@ -143,5 +145,12 @@ class TBankAcquiringClient:
         }
         return await self._request("/GetState", payload)
 
+    async def send_closing_receipt(self, payment_id: str, receipt_data: dict[str, Any]) -> dict[str, Any]:
+        payload = {
+            "TerminalKey": self.terminal_key,
+            "PaymentId": str(payment_id),
+            "Receipt": receipt_data,
+        }
+        return await self._request("/SendClosingReceipt", payload)
 
 tbank_acquiring_client = TBankAcquiringClient()

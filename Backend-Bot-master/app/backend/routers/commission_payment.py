@@ -4,13 +4,12 @@ from fastapi import Depends, HTTPException, Request
 from app.backend.deps import require_role, require_owner
 from app.config import TBANK_PAYMENT_NOTIFICATION_URL, TBANK_USE_SANDBOX
 from app.crud.commission_payment import commission_payment_crud, CommissionPaymentCrud
-from app.crud import ride_crud, document_crud, user_crud, ride_drivers_request_crud
+from app.crud import ride_crud, ride_drivers_request_crud
 from app.schemas.commission_payment import CommissionPaymentCreateRequest, CommissionPaymentSchema
 from app.services.tbank_acquiring import TBankAPIError, amount_to_minor_units, tbank_acquiring_client
 from app.services.webhook_dispatcher import webhook_dispatcher
 from app.models import Ride, CommissionPayment
 from app.backend.routers.base import BaseRouter
-from app.services import pdf_generator
 from app.enum import RoleCode
 from app.db import async_session_maker
 
@@ -45,8 +44,9 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
         if amount is None:
             raise HTTPException(status_code=400, detail="Commission amount is not set")
 
-        purpose = f"Commission for ride #{id}"
+        purpose = f"Комиссия за поездку #{id}"
         try:
+            amount_copeiki = amount_to_minor_units(amount)
             resp = await tbank_acquiring_client.init_payment(
                 amount=float(amount),
                 order_id=f"cp-{id}-{user.id}-{int(datetime.now(timezone.utc).timestamp())}",
@@ -54,6 +54,7 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
                 success_url=body.redirect_url,
                 fail_url=body.fail_redirect_url,
                 notification_url=TBANK_PAYMENT_NOTIFICATION_URL,
+                receipt_data={"Phone": f'+{user.phone}', "Taxation": "usn_income", "Items": [{"Name": purpose, "Price": amount_copeiki, "Quantity": 1, "Amount": amount_copeiki, "PaymentObject": "service", "Tax": "none"}]} if generate_check else None,
                 time_difference_seconds=int((datetime.now(timezone.utc) - ride_driver_request.updated_at).total_seconds()),
             )
         except TBankAPIError as e:
@@ -71,35 +72,18 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
             "updated_at": datetime.now(timezone.utc),
         }
 
-        async def _generate_and_upload_check(item: CommissionPaymentSchema) -> None:
-            key = f"receipts/commissions/{id}/receipt.pdf"
-            client = await user_crud.get_by_id(session, item.user_id)
-            client_full_name = [word for word in [client.first_name, client.last_name, client.middle_name] if word] if client else []
-
-            pdf_bytes = await pdf_generator.generate_commission_receipt(
-                ride_id=id,
-                client_name=" ".join(client_full_name) or str(item.user_id),
-                amount=float(item.amount or 0),
-                purpose=item.purpose or purpose,
-                operation_id=item.payment_id,
-                created_at=getattr(item, "created_at", None),
-            )
-            await document_crud.upload_bytes(key, pdf_bytes)
-
-        async def _send_sandbox_webhook_and_generate_check(item):
+        async def _send_sandbox_webhook(item):
             asyncio.create_task(self._send_sandbox_webhook(item))
-            if generate_check:
-                await _generate_and_upload_check(item)
             return item
 
         if existing:
             updated = await self.model_crud.update(session, existing.id, fields)
             if not updated:
                 raise HTTPException(status_code=500, detail="Failed to update commission payment")
-            return await _send_sandbox_webhook_and_generate_check(updated)
+            return await _send_sandbox_webhook(updated)
 
         created = await self.model_crud.create(session, {**fields, "created_at": datetime.now(timezone.utc)})
-        return await _send_sandbox_webhook_and_generate_check(created)
+        return await _send_sandbox_webhook(created)
 
     async def get_commission_payment(self, request: Request, id: int) -> CommissionPaymentSchema:
         session = request.state.session
