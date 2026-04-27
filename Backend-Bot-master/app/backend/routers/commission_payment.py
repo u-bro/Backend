@@ -4,13 +4,12 @@ from fastapi import Depends, HTTPException, Request
 from app.backend.deps import require_role, require_owner
 from app.config import TBANK_PAYMENT_NOTIFICATION_URL, TBANK_USE_SANDBOX
 from app.crud.commission_payment import commission_payment_crud, CommissionPaymentCrud
-from app.crud import ride_crud, document_crud, user_crud, ride_drivers_request_crud
+from app.crud import ride_crud, ride_drivers_request_crud
 from app.schemas.commission_payment import CommissionPaymentCreateRequest, CommissionPaymentSchema
 from app.services.tbank_acquiring import TBankAPIError, amount_to_minor_units, tbank_acquiring_client
 from app.services.webhook_dispatcher import webhook_dispatcher
 from app.models import Ride, CommissionPayment
 from app.backend.routers.base import BaseRouter
-from app.services import pdf_generator
 from app.enum import RoleCode
 from app.db import async_session_maker
 
