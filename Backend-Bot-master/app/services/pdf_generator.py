@@ -98,50 +98,104 @@ class PDFGenerator:
 
     async def generate_commission_receipt(
         self,
-        ride_id: int,
         client_name: str,
         amount: float,
-        purpose: str,
-        payment_mode: str = "Карта",
-        operation_id: Optional[str] = None,
+        payment_id: Optional[str] = None,
+        card_mask: Optional[str] = None,
+        email: Optional[str] = None,
         created_at: Optional[datetime] = None,
     ) -> bytes:
 
         if created_at is None:
             created_at = datetime.now(timezone.utc)
 
+        receipt_order_id = payment_id or "???"
+        created_at_local = created_at.astimezone(timezone.utc)
+        date_str = created_at_local.strftime("%d.%m.%Y")
+        time_str = created_at_local.strftime("%H:%M")
+
+        email_block = (
+            f"<p>Чек направлен на электронную почту: {email}</p>" if email else (
+                "<p>Чек не был направлен на электронную почту, так как адрес не указан.</p>"
+                "<p>Вы можете запросить чек:<br>"
+                "по телефону: +7 926 044-44-42<br>"
+                "по email: ubrowork@mail.ru</p>"
+            )
+        )
+
         html = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset=\"UTF-8\">
-            <title>Квитанция комиссии #{ride_id}</title>
+            <title>Квитанция об оплате комиссии</title>
+            <style>
+                {self.DEFAULT_CSS}
+                .section-title {{ font-weight: bold; margin-top: 16px; }}
+                .divider {{ margin: 16px 0; }}
+                .divider span {{ display: inline-block; letter-spacing: 1px; }}
+                .mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace; }}
+            </style>
         </head>
         <body>
             <div class=\"header\">
-                <div class=\"logo\">U-BRO TAXI</div>
-                <p>Квитанция об оплате комиссии</p>
+                <h1>🧾 КВИТАНЦИЯ ОБ ОПЛАТЕ КОМИССИИ</h1>
+                <p>Сервис: У-бро</p>
             </div>
 
-            <h1>Комиссия за поездку #{ride_id}</h1>
+            <div class=\"divider\"><span>⸻</span></div>
 
-            <div class=\"receipt-info\">
-                <p><strong>Дата:</strong> {created_at.strftime('%d.%m.%Y %H:%M')}</p>
-                <p><strong>Клиент:</strong> {client_name}</p>
-                <p><strong>Назначение:</strong> {purpose}</p>
-                {f'<p><strong>Operation ID:</strong> {operation_id}</p>' if operation_id else ''}
-                <p><strong>Способ оплаты:</strong> {payment_mode}</p>
-            </div>
+            <p><strong>Дата:</strong> {date_str}</p>
+            <p><strong>Время:</strong> {time_str}</p>
+            <p><strong>Номер операции:</strong> <span class=\"mono\">{receipt_order_id}</span></p>
 
-            <div class=\"receipt-info\">
-                <p><strong>Сумма комиссии:</strong></p>
-                <p class=\"amount\">{amount:.2f} ₽</p>
-            </div>
+            <div class=\"divider\"><span>⸻</span></div>
 
-            <div class=\"footer\">
-                <p>Спасибо за использование U-BRO TAXI!</p>
-                <p>Служба поддержки: support@u-bro.ru</p>
-            </div>
+            <div class=\"section-title\">Плательщик</div>
+            <p>{client_name}</p>
+
+            <div class=\"divider\"><span>⸻</span></div>
+
+            <div class=\"section-title\">Детали платежа</div>
+            <p><strong>Назначение платежа:</strong><br>
+               Комиссия сервиса «У-бро» за использование платформы</p>
+            <p><strong>Сумма:</strong> {amount:.2f} ₽</p>
+            <p><strong>Способ оплаты:</strong> Банковская карта</p>
+            <p><strong>Маска карты:</strong> {card_mask or "—"}</p>
+            <p><strong>Статус:</strong> Оплачено</p>
+
+            <div class=\"divider\"><span>⸻</span></div>
+
+            <div class=\"section-title\">Информация о чеке</div>
+            <p>Фискальный чек сформирован с использованием онлайн-кассы.</p>
+            {email_block}
+
+            <div class=\"divider\"><span>⸻</span></div>
+
+            <div class=\"section-title\">Оператор сервиса</div>
+            <p>Общество с ограниченной ответственностью «ИНТЕГРАЦИЯ»</p>
+            <p>ИНН: 7708421320<br>
+               КПП: 770801001<br>
+               ОГРН: 1237700454815</p>
+            <p><strong>Юридический адрес:</strong><br>
+               107140, Россия, г. Москва,<br>
+               вн.тер.г. муниципальный округ Красносельский,<br>
+               ул. Краснопрудная, д. 12/1, стр. 1, помещ. 1/6</p>
+
+            <div class=\"divider\"><span>⸻</span></div>
+
+            <div class=\"section-title\">Банковские реквизиты</div>
+            <p>Банк: АО «ТБанк»<br>
+               БИК: 044525974<br>
+               р/с: 40702810910002090599<br>
+               к/с: 30101810145250000974</p>
+
+            <div class=\"divider\"><span>⸻</span></div>
+
+            <div class=\"section-title\">Дополнительная информация</div>
+            <p>Оплата стоимости поездки осуществляется пользователем напрямую водителю.</p>
+            <p>Сервис «У-бро» не является исполнителем услуги перевозки.</p>
+            <p>Настоящий документ не является кассовым чеком.</p>
         </body>
         </html>
         """
