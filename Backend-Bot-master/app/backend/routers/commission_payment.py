@@ -8,6 +8,7 @@ from app.crud import ride_crud, ride_drivers_request_crud
 from app.schemas.commission_payment import CommissionPaymentCreateRequest, CommissionPaymentSchema
 from app.services.tbank_acquiring import TBankAPIError, amount_to_minor_units, tbank_acquiring_client
 from app.services.webhook_dispatcher import webhook_dispatcher
+from app.services.pdf_generator import pdf_generator
 from app.models import Ride, CommissionPayment
 from app.backend.routers.base import BaseRouter
 from app.enum import RoleCode
@@ -54,7 +55,7 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
                 success_url=body.redirect_url,
                 fail_url=body.fail_redirect_url,
                 notification_url=TBANK_PAYMENT_NOTIFICATION_URL,
-                receipt_data={"Phone": f'+{user.phone}', "Taxation": "usn_income", "Items": [{"Name": purpose, "Price": amount_copeiki, "Quantity": 1, "Amount": amount_copeiki, "PaymentObject": "service", "Tax": "none"}]} if generate_check else None,
+                receipt_data={"Phone": f'+{user.phone}', **({"Email": user.email} if user.email else {}), "Taxation": "usn_income", "Items": [{"Name": purpose, "Price": amount_copeiki, "Quantity": 1, "Amount": amount_copeiki, "PaymentObject": "service", "Tax": "none"}]} if generate_check else None,
                 time_difference_seconds=int((datetime.now(timezone.utc) - ride_driver_request.updated_at).total_seconds()),
             )
         except TBankAPIError as e:
