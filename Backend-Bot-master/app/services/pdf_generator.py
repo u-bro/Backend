@@ -1,12 +1,13 @@
-from typing import Optional, Dict, Any
+from typing import Optional
 from datetime import datetime, timezone
 from io import BytesIO
 import logging
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML, CSS
+    from weasyprint import HTML
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
@@ -15,9 +16,6 @@ except ImportError:
 try:
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import mm
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
@@ -110,9 +108,9 @@ class PDFGenerator:
             created_at = datetime.now(timezone.utc)
 
         receipt_order_id = payment_id or "???"
-        created_at_local = created_at.astimezone(timezone.utc)
-        date_str = created_at_local.strftime("%d.%m.%Y")
-        time_str = created_at_local.strftime("%H:%M")
+        created_at_msk = created_at.astimezone(ZoneInfo("Europe/Moscow"))
+        date_str = created_at_msk.strftime("%d.%m.%Y")
+        time_str = created_at_msk.strftime("%H:%M")
 
         email_block = (
             f"<p>Чек направлен на электронную почту: {email}</p>" if email else (
