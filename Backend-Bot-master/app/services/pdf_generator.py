@@ -99,7 +99,6 @@ class PDFGenerator:
         client_name: str,
         amount: float,
         payment_id: Optional[str] = None,
-        card_mask: Optional[str] = None,
         email: Optional[str] = None,
         created_at: Optional[datetime] = None,
     ) -> bytes:
@@ -130,45 +129,43 @@ class PDFGenerator:
             <style>
                 {self.DEFAULT_CSS}
                 .section-title {{ font-weight: bold; margin-top: 16px; }}
-                .divider {{ margin: 16px 0; }}
-                .divider span {{ display: inline-block; letter-spacing: 1px; }}
+                hr.divider {{ border: 0; border-top: 1px solid #cfcfcf; margin: 16px 0; }}
                 .mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace; }}
             </style>
         </head>
         <body>
             <div class=\"header\">
-                <h1>🧾 КВИТАНЦИЯ ОБ ОПЛАТЕ КОМИССИИ</h1>
+                <h1>КВИТАНЦИЯ ОБ ОПЛАТЕ КОМИССИИ</h1>
                 <p>Сервис: У-бро</p>
             </div>
 
-            <div class=\"divider\"><span>⸻</span></div>
+            <hr class=\"divider\"> 
 
             <p><strong>Дата:</strong> {date_str}</p>
             <p><strong>Время:</strong> {time_str}</p>
             <p><strong>Номер операции:</strong> <span class=\"mono\">{receipt_order_id}</span></p>
 
-            <div class=\"divider\"><span>⸻</span></div>
+            <hr class=\"divider\"> 
 
             <div class=\"section-title\">Плательщик</div>
             <p>{client_name}</p>
 
-            <div class=\"divider\"><span>⸻</span></div>
+            <hr class=\"divider\"> 
 
             <div class=\"section-title\">Детали платежа</div>
             <p><strong>Назначение платежа:</strong><br>
                Комиссия сервиса «У-бро» за использование платформы</p>
             <p><strong>Сумма:</strong> {amount:.2f} ₽</p>
             <p><strong>Способ оплаты:</strong> Банковская карта</p>
-            <p><strong>Маска карты:</strong> {card_mask or "—"}</p>
             <p><strong>Статус:</strong> Оплачено</p>
 
-            <div class=\"divider\"><span>⸻</span></div>
+            <hr class=\"divider\"> 
 
             <div class=\"section-title\">Информация о чеке</div>
             <p>Фискальный чек сформирован с использованием онлайн-кассы.</p>
             {email_block}
 
-            <div class=\"divider\"><span>⸻</span></div>
+            <hr class=\"divider\"> 
 
             <div class=\"section-title\">Оператор сервиса</div>
             <p>Общество с ограниченной ответственностью «ИНТЕГРАЦИЯ»</p>
@@ -180,7 +177,7 @@ class PDFGenerator:
                вн.тер.г. муниципальный округ Красносельский,<br>
                ул. Краснопрудная, д. 12/1, стр. 1, помещ. 1/6</p>
 
-            <div class=\"divider\"><span>⸻</span></div>
+            <hr class=\"divider\"> 
 
             <div class=\"section-title\">Банковские реквизиты</div>
             <p>Банк: АО «ТБанк»<br>
@@ -188,7 +185,7 @@ class PDFGenerator:
                р/с: 40702810910002090599<br>
                к/с: 30101810145250000974</p>
 
-            <div class=\"divider\"><span>⸻</span></div>
+            <hr class=\"divider\"> 
 
             <div class=\"section-title\">Дополнительная информация</div>
             <p>Оплата стоимости поездки осуществляется пользователем напрямую водителю.</p>
