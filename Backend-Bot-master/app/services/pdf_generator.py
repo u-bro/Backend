@@ -1,12 +1,13 @@
-from typing import Optional, Dict, Any
+from typing import Optional
 from datetime import datetime, timezone
 from io import BytesIO
 import logging
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML, CSS
+    from weasyprint import HTML
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
@@ -15,9 +16,6 @@ except ImportError:
 try:
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import mm
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
@@ -95,128 +93,104 @@ class PDFGenerator:
     def __init__(self):
         self.weasyprint_available = WEASYPRINT_AVAILABLE
         self.reportlab_available = REPORTLAB_AVAILABLE
-    
-    async def generate_ride_receipt(
-        self,
-        ride_id: int,
-        client_name: str,
-        driver_name: str,
-        pickup_address: str,
-        dropoff_address: str,
-        fare: float,
-        distance_km: Optional[float] = None,
-        duration_min: Optional[int] = None,
-        payment_method: str = "Наличные",
-        created_at: Optional[datetime] = None
-    ) -> bytes:
-        
-        if created_at is None:
-            created_at = datetime.now(timezone.utc)
-        
-        html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Квитанция #{ride_id}</title>
-        </head>
-        <body>
-            <div class="header">
-                <div class="logo">🚗 U-BRO TAXI</div>
-                <p>Квитанция об оплате поездки</p>
-            </div>
-            
-            <h1>Квитанция #{ride_id}</h1>
-            
-            <div class="receipt-info">
-                <p><strong>Дата:</strong> {created_at.strftime('%d.%m.%Y %H:%M')}</p>
-                <p><strong>Клиент:</strong> {client_name}</p>
-                <p><strong>Водитель:</strong> {driver_name}</p>
-            </div>
-            
-            <h2>Детали поездки</h2>
-            <table>
-                <tr>
-                    <th>Параметр</th>
-                    <th>Значение</th>
-                </tr>
-                <tr>
-                    <td>Адрес подачи</td>
-                    <td>{pickup_address}</td>
-                </tr>
-                <tr>
-                    <td>Адрес назначения</td>
-                    <td>{dropoff_address}</td>
-                </tr>
-                {f'<tr><td>Расстояние</td><td>{distance_km:.1f} км</td></tr>' if distance_km else ''}
-                {f'<tr><td>Время в пути</td><td>{duration_min} мин</td></tr>' if duration_min else ''}
-                <tr>
-                    <td>Способ оплаты</td>
-                    <td>{payment_method}</td>
-                </tr>
-            </table>
-            
-            <div class="receipt-info">
-                <p><strong>Итого к оплате:</strong></p>
-                <p class="amount">{fare:.2f} ₽</p>
-            </div>
-            
-            <div class="footer">
-                <p>Спасибо за использование U-BRO TAXI!</p>
-                <p>Служба поддержки: support@u-bro.ru</p>
-            </div>
-        </body>
-        </html>
-        """
-        
-        return await self._generate_pdf_from_html(html)
 
     async def generate_commission_receipt(
         self,
-        ride_id: int,
         client_name: str,
         amount: float,
-        purpose: str,
-        payment_mode: str = "Карта",
-        operation_id: Optional[str] = None,
+        payment_id: Optional[str] = None,
+        email: Optional[str] = None,
         created_at: Optional[datetime] = None,
     ) -> bytes:
 
         if created_at is None:
             created_at = datetime.now(timezone.utc)
 
+        receipt_order_id = payment_id or "???"
+        created_at_msk = created_at.astimezone(ZoneInfo("Europe/Moscow"))
+        date_str = created_at_msk.strftime("%d.%m.%Y")
+        time_str = created_at_msk.strftime("%H:%M")
+
+        email_block = (
+            f"<p>Чек направлен на электронную почту: {email}</p>" if email else (
+                "<p>Чек не был направлен на электронную почту, так как адрес не указан.</p>"
+                "<p>Вы можете запросить чек:<br>"
+                "по телефону: +7 926 044-44-42<br>"
+                "по email: ubrowork@mail.ru</p>"
+            )
+        )
+
         html = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset=\"UTF-8\">
-            <title>Квитанция комиссии #{ride_id}</title>
+            <title>Квитанция об оплате комиссии</title>
+            <style>
+                {self.DEFAULT_CSS}
+                .section-title {{ font-weight: bold; margin-top: 16px; }}
+                hr.divider {{ border: 0; border-top: 1px solid #cfcfcf; margin: 16px 0; }}
+                .mono {{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace; }}
+            </style>
         </head>
         <body>
             <div class=\"header\">
-                <div class=\"logo\">U-BRO TAXI</div>
-                <p>Квитанция об оплате комиссии</p>
+                <h1>КВИТАНЦИЯ ОБ ОПЛАТЕ КОМИССИИ</h1>
+                <p>Сервис: У-бро</p>
             </div>
 
-            <h1>Комиссия за поездку #{ride_id}</h1>
+            <hr class=\"divider\"> 
 
-            <div class=\"receipt-info\">
-                <p><strong>Дата:</strong> {created_at.strftime('%d.%m.%Y %H:%M')}</p>
-                <p><strong>Клиент:</strong> {client_name}</p>
-                <p><strong>Назначение:</strong> {purpose}</p>
-                {f'<p><strong>Operation ID:</strong> {operation_id}</p>' if operation_id else ''}
-                <p><strong>Способ оплаты:</strong> {payment_mode}</p>
-            </div>
+            <p><strong>Дата:</strong> {date_str}</p>
+            <p><strong>Время:</strong> {time_str}</p>
+            <p><strong>Номер операции:</strong> <span class=\"mono\">{receipt_order_id}</span></p>
 
-            <div class=\"receipt-info\">
-                <p><strong>Сумма комиссии:</strong></p>
-                <p class=\"amount\">{amount:.2f} ₽</p>
-            </div>
+            <hr class=\"divider\"> 
 
-            <div class=\"footer\">
-                <p>Спасибо за использование U-BRO TAXI!</p>
-                <p>Служба поддержки: support@u-bro.ru</p>
-            </div>
+            <div class=\"section-title\">Плательщик</div>
+            <p>{client_name}</p>
+
+            <hr class=\"divider\"> 
+
+            <div class=\"section-title\">Детали платежа</div>
+            <p><strong>Назначение платежа:</strong><br>
+               Комиссия сервиса «У-бро» за использование платформы</p>
+            <p><strong>Сумма:</strong> {amount:.2f} ₽</p>
+            <p><strong>Способ оплаты:</strong> Банковская карта</p>
+            <p><strong>Статус:</strong> Оплачено</p>
+
+            <hr class=\"divider\"> 
+
+            <div class=\"section-title\">Информация о чеке</div>
+            <p>Фискальный чек сформирован с использованием онлайн-кассы.</p>
+            {email_block}
+
+            <hr class=\"divider\"> 
+
+            <div class=\"section-title\">Оператор сервиса</div>
+            <p>Общество с ограниченной ответственностью «ИНТЕГРАЦИЯ»</p>
+            <p>ИНН: 7708421320<br>
+               КПП: 770801001<br>
+               ОГРН: 1237700454815</p>
+            <p><strong>Юридический адрес:</strong><br>
+               107140, Россия, г. Москва,<br>
+               вн.тер.г. муниципальный округ Красносельский,<br>
+               ул. Краснопрудная, д. 12/1, стр. 1, помещ. 1/6</p>
+
+            <hr class=\"divider\"> 
+
+            <div class=\"section-title\">Банковские реквизиты</div>
+            <p>Банк: АО «ТБанк»<br>
+               БИК: 044525974<br>
+               р/с: 40702810910002090599<br>
+               к/с: 30101810145250000974</p>
+
+            <hr class=\"divider\"> 
+
+            <div class=\"section-title\">Дополнительная информация</div>
+            <p>Оплата стоимости поездки осуществляется пользователем напрямую водителю.</p>
+            <p>Сервис «У-бро» не является исполнителем услуги перевозки.</p>
+            <p>Настоящий документ не является кассовым чеком.</p>
         </body>
         </html>
         """

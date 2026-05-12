@@ -26,7 +26,7 @@ class DriverStateStorage:
         if driver_profile_id in self._drivers:
             state = self._drivers[driver_profile_id]
             state.classes_allowed = classes_set
-            state.status=DriverStatus(driver_location.status)
+            state.status=driver_location.status
             state.latitude=driver_location.latitude
             state.longitude=driver_location.longitude
             state.car_id=car_id
@@ -35,7 +35,7 @@ class DriverStateStorage:
                 driver_profile_id=driver_profile_id,
                 user_id=driver_profile.user_id,
                 classes_allowed=classes_set,
-                status=DriverStatus(driver_location.status),
+                status=driver_location.status,
                 latitude=driver_location.latitude,
                 longitude=driver_location.longitude,
                 car_id=car_id

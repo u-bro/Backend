@@ -25,7 +25,7 @@ class PushAdminRouter(BaseRouter[None]):
 
     async def send_to_user(self, request: Request, body: PushSendToUserRequest) -> dict:
         resp = await fcm_service.send_to_user(request.state.session, body.user_id, body)
-        return {"success_count": resp.success_count, "failure_count": resp.failure_count}
+        return {"success_count": resp.success_count if resp else 0, "failure_count": resp.failure_count if resp else 0}
 
 
 push_notification_router = PushAdminRouter(None, "/push").router

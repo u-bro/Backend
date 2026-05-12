@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class DriverTracker:
 
-    def update_location(self, driver_profile_id: int, latitude: float, longitude: float) -> Optional[DriverState]:
+    async def update_location(self, driver_profile_id: int, latitude: float, longitude: float) -> Optional[DriverState]:
         if driver_profile_id not in driver_state_storage._drivers:
             logger.warning(f"Driver {driver_profile_id} not registered")
             return None
@@ -25,12 +25,17 @@ class DriverTracker:
         state.longitude = longitude
         state.updated_at = datetime.now(timezone.utc)
 
+        if state.is_available():
+            await driver_feed.start_feed_task(state.user_id, driver_profile_id)
+        else:
+            await driver_feed.stop_feed(state.user_id)
+
         return state
 
     async def update_location_by_user_id(self, session: AsyncSession, user_id: int, latitude: float, longitude: float, **kwargs) -> Optional[DriverState]:
         driver_id = driver_state_storage._user_to_driver.get(user_id, 0)
         await driver_location_crud.update_by_driver_profile_id(session, driver_id, DriverLocationUpdateMe(latitude=latitude, longitude=longitude))
-        return self.update_location(driver_id, latitude, longitude, **kwargs)
+        return await self.update_location(driver_id, latitude, longitude, **kwargs)
 
     async def _set_status(self, driver_profile_id: int, status: DriverStatus) -> Optional[DriverState]:
         if driver_profile_id not in driver_state_storage._drivers:

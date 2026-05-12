@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from .base import BaseSchema
 from .driver_rating import DriverRatingSchema
 from .driver_profile import DriverProfileSchema
+from .chat_message import ChatMessageSchema
 from app.enum import RideClass
 
 
@@ -171,3 +172,7 @@ class RideSchemaWithDriverProfile(RideSchema):
 class RideExpectedFareUpdate(BaseSchema):
     status: None = None
     expected_fare: float | None = Field(None, gt=0, lt=1_000_000_000_000)
+
+
+class RideSchemaWithChatMessage(RideSchema):
+    chat_message: ChatMessageSchema | None = None

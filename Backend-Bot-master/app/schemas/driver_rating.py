@@ -11,7 +11,7 @@ class DriverRatingCreateIn(BaseSchema):
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class DriverRatingCreate(DriverRatingCreateIn):
-    client_id: int = Field(..., gt=0)
+    client_id: int | None = Field(None, gt=0)
 
 
 class DriverRatingUpdate(BaseSchema):

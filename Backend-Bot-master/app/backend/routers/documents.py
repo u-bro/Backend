@@ -7,10 +7,10 @@ from app.crud.document import DocumentCrud, document_crud
 from app.crud.driver_document import driver_document_crud
 from app.crud.driver_moderation_info import driver_moderation_info_crud
 from app.schemas.driver_document import DriverDocumentCreate
-from app.crud import ride_crud, car_crud
+from app.crud import car_crud
 from app.enum import S3Bucket, RoleCode
 from app.config import S3_AVATARS_BUCKET_UUID
-from datetime import datetime
+from datetime import datetime, timezone
 from app.enum import DriverDocumentType
 
 
@@ -69,7 +69,7 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
 
     async def upload_avatar(self, request: Request, role_code: str = Query("user"), file: UploadFile = File(...), user_id = Depends(get_current_user_id)) -> dict:
         pdf_bytes = await file.read()
-        key = f"user/{user_id}/{role_code}/{round(datetime.now().timestamp())}/avatar"
+        key = f"user/{user_id}/{role_code}/{round(datetime.now(timezone.utc).timestamp())}/avatar"
         content_type = file.content_type or "image/jpeg"
         await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type, bucket=S3Bucket.AVATAR)
         return {"key": key, "url": self.model_crud.public_url(key, S3_AVATARS_BUCKET_UUID)}

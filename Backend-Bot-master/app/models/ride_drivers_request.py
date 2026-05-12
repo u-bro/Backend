@@ -8,7 +8,7 @@ class RideDriversRequest(Base):
     __tablename__ = 'ride_drivers_requests'
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    ride_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('rides.id'), nullable=False)
+    ride_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('rides.id'), nullable=True)
     driver_profile_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('driver_profiles.id'), nullable=False)
     car_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('cars.id'), nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False)

@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from .driver_location import driver_location_crud
 from app.models import Car
+from datetime import datetime, timezone
 
 CLASS_VALUE = {
     'light': 1,
@@ -81,6 +82,10 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         
         if existing_result.status == 'waiting_register':
             update_obj.status = 'waiting_approved'
+        
+        if update_obj.status == 'approved':
+            update_obj.approved = True
+            update_obj.approved_at = datetime.now(timezone.utc)
 
         if "current_car_id" in update_data:
             car = await session.execute(select(Car).where(Car.id == update_data["current_car_id"]))

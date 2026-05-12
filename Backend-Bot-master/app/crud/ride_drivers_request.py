@@ -31,27 +31,32 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         }
         super().__init__(RideDriversRequest, RideDriversRequestSchema)
 
-    async def get_by_ride_id(self, session: AsyncSession, ride_id: int):
+    async def get_by_ride_id(self, session: AsyncSession, ride_id: int) -> list[RideDriversRequestSchema]:
         result = await session.execute(select(self.model).where(self.model.ride_id == ride_id))
         ride_drivers_requests = result.scalars().all()
         return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
+    
+    async def get_accepted_by_ride_id(self, session: AsyncSession, ride_id: int) -> RideDriversRequestSchema | None:
+        result = await session.execute(select(self.model).where(and_(self.model.ride_id == ride_id, self.model.status == "accepted")))
+        ride_drivers_request = result.scalar_one_or_none()
+        return self.schema.model_validate(ride_drivers_request) if ride_drivers_request else None
 
-    async def get_by_ride_id_detailed(self, session: AsyncSession, ride_id: int):
+    async def get_by_ride_id_detailed(self, session: AsyncSession, ride_id: int) -> list[RideDriversRequestSchemaDetailed]:
         result = await session.execute(select(self.model).options(joinedload(self.model.driver_profile)).options(joinedload(self.model.car)).where(self.model.ride_id == ride_id))
         ride_drivers_requests = result.scalars().all()
         return [RideDriversRequestSchemaDetailed.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
 
-    async def get_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
+    async def get_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int) -> list[RideDriversRequestSchema]:
         result = await session.execute(select(self.model).where(self.model.driver_profile_id == driver_profile_id))
         ride_drivers_requests = result.scalars().all()
         return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
 
-    async def get_requested_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
+    async def get_requested_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int) -> list[RideDriversRequestSchema]:
         result = await session.execute(select(self.model).where(and_(self.model.driver_profile_id == driver_profile_id, self.model.status == "requested")))
         ride_drivers_requests = result.scalars().all()
         return [self.schema.model_validate(ride_drivers_request) for ride_drivers_request in ride_drivers_requests]
 
-    async def get_requested_by_ride_id_and_driver_profile_id(self, session: AsyncSession, ride_id: int, driver_profile_id: int):
+    async def get_requested_by_ride_id_and_driver_profile_id(self, session: AsyncSession, ride_id: int, driver_profile_id: int) -> RideDriversRequestSchema | None:
         result = await session.execute(select(self.model).where(and_(self.model.ride_id == ride_id, self.model.driver_profile_id == driver_profile_id, self.model.status == "requested")))
         ride_drivers_request = result.scalar_one_or_none()
         return self.schema.model_validate(ride_drivers_request) if ride_drivers_request else None
@@ -118,7 +123,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         for request in ride_drivers_requests:
             await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
             state = driver_state_storage.get_driver(request.driver_profile_id)
-            await manager_driver_feed.send_personal_message(state.user_id, {"type": "ride_offer_rejected", "message": "Отклик на поездку отклонен", "data": self.schema.model_validate(request).model_dump(mode='json')})
+            if state:
+                await manager_driver_feed.send_personal_message(state.user_id, {"type": "ride_offer_rejected", "message": "Отклик на поездку отклонен", "data": self.schema.model_validate(request).model_dump(mode='json')})
 
     async def cancel_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int):
         requests = await self.get_requested_by_driver_profile_id(session, driver_profile_id)

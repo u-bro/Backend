@@ -10,7 +10,7 @@ class RideStatusHistory(models.Model):
         verbose_name_plural = 'Истории статусов поездок'
 
     id = models.AutoField(primary_key=True)
-    ride_id = models.IntegerField()
+    ride_id = models.IntegerField(null=True, blank=True)
     from_status = models.CharField(max_length=50, null=True, blank=True, choices=RIDE_STATUS_CHOICES)
     to_status = models.CharField(max_length=50, null=True, blank=True, choices=RIDE_STATUS_CHOICES)
     changed_by = models.IntegerField(null=True, blank=True)

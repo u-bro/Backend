@@ -37,8 +37,14 @@ class UserSchemaUpdate(UserSchemaCreate):
 
 class UserSchemaUpdateMe(UserSchemaValidated):
     role_id: int | None = Field(None, gt=0)
-    status: Literal["active"] | None = Field("active", max_length=50)
+    status: Literal["active"] | None = Field(None, max_length=50)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @model_validator(mode="after")
+    def set_status(self):
+        if self.first_name or self.last_name or self.middle_name or self.phone or self.email or self.city or self.photo_url:
+            self.status = "active"
+        return self
 
 
 class UserSchema(UserSchemaUpdate):

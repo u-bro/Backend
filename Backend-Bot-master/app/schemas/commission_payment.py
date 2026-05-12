@@ -1,11 +1,10 @@
 from datetime import datetime, timezone
-from typing import Any, Literal
+from typing import Any
 from pydantic import Field
 from .base import BaseSchema
 
 
 class CommissionPaymentCreateRequest(BaseSchema):
-    payment_mode: list[Literal["sbp", "card", "tinkoff", "dolyame"]] = Field(default_factory=lambda: ["card"])
     redirect_url: str | None = None
     fail_redirect_url: str | None = None
 
@@ -13,18 +12,15 @@ class CommissionPaymentCreateRequest(BaseSchema):
 class CommissionPaymentSchema(BaseSchema):
     id: int
     ride_id: int
-    user_id: int
+    user_id: int | None = None
 
     amount: float
     currency: str
 
     status: str
 
-    tochka_operation_id: str | None = None
     payment_link: str | None = None
-
     purpose: str | None = None
-    payment_mode: Any | None = None
 
     paid_at: datetime | None = None
     payment_id: str | None = None

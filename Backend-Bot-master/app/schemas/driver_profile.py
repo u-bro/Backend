@@ -29,7 +29,7 @@ class DriverProfileValidated(BaseSchema):
 
 
 class DriverProfileCreate(DriverProfileValidated):
-    user_id: int
+    user_id: int | None = None
     license_issued_at: Optional[datetime] = None
     license_expires_at: Optional[datetime] = None
     classes_allowed: list[RIDE_CLASSES_LITERAL] = []

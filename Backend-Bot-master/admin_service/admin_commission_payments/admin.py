@@ -13,13 +13,12 @@ class CommissionPaymentAdmin(admin.ModelAdmin):
         "currency",
         "status",
         "is_refund",
-        "tochka_operation_id",
         "paid_at",
         "created_at",
         "updated_at",
     )
     list_filter = ("status", "is_refund", "paid_at", "created_at")
-    search_fields = ("ride_id", "user_id", "tochka_operation_id", "payment_id")
+    search_fields = ("ride_id", "user_id", "payment_id")
     list_per_page = 25
 
     def has_add_permission(self, request):

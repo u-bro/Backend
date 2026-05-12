@@ -11,7 +11,7 @@ class DriverRating(models.Model):
     id = models.AutoField(primary_key=True)
     driver_profile_id = models.IntegerField()
     client_id = models.IntegerField()
-    ride_id = models.IntegerField()
+    ride_id = models.IntegerField(null=True, blank=True)
     rate = models.IntegerField()
     comment = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(null=True, blank=True)

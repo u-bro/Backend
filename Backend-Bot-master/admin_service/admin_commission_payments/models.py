@@ -10,19 +10,16 @@ class CommissionPayment(models.Model):
 
     id = models.AutoField(primary_key=True)
 
-    ride_id = models.IntegerField()
+    ride_id = models.IntegerField(null=True, blank=True)
     user_id = models.IntegerField()
 
     amount = models.DecimalField(max_digits=15, decimal_places=2)
     currency = models.CharField(max_length=10)
 
     status = models.CharField(max_length=32)
-
-    tochka_operation_id = models.CharField(max_length=64, null=True, blank=True)
     payment_link = models.CharField(max_length=2048, null=True, blank=True)
 
     purpose = models.CharField(max_length=255, null=True, blank=True)
-    payment_mode = models.JSONField(null=True, blank=True)
 
     paid_at = models.DateTimeField(null=True, blank=True)
     payment_id = models.CharField(max_length=128, null=True, blank=True)

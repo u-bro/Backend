@@ -62,6 +62,10 @@ class UserAdmin(admin.ModelAdmin):
 
         return queryset.distinct(), use_distinct
 
+    def delete_queryset(self, request, queryset):
+        pks = list(queryset.values_list("pk", flat=True))
+        self.model.objects.filter(pk__in=pks).delete()
+
     def has_add_permission(self, request):  
         return request.user.groups.filter(name='Admin').exists()
 

@@ -1,5 +1,5 @@
 import asyncio
-from sqlalchemy import and_, insert, select, update
+from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.base import CrudBase
 from app.models.commission_payment import CommissionPayment
@@ -22,15 +22,10 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
     def __init__(self) -> None:
         super().__init__(CommissionPayment, CommissionPaymentSchema)
 
-    async def get_by_operation_id(self, session: AsyncSession, operation_id: str) -> CommissionPaymentSchema | None:
-        result = await session.execute(select(self.model).where(self.model.tochka_operation_id == operation_id))
+    async def get_by_payment_id(self, session: AsyncSession, payment_id: str) -> CommissionPaymentSchema | None:
+        result = await session.execute(select(self.model).where(self.model.payment_id == payment_id))
         item = result.scalar_one_or_none()
         return self.schema.model_validate(item) if item else None
-
-    async def get_by_operation_id_sandbox(self, session: AsyncSession, operation_id: str) -> list[CommissionPaymentSchema]:
-        result = await session.execute(select(self.model).where(and_(self.model.tochka_operation_id == operation_id, self.model.status == 'CREATED')))
-        items = result.scalars().all()
-        return [self.schema.model_validate(item) for item in items]
 
     async def get_by_ride_and_user(self, session: AsyncSession, ride_id: int, user_id: int, *, is_refund: bool = False) -> CommissionPaymentSchema | None:
         result = await session.execute(
@@ -42,16 +37,6 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
         )
         item = result.scalar_one_or_none()
         return self.schema.model_validate(item) if item else None
-
-    async def update_by_operation_id(self, session: AsyncSession, operation_id: str, fields: dict) -> CommissionPaymentSchema | None:
-        existing = await self.get_by_operation_id(session, operation_id)
-        if not existing:
-            return None
-
-        if not fields:
-            return existing
-
-        return await self.update(session, existing.id, fields)
 
     async def update(self, session: AsyncSession, id: int, fields: dict) -> CommissionPaymentSchema | None:
         if not fields:
@@ -70,7 +55,7 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
         await asyncio.sleep(COMMISSION_PAY_SECONDS_LIMIT)
         async with async_session_maker() as session:
             payment = await self.get_by_ride_and_user(session, ride_id, user_id)
-            if payment and payment.status == 'APPROVED':
+            if payment and (payment.status == 'CONFIRMED' or payment.status == 'AUTHORIZED'):
                 return
 
             updated_ride = await ride_crud.update(session, ride_id, RideSchemaUpdateByClient(status='canceled'), user_id)
