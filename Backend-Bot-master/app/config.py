@@ -29,7 +29,7 @@ OTP_TTL = int(os.environ.get('OTP_TTL', 120))
 OTP_MAX_ATTEMPTS = int(os.environ.get('OTP_MAX_ATTEMPTS', 3))
 OTP_NEXT_SENDING_SECONDS = int(os.environ.get('OTP_NEXT_SENDING_SECONDS', 30))
 
-MAX_DISTANCE_KM = float(os.environ.get('MAX_DISTANCE_KM', 5.0))
+MAX_DISTANCE_KM = float(os.environ.get('MAX_DISTANCE_KM', 30.0))
 FEED_PUSH_INTERVAL_SECONDS = int(os.getenv("MATCHING_FEED_PUSH_INTERVAL_SECONDS", "5"))
 DRIVER_LOCATION_PUSH_INTERVAL_SECONDS = int(os.getenv("DRIVER_LOCATION_PUSH_INTERVAL_SECONDS", "5"))
 FEED_LIMIT = int(os.getenv("MATCHING_FEED_LIMIT", "20"))
@@ -51,6 +51,7 @@ AWS_ACCESS_KEY_ID=os.environ.get('AWS_ACCESS_KEY_ID') or 'test-aws-access-key-id
 AWS_SECRET_KEY=os.environ.get('AWS_SECRET_KEY') or 'test-aws-secret-access-key'
 
 FIREBASE_SERVICE_ACCOUNT_PATH=os.environ.get('FIREBASE_SERVICE_ACCOUNT_PATH') or 'firebase-service-account.json'
+MODERATION_INTERNAL_TOKEN = os.getenv('MODERATION_INTERNAL_TOKEN')
 
 TBANK_USE_SANDBOX = (os.getenv("TBANK_USE_SANDBOX", os.getenv("TOCHKA_USE_SANDBOX", "false")).lower() in ("1", "true", "yes"))
 TBANK_BASE_URL = os.getenv("TBANK_BASE_URL", "https://securepay.tinkoff.ru/v2/")
