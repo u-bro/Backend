@@ -24,8 +24,6 @@ def test_route_inventory_contains_current_critical_http_endpoints(app_instance):
     assert ("GET", "/api/v1/ride-requests/ride/{id}") in routes
     assert ("GET", "/api/v1/documents/public/policy/{key:path}") in routes
     assert ("POST", "/api/v1/webhooks/tbank") in routes
-    assert ("POST", "/api/v1/driver-profiles/me/resubmit") in routes
-    assert ("POST", "/api/v1/internal/driver-profiles/{id}/moderation") in routes
 
     assert ("POST", "/api/v1/auth/login") not in routes
     assert ("POST", "/api/v1/auth/register") not in routes

@@ -1,6 +1,6 @@
 import asyncio
 from typing import Any
-from fastapi import BackgroundTasks, Request, Depends, HTTPException
+from fastapi import Request, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.routers.base import BaseRouter
 from app.crud.ride import ride_crud, RideCrud
@@ -14,7 +14,6 @@ from app.models import Ride
 from app.crud import in_app_notification_crud, ride_drivers_request_crud, driver_profile_crud
 from app.services.chat_service import chat_service
 from app.services import fcm_service, manager_driver_feed
-from app.services.new_ride_notifications import notify_about_new_ride
 from app.crud.driver_tracker import driver_tracker
 from app.enum import RoleCode
 
@@ -59,11 +58,9 @@ class RideRouter(BaseRouter[RideCrud]):
     async def get_my_as_driver(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id_without_approve), page: int = 1, page_size: int = 10):
         return await self.model_crud.get_by_driver_profile_id_paginated(request.state.session, driver_profile_id, page, page_size, "created_at desc")
 
-    async def create(self, request: Request, create_obj: RideSchemaIn, background_tasks: BackgroundTasks, user_id: int = Depends(get_current_user_id)) -> RideSchema:
+    async def create(self, request: Request, create_obj: RideSchemaIn, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         create_obj = RideSchemaCreate(client_id=user_id, **create_obj.model_dump())
         ride = await self.model_crud.create(request.state.session, create_obj)
-        if ride and ride.status == "requested":
-            background_tasks.add_task(notify_about_new_ride, ride.id)
         asyncio.create_task(ride_crud.cancel_ride_if_timeout(ride.id, user_id))
         return ride
 

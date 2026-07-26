@@ -3,11 +3,11 @@ from app.models.driver_profile import DriverProfile
 from app.schemas.driver_profile import DriverProfileSchema, DriverProfileApprove, DriverProfileWithCars, DriverProfileCreate
 from app.schemas.driver_location import DriverLocationCreate
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import update, select, insert
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from .driver_location import driver_location_crud
-from app.models import Car, DriverProfileModeration
+from app.models import Car
 from datetime import datetime, timezone
 
 CLASS_VALUE = {
@@ -115,66 +115,5 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         if not driver_location:
             await driver_location_crud.create(session, DriverLocationCreate(driver_profile_id=id))
         return await super().update(session, item.id, update_obj)
-
-    async def resubmit(self, session: AsyncSession, id: int):
-        result = await session.execute(select(self.model).where(self.model.id == id))
-        item = result.scalar_one_or_none()
-        if not item:
-            raise HTTPException(status_code=404, detail="Driver profile not found")
-        if item.status != "rejected":
-            raise HTTPException(status_code=409, detail="Only rejected profiles can be resubmitted")
-
-        stmt = (
-            update(self.model)
-            .where(self.model.id == id)
-            .values(
-                status="waiting_moderation",
-                approved=False,
-                approved_by=None,
-                approved_at=None,
-                updated_at=datetime.now(timezone.utc),
-            )
-            .returning(self.model)
-        )
-        updated = await self.execute_get_one(session, stmt)
-        return self.schema.model_validate(updated) if updated else None
-
-    async def moderate(self, session: AsyncSession, id: int, status: str, moderation_info_ids: list[int], admin_user_id: int):
-        result = await session.execute(select(self.model).where(self.model.id == id))
-        item = result.scalar_one_or_none()
-        if not item:
-            raise HTTPException(status_code=404, detail="Driver profile not found")
-
-        await session.execute(
-            delete(DriverProfileModeration).where(DriverProfileModeration.driver_profile_id == id)
-        )
-        if moderation_info_ids:
-            await session.execute(
-                insert(DriverProfileModeration),
-                [
-                    {"driver_profile_id": id, "driver_moderation_info_id": reason_id}
-                    for reason_id in moderation_info_ids
-                ],
-            )
-
-        approved = status == "approved"
-        if approved:
-            driver_location = await driver_location_crud.get_by_driver_profile_id(session, id)
-            if not driver_location:
-                await driver_location_crud.create(session, DriverLocationCreate(driver_profile_id=id))
-        stmt = (
-            update(self.model)
-            .where(self.model.id == id)
-            .values(
-                status=status,
-                approved=approved,
-                approved_by=admin_user_id,
-                approved_at=datetime.now(timezone.utc) if approved else None,
-                updated_at=datetime.now(timezone.utc),
-            )
-            .returning(self.model)
-        )
-        updated = await self.execute_get_one(session, stmt)
-        return self.schema.model_validate(updated) if updated else None
 
 driver_profile_crud = DriverProfileCrud()

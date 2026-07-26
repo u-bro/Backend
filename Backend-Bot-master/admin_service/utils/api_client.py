@@ -1,5 +1,4 @@
 import logging
-import os
 from typing import Any, Dict, Optional
 
 import requests
@@ -134,24 +133,6 @@ class FastAPIClient:
             return response.status_code in (200, 201)
         except Exception as e:
             logger.error(f"Failed to review anomaly {anomaly_id}: {e}")
-            return False
-
-    def moderate_driver(self, driver_id: int, status: str, moderation_info_ids: list[int], admin_user_id: int) -> bool:
-        try:
-            token = os.getenv("MODERATION_INTERNAL_TOKEN")
-            response = self._make_request(
-                "POST",
-                f"/api/v1/internal/driver-profiles/{driver_id}/moderation",
-                {
-                    "status": status,
-                    "moderation_info_ids": moderation_info_ids,
-                    "admin_user_id": admin_user_id,
-                },
-                headers={"X-Moderation-Token": token or ""},
-            )
-            return response.status_code == 200
-        except Exception:
-            logger.exception("Failed to moderate driver %s", driver_id)
             return False
 
 

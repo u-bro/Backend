@@ -214,8 +214,6 @@ class DriverProfileAdmin(admin.ModelAdmin):
                 obj.approved = True
                 if not obj.approved_at:
                     obj.approved_at = timezone.now()
-            elif obj.status == "rejected":
-                obj.approved = False
             super().save_model(request, obj, form, change)
             if not change and obj.pk:
                 DriverLocation.objects.get_or_create(
@@ -260,19 +258,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
             RideDriversRequest.objects.filter(car_id__in=car_ids).delete()
             Car.objects.filter(id__in=car_ids).delete()
 
-    def approve_drivers(self, request, queryset):
-        if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
-            self.message_user(request, "No permission", messages.ERROR)
-            return
-
-        count = 0
-        approved_by = self._resolve_backend_user_id(request)
-        for driver in queryset:
-            if api_client.moderate_driver(driver.id, "approved", [], approved_by):
-                count += 1
-        self.message_user(request, f"Approved {count} drivers", messages.SUCCESS)
-
-    def reject_drivers(self, request, queryset):
+    def approve_drivers(self, request, queryset):  
         if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
             self.message_user(request, "No permission", messages.ERROR)
             return
@@ -280,9 +266,27 @@ class DriverProfileAdmin(admin.ModelAdmin):
         count = 0
         approved_by = self._resolve_backend_user_id(request)
         for driver in queryset:
-            reason_ids = list(driver.moderation_info.values_list("id", flat=True))
-            if api_client.moderate_driver(driver.id, "rejected", reason_ids, approved_by):
-                count += 1
+            driver.approved = True
+            driver.status = DriverProfile.STATUS_APPROVED
+            driver.approved_by = approved_by
+            driver.approved_at = timezone.now()
+            driver.save()
+            count += 1
+        self.message_user(request, f"Approved {count} drivers", messages.SUCCESS)
+
+    def reject_drivers(self, request, queryset):  
+        if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
+            self.message_user(request, "No permission", messages.ERROR)
+            return
+            
+        count = 0
+        approved_by = self._resolve_backend_user_id(request)
+        for driver in queryset:
+            driver.approved = False
+            driver.approved_by = approved_by
+            driver.approved_at = timezone.now()
+            driver.save()
+            count += 1
         self.message_user(request, f"Rejected {count} drivers", messages.SUCCESS)
 
     def block_drivers(self, request, queryset):  
