@@ -111,6 +111,7 @@ class FCMService:
         message = messaging.Message(
             token=payload.token,
             notification=self._build_notification(payload),
+            data=self._build_data_payload(payload),
         )
 
         return await asyncio.to_thread(messaging.send, message)
@@ -125,6 +126,7 @@ class FCMService:
         message = messaging.MulticastMessage(
             tokens=tokens_list,
             notification=self._build_notification(payload),
+            data=self._build_data_payload(payload),
         )
 
         return await asyncio.to_thread(messaging.send_each_for_multicast, message, dry_run)
