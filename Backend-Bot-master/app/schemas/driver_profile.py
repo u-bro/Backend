@@ -41,7 +41,7 @@ class DriverProfileCreate(DriverProfileValidated):
 
 
 class DriverProfileUpdateMe(DriverProfileValidated):
-    status: Literal['waiting_approved'] | None = Field(None, max_length=50)
+    status: Literal['waiting_approved'] | None = Field('waiting_approved', max_length=50)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -72,16 +72,10 @@ class DriverProfileSchema(DriverProfileCreate):
     approved: bool = False
     approved_by: Optional[int] = None
     approved_at: Optional[datetime] = None
-    status: Literal['waiting_register', 'waiting_approved', 'waiting_moderation', 'approved', 'rejected'] | None = Field(None, max_length=50)
+    status: Literal['waiting_register', 'waiting_approved', 'waiting_moderation', 'approved'] | None = Field(None, max_length=50)
     updated_at: Optional[datetime] = None
 
 
 class DriverProfileWithCars(DriverProfileSchema):
     cars: list[CarSchema]
     moderation_info: list[DriverModerationInfoSchema]
-
-
-class DriverModerationAction(BaseSchema):
-    status: Literal['approved', 'rejected']
-    moderation_info_ids: list[int] = Field(default_factory=list)
-    admin_user_id: int = Field(..., gt=0)

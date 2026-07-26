@@ -23,16 +23,9 @@ DRIVER_PROFILE_STATUS_VALUES = (
     "waiting_register",
     "waiting_approved",
     "waiting_moderation",
-    "rejected",
     "approved",
 )
-DRIVER_PROFILE_STATUS_CHOICES = (
-    ("waiting_register", "Ожидает регистрации"),
-    ("waiting_approved", "Ожидает проверки"),
-    ("waiting_moderation", "Ожидает модерации"),
-    ("rejected", "Отклонён"),
-    ("approved", "Принят"),
-)
+DRIVER_PROFILE_STATUS_CHOICES = tuple((value, value) for value in DRIVER_PROFILE_STATUS_VALUES)
 
 DRIVER_DOCUMENT_TYPE_VALUES = (
     "PASSPORT_FRONT",
