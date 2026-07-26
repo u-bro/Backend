@@ -61,6 +61,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'admin_drivers.context_processors.moderation_queue',
             ],
         },
     },
@@ -106,6 +107,7 @@ JAZZMIN_SETTINGS = {
     "welcome_sign": "Добро пожаловать в админ панель",
     "topmenu_links": [
         {"name": "Главная", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Модерация водителей", "url": "driver-moderation-list"},
         {"name": "Политики", "url": "admin-policies", "permissions": ["auth.view_user"]},
     ],
 }
