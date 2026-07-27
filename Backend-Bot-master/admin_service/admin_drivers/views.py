@@ -24,10 +24,10 @@ from .models import DriverModerationInfo, DriverProfile, DriverProfileModeration
 
 
 STATUS_LABELS = {
-    "waiting_register": "Ожидает регистрации",
-    "waiting_approved": "Ожидает проверки",
-    "waiting_moderation": "Ожидает модерации",
-    "rejected": "Отклонён",
+    "waiting_register": "Регистрация не завершена",
+    "waiting_approved": "Проверка данных",
+    "waiting_moderation": "Модерация документов",
+    "rejected": "Отклонённые заявки",
     "approved": "Принят",
 }
 QUEUE_STATUSES = ("waiting_approved", "waiting_moderation")
@@ -54,7 +54,7 @@ def _moderation_context(request):
 
     count = DriverProfile.objects.filter(status__in=QUEUE_STATUSES).count()
     return {
-        "site_header": admin.site.site_header,
+        **admin.site.each_context(request),
         "queue_count": count,
         "status_labels": STATUS_LABELS,
     }

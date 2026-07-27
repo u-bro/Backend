@@ -27,10 +27,10 @@ DRIVER_PROFILE_STATUS_VALUES = (
     "approved",
 )
 DRIVER_PROFILE_STATUS_CHOICES = (
-    ("waiting_register", "Ожидает регистрации"),
-    ("waiting_approved", "Ожидает проверки"),
-    ("waiting_moderation", "Ожидает модерации"),
-    ("rejected", "Отклонён"),
+    ("waiting_register", "Регистрация не завершена"),
+    ("waiting_approved", "Проверка данных"),
+    ("waiting_moderation", "Модерация документов"),
+    ("rejected", "Отклонённые заявки"),
     ("approved", "Принят"),
 )
 
