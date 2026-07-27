@@ -183,10 +183,22 @@ def moderation_detail(request, profile_id: int):
     car_ids = [car.id for car in cars]
     documents = DriverDocument.objects.filter(driver_profile_id=profile.id).order_by("doc_type", "-created_at")
     car_photos = list(CarPhoto.objects.filter(car_id__in=car_ids).order_by("car_id", "type")) if car_ids else []
-    photos_by_car = defaultdict(list)
+    car_images_by_key = defaultdict(list)
+    image_keys = set()
+    for document in documents:
+        document_key = (document.doc_type or "").upper()
+        if "CAR" not in document_key:
+            continue
+        image_keys.add((document_key, document.file_bucket_key))
+        car_images_by_key[document_key].append({"kind": "document", "document": document})
+
     for photo in car_photos:
-        photos_by_car[photo.car_id].append(photo)
-    cars_data = [{"car": car, "photos": photos_by_car.get(car.id, [])} for car in cars]
+        photo_key = (photo.type or "CAR_PHOTO").upper()
+        if "CAR" not in photo_key:
+            photo_key = f"CAR_PHOTO_{photo_key}"
+        if (photo_key, photo.photo_url) in image_keys:
+            continue
+        car_images_by_key[photo_key].append({"kind": "photo", "photo": photo})
     moderation_rows = DriverProfileModeration.objects.filter(
         driver_profile_id=profile.id
     ).select_related("driver_moderation_info")
@@ -205,10 +217,11 @@ def moderation_detail(request, profile_id: int):
             **_moderation_context(request),
             "profile": profile,
             "profile_user": user,
+            "avatar_url": profile.photo_url or user.photo_url,
             "form": form,
             "cars": cars,
-            "cars_data": cars_data,
             "documents": documents,
+            "car_photo_groups": sorted(car_images_by_key.items()),
             "document_groups": sorted(document_groups.items()),
             "reasons": reasons,
             "all_reasons": all_reasons,

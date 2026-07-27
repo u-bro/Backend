@@ -17,6 +17,7 @@
   .document-item, .photo-item { border: 1px solid #ddd; border-radius: 4px; padding: 8px; }
   .document-preview { display: block; width: 100%; height: 120px; object-fit: contain; margin: 6px 0; background: #f8f9fa; }
   .photo-item img { width: 100%; height: 120px; object-fit: cover; }
+  .avatar-preview { width: 120px; height: 120px; object-fit: cover; border-radius: 50%; background: #f8f9fa; display: block; margin-top: 8px; }
   @media (max-width: 900px) { .moderation-grid { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
@@ -72,25 +73,31 @@
       </div>
 
       <div class="moderation-card">
-        <h2>Автомобили и фотографии</h2>
-        {% for car_data in cars_data %}
-          {% with car=car_data.car %}
-          <h3>{{ car.model|default:"Автомобиль" }} · {{ car.number|default:"без номера" }}</h3>
-          <p>Регион: {{ car.region|default:"—" }} · VIN: {{ car.vin|default:"—" }} · Год: {{ car.year|default:"—" }}</p>
-          <div class="photo-grid">
-            {% regroup car_data.photos by type as photo_groups %}
-            {% for photo_group in photo_groups %}
-              <div class="photo-item">
-                <strong>{{ photo_group.grouper|default:"Фото" }}</strong>
-                {% for photo in photo_group.list %}
-                  {% if photo.photo_url %}<a href="{{ photo.photo_url }}" target="_blank" rel="noopener"><img src="{{ photo.photo_url }}" alt="{{ photo_group.grouper|default:'Фото автомобиля' }}"></a>{% endif %}
-                  <small>{{ photo.status|default:"—" }}</small>
-                {% endfor %}
-              </div>
-            {% empty %}<p>Фотографии не загружены.</p>{% endfor %}
-          </div>
-          {% endwith %}
-        {% empty %}<p>Автомобили не добавлены.</p>{% endfor %}
+        <h2>Фотографии автомобиля</h2>
+        <div class="photo-grid">
+          {% for photo_key, images in car_photo_groups %}
+            <div class="photo-item">
+              <strong>{{ photo_key }}</strong>
+              {% for image in images %}
+                {% if image.kind == "document" %}
+                  <a href="{% url 'admin:admin_driver_document_preview' image.document.id %}" target="_blank" rel="noopener">
+                    <img class="document-preview" src="{% url 'admin:admin_driver_document_preview' image.document.id %}" alt="{{ photo_key }}">
+                  </a>
+                  <small>{{ image.document.status|default:"—" }}</small>
+                {% else %}
+                  {% if image.photo.photo_url %}
+                    <a href="{{ image.photo.photo_url }}" target="_blank" rel="noopener">
+                      <img src="{{ image.photo.photo_url }}" alt="{{ photo_key }}">
+                    </a>
+                  {% else %}
+                    <small>Изображение отсутствует</small>
+                  {% endif %}
+                  <small>{{ image.photo.status|default:"—" }}</small>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% empty %}<p>Фотографии автомобиля не загружены.</p>{% endfor %}
+        </div>
       </div>
     </main>
 
@@ -110,6 +117,12 @@
 
       <div class="moderation-card">
         <h2>Контакты пользователя</h2>
+        <h3>Аватарка</h3>
+        {% if avatar_url %}
+          <a href="{{ avatar_url }}" target="_blank" rel="noopener"><img class="avatar-preview" src="{{ avatar_url }}" alt="Аватарка водителя"></a>
+        {% else %}
+          <p>Аватарка не загружена.</p>
+        {% endif %}
         <p>Телефон: {{ profile_user.phone|default:"—" }}</p>
         <p>Email: {{ profile_user.email|default:"—" }}</p>
         <p>Город: {{ profile_user.city|default:"—" }}</p>

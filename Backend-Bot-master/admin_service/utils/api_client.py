@@ -138,7 +138,9 @@ class FastAPIClient:
 
     def moderate_driver(self, driver_id: int, status: str, moderation_info_ids: list[int], admin_user_id: int) -> bool:
         try:
-            token = os.getenv("MODERATION_INTERNAL_TOKEN")
+            token = (os.getenv("MODERATION_INTERNAL_TOKEN") or "").strip()
+            if not token:
+                logger.error("MODERATION_INTERNAL_TOKEN is not configured in admin_service")
             response = self._make_request(
                 "POST",
                 f"/api/v1/internal/driver-profiles/{driver_id}/moderation",
@@ -149,6 +151,8 @@ class FastAPIClient:
                 },
                 headers={"X-Moderation-Token": token or ""},
             )
+            if response.status_code == 403:
+                logger.error("Moderation API rejected the internal token")
             return response.status_code == 200
         except Exception:
             logger.exception("Failed to moderate driver %s", driver_id)
