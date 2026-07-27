@@ -10,6 +10,7 @@
   .moderation-count { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; font-size: 18px; font-weight: 600; }
   .moderation-count span { border-radius: 999px; background: #dc3545; color: #fff; padding: 2px 9px; font-size: 14px; }
   .moderation-table td, .moderation-table th { vertical-align: middle; }
+  .moderation-table tbody tr[data-href] { cursor: pointer; }
   .status-badge { display: inline-block; border-radius: 999px; padding: 4px 9px; background: #e9ecef; white-space: nowrap; }
   .status-waiting_moderation, .status-waiting_approved, .status-waiting_register { background: #fff3cd; color: #664d03; }
   .status-rejected { background: #f8d7da; color: #842029; }
@@ -52,7 +53,7 @@
       </thead>
       <tbody>
         {% for profile in profiles %}
-          <tr>
+          <tr data-href="{% url 'driver-moderation-detail' profile.id %}" onclick="window.location.href=this.dataset.href" tabindex="0" onkeydown="if(event.key==='Enter'){window.location.href=this.dataset.href}">
             <td><a href="{% url 'driver-moderation-detail' profile.id %}">{{ profile.first_name|default:"—" }}</a></td>
             <td><a href="{% url 'driver-moderation-detail' profile.id %}">{{ profile.last_name|default:"—" }}</a></td>
             <td>{{ profile.user_phone|default:"—" }}</td>

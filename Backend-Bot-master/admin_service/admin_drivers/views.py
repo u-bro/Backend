@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -29,7 +30,7 @@ STATUS_LABELS = {
     "rejected": "Отклонён",
     "approved": "Принят",
 }
-QUEUE_STATUSES = ("waiting_register", "waiting_approved", "waiting_moderation")
+QUEUE_STATUSES = ("waiting_approved", "waiting_moderation")
 MODERATION_STATUSES = ("waiting_register", "waiting_approved", "waiting_moderation", "rejected")
 REQUIRED_DOCUMENT_TYPES = (
     "PASSPORT_FRONT",
@@ -62,7 +63,9 @@ def _moderation_context(request):
 def _annotated_profiles():
     phone_query = User.objects.filter(id=models.OuterRef("user_id")).values("phone")[:1]
     email_query = User.objects.filter(id=models.OuterRef("user_id")).values("email")[:1]
-    return DriverProfile.objects.exclude(status=DriverProfile.STATUS_APPROVED).annotate(
+    return DriverProfile.objects.exclude(
+        status__in=(DriverProfile.STATUS_APPROVED, "waiting_register")
+    ).annotate(
         user_phone=Subquery(phone_query),
         user_email=Subquery(email_query),
         status_order=Case(
@@ -89,11 +92,18 @@ def moderation_list(request):
     if not _is_moderator(request):
         raise Http404()
 
-    profiles = _annotated_profiles()
     status = request.GET.get("status", "")
     query = request.GET.get("q", "").strip()
-    if status in MODERATION_STATUSES:
-        profiles = profiles.filter(status=status)
+    if status == "waiting_register":
+        profiles = DriverProfile.objects.filter(status=status).annotate(
+            user_phone=Subquery(User.objects.filter(id=models.OuterRef("user_id")).values("phone")[:1]),
+            user_email=Subquery(User.objects.filter(id=models.OuterRef("user_id")).values("email")[:1]),
+            status_order=Value(2, output_field=IntegerField()),
+        )
+    else:
+        profiles = _annotated_profiles()
+        if status in MODERATION_STATUSES:
+            profiles = profiles.filter(status=status)
     if query:
         user_ids = User.objects.filter(
             Q(first_name__icontains=query)
@@ -172,12 +182,22 @@ def moderation_detail(request, profile_id: int):
     cars = list(Car.objects.filter(driver_profile_id=profile.id).order_by("id"))
     car_ids = [car.id for car in cars]
     documents = DriverDocument.objects.filter(driver_profile_id=profile.id).order_by("doc_type", "-created_at")
-    car_photos = CarPhoto.objects.filter(car_id__in=car_ids).order_by("car_id", "type") if car_ids else CarPhoto.objects.none()
-    reasons = DriverModerationInfo.objects.filter(driver_profiles__id=profile.id)
+    car_photos = list(CarPhoto.objects.filter(car_id__in=car_ids).order_by("car_id", "type")) if car_ids else []
+    photos_by_car = defaultdict(list)
+    for photo in car_photos:
+        photos_by_car[photo.car_id].append(photo)
+    cars_data = [{"car": car, "photos": photos_by_car.get(car.id, [])} for car in cars]
+    moderation_rows = DriverProfileModeration.objects.filter(
+        driver_profile_id=profile.id
+    ).select_related("driver_moderation_info")
+    reasons = [row.driver_moderation_info for row in moderation_rows]
     all_reasons = DriverModerationInfo.objects.all().order_by("code")
     warning_documents = documents.exclude(status="approved")
     uploaded_document_types = set(documents.values_list("doc_type", flat=True))
     missing_documents = [doc_type for doc_type in REQUIRED_DOCUMENT_TYPES if doc_type not in uploaded_document_types]
+    document_groups = defaultdict(list)
+    for document in documents:
+        document_groups[document.doc_type].append(document)
     return render(
         request,
         "admin_drivers/moderation_detail.html",
@@ -187,8 +207,9 @@ def moderation_detail(request, profile_id: int):
             "user": user,
             "form": form,
             "cars": cars,
+            "cars_data": cars_data,
             "documents": documents,
-            "car_photos": car_photos,
+            "document_groups": sorted(document_groups.items()),
             "reasons": reasons,
             "all_reasons": all_reasons,
             "warning_documents": warning_documents,
