@@ -204,7 +204,7 @@ def moderation_detail(request, profile_id: int):
         {
             **_moderation_context(request),
             "profile": profile,
-            "user": user,
+            "profile_user": user,
             "form": form,
             "cars": cars,
             "cars_data": cars_data,

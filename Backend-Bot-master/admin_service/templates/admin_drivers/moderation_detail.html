@@ -110,10 +110,10 @@
 
       <div class="moderation-card">
         <h2>Контакты пользователя</h2>
-        <p>Телефон: {{ user.phone|default:"—" }}</p>
-        <p>Email: {{ user.email|default:"—" }}</p>
-        <p>Город: {{ user.city|default:"—" }}</p>
-        <p>Активен: {% if user.is_active %}да{% else %}нет{% endif %}</p>
+        <p>Телефон: {{ profile_user.phone|default:"—" }}</p>
+        <p>Email: {{ profile_user.email|default:"—" }}</p>
+        <p>Город: {{ profile_user.city|default:"—" }}</p>
+        <p>Активен: {% if profile_user.is_active %}да{% else %}нет{% endif %}</p>
         <form method="post" onsubmit="return confirm('Заблокировать пользователя?');">
           {% csrf_token %}<button class="button" type="submit" name="action" value="block">Заблокировать</button>
         </form>
