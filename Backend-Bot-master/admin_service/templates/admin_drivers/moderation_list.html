@@ -29,7 +29,7 @@
     <div>
       <label for="id_status">Статус</label>
       <select id="id_status" name="status">
-        <option value="">Все не принятые</option>
+        <option value="">Ожидающие модерации</option>
         {% for value, label in status_choices %}
           <option value="{{ value }}"{% if selected_status == value %} selected{% endif %}>{{ label }}</option>
         {% endfor %}

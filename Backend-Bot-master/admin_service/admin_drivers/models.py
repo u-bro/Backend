@@ -3,6 +3,10 @@ from django.core.validators import MinValueValidator
 from utils.schema_choices import DRIVER_PROFILE_STATUS_CHOICES, RIDE_CLASS_CHOICES
 
 
+def default_classes_allowed():
+    return ["light"]
+
+
 class DriverModerationInfo(models.Model):
     class Meta:
         db_table = 'driver_moderation_info'
@@ -51,7 +55,7 @@ class DriverProfile(models.Model):
     approved_by = models.BigIntegerField(null=True, blank=True)
     approved_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES)
-    classes_allowed = models.JSONField(null=False, blank=False, default=['light'])
+    classes_allowed = models.JSONField(null=False, blank=False, default=default_classes_allowed)
     current_class = models.CharField(max_length=50, null=True, blank=True, choices=RIDE_CLASS_CHOICES)
     current_car_id = models.BigIntegerField(null=True, blank=True)
     rating_avg = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, default=5.0, validators=[MinValueValidator(0)])

@@ -64,7 +64,7 @@ def _annotated_profiles():
     phone_query = User.objects.filter(id=models.OuterRef("user_id")).values("phone")[:1]
     email_query = User.objects.filter(id=models.OuterRef("user_id")).values("email")[:1]
     return DriverProfile.objects.exclude(
-        status__in=(DriverProfile.STATUS_APPROVED, "waiting_register")
+        status__in=(DriverProfile.STATUS_APPROVED, "waiting_register", "rejected")
     ).annotate(
         user_phone=Subquery(phone_query),
         user_email=Subquery(email_query),
@@ -94,7 +94,7 @@ def moderation_list(request):
 
     status = request.GET.get("status", "")
     query = request.GET.get("q", "").strip()
-    if status == "waiting_register":
+    if status in ("waiting_register", "rejected"):
         profiles = DriverProfile.objects.filter(status=status).annotate(
             user_phone=Subquery(User.objects.filter(id=models.OuterRef("user_id")).values("phone")[:1]),
             user_email=Subquery(User.objects.filter(id=models.OuterRef("user_id")).values("email")[:1]),
