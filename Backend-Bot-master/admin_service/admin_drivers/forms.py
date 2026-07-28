@@ -1,4 +1,7 @@
+from datetime import datetime, time
+
 from django import forms
+from django.utils import timezone
 from admin_cars.models import Car
 from admin_users.models import User
 from utils.schema_choices import RIDE_CLASS_CHOICES
@@ -16,6 +19,24 @@ class DriverModerationForm(forms.ModelForm):
     phone = forms.CharField(label="Номер телефона", max_length=20, required=False)
     email = forms.EmailField(label="Email", max_length=255, required=False)
     city = forms.CharField(label="Город", max_length=100, required=False)
+    birth_date = forms.DateField(
+        label="Дата рождения",
+        required=False,
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
+    license_issued_at = forms.DateField(
+        label="Дата выдачи прав",
+        required=False,
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
+    license_expires_at = forms.DateField(
+        label="Дата окончания прав",
+        required=False,
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
     classes_allowed = forms.MultipleChoiceField(
         label="Разрешённые классы",
         choices=RIDE_CLASS_CHOICES,
@@ -70,12 +91,6 @@ class DriverModerationForm(forms.ModelForm):
             "new_car_vin",
             "new_car_year",
         )
-        widgets = {
-            "birth_date": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-            "license_issued_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-            "license_expires_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-        }
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.driver_cars = Car.objects.filter(driver_profile_id=self.instance.id).order_by("id")
@@ -91,6 +106,13 @@ class DriverModerationForm(forms.ModelForm):
         classes_allowed = getattr(self.instance, "classes_allowed", None)
         if isinstance(classes_allowed, list):
             self.initial["classes_allowed"] = classes_allowed
+
+        for field_name in ("birth_date", "license_issued_at", "license_expires_at"):
+            value = getattr(self.instance, field_name, None)
+            if value:
+                if timezone.is_aware(value):
+                    value = timezone.localtime(value)
+                self.initial[field_name] = value.date()
 
         car = self._current_car()
         if car:
@@ -140,6 +162,11 @@ class DriverModerationForm(forms.ModelForm):
 
         for field in ("phone", "email", "city"):
             setattr(user, field, self.cleaned_data.get(field) or None)
+
+        for field_name in ("birth_date", "license_issued_at", "license_expires_at"):
+            value = self.cleaned_data.get(field_name)
+            value = datetime.combine(value, time.min) if value else None
+            setattr(profile, field_name, timezone.make_aware(value) if value else None)
 
         if commit:
             user.save(update_fields=["first_name", "last_name", "middle_name", "photo_url", "phone", "email", "city"])

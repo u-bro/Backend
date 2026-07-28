@@ -204,11 +204,18 @@ def moderation_detail(request, profile_id: int):
     ).select_related("driver_moderation_info")
     reasons = [row.driver_moderation_info for row in moderation_rows]
     all_reasons = DriverModerationInfo.objects.all().order_by("code")
-    warning_documents = documents.exclude(status="approved")
+    driver_documents = [
+        document
+        for document in documents
+        if "CAR" not in (document.doc_type or "").upper()
+    ]
+    warning_documents = [
+        document for document in driver_documents if document.status != "approved"
+    ]
     uploaded_document_types = set(documents.values_list("doc_type", flat=True))
     missing_documents = [doc_type for doc_type in REQUIRED_DOCUMENT_TYPES if doc_type not in uploaded_document_types]
     document_groups = defaultdict(list)
-    for document in documents:
+    for document in driver_documents:
         document_groups[document.doc_type].append(document)
     return render(
         request,
