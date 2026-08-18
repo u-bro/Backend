@@ -6,6 +6,7 @@ from django.db import transaction
 from django.utils.safestring import mark_safe
 from django.utils import timezone
 from utils.api_client import api_client
+from utils.admin_links import driver_profile_link, user_link
 
 from admin_ride_drivers_requests.models import RideDriversRequest
 from .models import Ride
@@ -25,8 +26,8 @@ class RideActionForm(forms.Form):
 class RideAdmin(admin.ModelAdmin):
     list_display = (
         "id",
-        "client_id",
-        "driver_profile_id",
+        "client_id_link",
+        "driver_profile_id_link",
         "status",
         "ride_class",
         "ride_type",
@@ -39,7 +40,12 @@ class RideAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_editable = tuple([f for f in list_display if f != 'id' and f not in ['pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'distance_meters', 'duration_seconds', 'status', 'cancellation_reason']])
+    list_editable = tuple([
+        f for f in list_display
+        if f != 'id'
+        and any(f == field.name for field in Ride._meta.fields)
+        and f not in ['pickup_address', 'pickup_lat', 'pickup_lng', 'dropoff_address', 'dropoff_lat', 'dropoff_lng', 'expected_fare', 'actual_fare', 'distance_meters', 'duration_seconds', 'status', 'cancellation_reason']
+    ])
     list_filter = ("status", "ride_class", "ride_type", "is_anomaly", "created_at")
     search_fields = ("pickup_address", "dropoff_address", "client_id", "driver_profile_id")
     actions = ["cancel_rides", "mark_anomaly_resolved"]
@@ -47,7 +53,15 @@ class RideAdmin(admin.ModelAdmin):
     list_per_page = 25
 
 
-    readonly_fields = ('id', 'created_at', 'updated_at', 'started_at', 'completed_at', 'canceled_at')
+    readonly_fields = ('id', 'created_at', 'updated_at', 'started_at', 'completed_at', 'canceled_at', 'client_id_link', 'driver_profile_id_link')
+
+    @admin.display(description="Client ID", ordering="client_id")
+    def client_id_link(self, obj):
+        return user_link(getattr(obj, "client_id", None))
+
+    @admin.display(description="Driver profile ID", ordering="driver_profile_id")
+    def driver_profile_id_link(self, obj):
+        return driver_profile_link(getattr(obj, "driver_profile_id", None))
 
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)

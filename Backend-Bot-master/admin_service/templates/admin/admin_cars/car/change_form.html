@@ -1,0 +1,12 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .car-photo-gallery { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); max-width: 1100px; }
+    .car-photo-card { background: #fff; border: 1px solid #d9dee3; border-radius: 8px; overflow: hidden; }
+    .car-photo-card img { background: #f8f9fa; display: block; height: 160px; object-fit: cover; width: 100%; }
+    .car-photo-card div { display: grid; gap: 3px; padding: 10px; }
+    .car-photo-card span, .car-photo-card small { overflow-wrap: anywhere; }
+  </style>
+{% endblock %}

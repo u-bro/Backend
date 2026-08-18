@@ -3,14 +3,17 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.utils.html import format_html
 import re
 from utils.api_client import api_client
+from utils.admin_links import safe_external_url
 
 from .models import User
 
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
+    change_form_template = "admin/admin_users/user/change_form.html"
     list_display = (
         "id",
         "phone",
@@ -28,7 +31,25 @@ class UserAdmin(admin.ModelAdmin):
 
     list_per_page = 25
 
-    readonly_fields = ('id', 'created_at', 'last_active_at')
+    readonly_fields = ('id', 'created_at', 'last_active_at', 'photo_preview')
+    fieldsets = (
+        ("Профиль", {"fields": ("photo_preview", "photo_url", "first_name", "last_name", "middle_name")}),
+        ("Контакты", {"fields": ("phone", "email", "city")}),
+        ("Статус и роль", {"fields": ("is_active", "status", "role_id")}),
+        ("Служебная информация", {"fields": ("id", "created_at", "updated_at", "last_active_at"), "classes": ("collapse",)}),
+    )
+
+    @admin.display(description="Изображение пользователя")
+    def photo_preview(self, obj):
+        photo_url = safe_external_url(getattr(obj, "photo_url", None))
+        if not photo_url:
+            return "Изображение не загружено."
+        return format_html(
+            '<a class="user-avatar-link" href="{}" target="_blank" rel="noopener">'
+            '<img class="user-avatar" src="{}" alt="Изображение пользователя"></a>',
+            photo_url,
+            photo_url,
+        )
 
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)

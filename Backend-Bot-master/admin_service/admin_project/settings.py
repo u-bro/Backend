@@ -132,6 +132,47 @@ JAZZMIN_SETTINGS = {
         {"name": "Модерация водителей", "url": "driver-moderation-list"},
         {"name": "Политики", "url": "admin-policies", "permissions": ["auth.view_user"]},
     ],
+    "hide_apps": [
+        "admin_users",
+        "admin_driver_documents",
+        "admin_commissions",
+        "admin_commission_payments",
+        "admin_ride_status_history",
+        "admin_cars",
+        "admin_car_photos",
+        "admin_driver_locations",
+        "admin_ride_drivers_requests",
+    ],
+    "hide_models": [
+        "auth.User",
+        "admin_drivers.DriverProfileModeration",
+        "admin_drivers.DriverModerationInfo",
+    ],
+    "custom_links": {
+        "auth": [
+            {"name": "Администраторы", "url": "admin:auth_user_changelist", "icon": "fas fa-user-shield", "permissions": ["auth.view_user"]},
+            {"name": "Пользователи", "url": "admin:admin_users_user_changelist", "icon": "fas fa-users", "permissions": ["admin_users.view_user"]},
+        ],
+        "admin_drivers": [
+            {"name": "Автомобили", "url": "admin:admin_cars_car_changelist", "icon": "fas fa-car", "permissions": ["admin_cars.view_car"]},
+            {"name": "Локации водителей", "url": "admin:admin_driver_locations_driverlocation_changelist", "icon": "fas fa-map-marker-alt", "permissions": ["admin_driver_locations.view_driverlocation"]},
+            {"name": "Причины модераций", "url": "admin:admin_drivers_drivermoderationinfo_changelist", "icon": "fas fa-clipboard-list", "permissions": ["admin_drivers.view_drivermoderationinfo"]},
+        ],
+        "admin_rides": [
+            {"name": "Платежи комиссий", "url": "admin:admin_commission_payments_commissionpayment_changelist", "icon": "fas fa-credit-card", "permissions": ["admin_commission_payments.view_commissionpayment"]},
+            {"name": "Комиссии", "url": "admin:admin_commissions_commission_changelist", "icon": "fas fa-percent", "permissions": ["admin_commissions.view_commission"]},
+            {"name": "Истории статусов поездок", "url": "admin:admin_ride_status_history_ridestatushistory_changelist", "icon": "fas fa-history", "permissions": ["admin_ride_status_history.view_ridestatushistory"]},
+            {"name": "Запросы водителей", "url": "admin:admin_ride_drivers_requests_ridedriversrequest_changelist", "icon": "fas fa-route", "permissions": ["admin_ride_drivers_requests.view_ridedriversrequest"]},
+        ],
+    },
+    "order_with_respect_to": [
+        "auth",
+        "admin_drivers",
+        "admin_rides",
+        "admin_chat_messages",
+        "admin_roles",
+        "axes",
+    ],
 }
 
 CSRF_TRUSTED_ORIGINS = [

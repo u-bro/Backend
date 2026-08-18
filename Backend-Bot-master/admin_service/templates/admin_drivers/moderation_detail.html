@@ -18,13 +18,24 @@
   .document-preview { display: block; width: 100%; height: 120px; object-fit: contain; margin: 6px 0; background: #f8f9fa; }
   .photo-item img { width: 100%; height: 120px; object-fit: cover; }
   .avatar-preview { width: 120px; height: 120px; object-fit: cover; border-radius: 50%; background: #f8f9fa; display: block; margin-top: 8px; }
+  .cars-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .car-card { border: 1px solid #d9dee3; border-radius: 8px; padding: 14px; background: rgba(248, 249, 250, .55); }
+  .car-card.current { border-color: #198754; box-shadow: inset 0 3px #198754; }
+  .car-card-header { align-items: center; display: flex; gap: 8px; justify-content: space-between; margin-bottom: 10px; }
+  .car-card-header h3 { margin: 0; }
+  .current-badge { background: #198754; border-radius: 999px; color: #fff; font-size: 12px; padding: 3px 8px; }
+  .car-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 12px; margin-bottom: 12px; }
+  .car-meta span { overflow-wrap: anywhere; }
+  .car-photo { border-radius: 5px; overflow: hidden; background: #fff; border: 1px solid #ddd; }
+  .car-photo img { display: block; width: 100%; height: 140px; object-fit: cover; }
+  .car-photo-info { display: grid; gap: 2px; padding: 7px; }
   @media (max-width: 900px) { .moderation-grid { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
 
 {% block content %}
 <div id="content-main">
-  <p><a href="{% url 'driver-moderation-list' %}">← К списку модерации</a></p>
+  <p><a href="{{ back_url }}">← {{ back_label }}</a></p>
   <div class="moderation-grid">
     <main>
       <div class="moderation-card">
@@ -73,32 +84,61 @@
       </div>
 
       <div class="moderation-card">
-        <h2>Фотографии автомобиля</h2>
-        <div class="photo-grid">
-          {% for photo_key, images in car_photo_groups %}
-            <div class="photo-item">
-              <strong>{{ photo_key }}</strong>
-              {% for image in images %}
-                {% if image.kind == "document" %}
-                  <a href="{% url 'admin:admin_driver_document_preview' image.document.id %}" target="_blank" rel="noopener">
-                    <img class="document-preview" src="{% url 'admin:admin_driver_document_preview' image.document.id %}" alt="{{ photo_key }}">
-                  </a>
-                  <small>{{ image.document.status|default:"—" }}</small>
-                {% else %}
-                  {% if image.photo.photo_url %}
-                    <a href="{{ image.photo.photo_url }}" target="_blank" rel="noopener">
-                      <img src="{{ image.photo.photo_url }}" alt="{{ photo_key }}">
-                    </a>
-                  {% else %}
-                    <small>Изображение отсутствует</small>
-                  {% endif %}
-                  <small>{{ image.photo.status|default:"—" }}</small>
-                {% endif %}
-              {% endfor %}
-            </div>
-          {% empty %}<p>Фотографии автомобиля не загружены.</p>{% endfor %}
+        <h2>Автомобили</h2>
+        <div class="cars-grid">
+          {% for item in car_cards %}
+            <article class="car-card{% if item.is_current %} current{% endif %}">
+              <div class="car-card-header">
+                <h3>{{ item.car.model|default:"Автомобиль без модели" }}</h3>
+                {% if item.is_current %}<span class="current-badge">Текущий</span>{% endif %}
+              </div>
+              <div class="car-meta">
+                <span>ID: {{ item.admin_link }}</span>
+                <span>Госномер: {{ item.car.number|default:"—" }}</span>
+                <span>Регион: {{ item.car.region|default:"—" }}</span>
+                <span>Год: {{ item.car.year|default:"—" }}</span>
+                <span>VIN: {{ item.car.vin|default:"—" }}</span>
+              </div>
+              <div class="photo-grid">
+                {% for photo_item in item.photos %}
+                  <div class="car-photo">
+                    {% if photo_item.url %}
+                      <a href="{{ photo_item.url }}" target="_blank" rel="noopener">
+                        <img src="{{ photo_item.url }}" alt="{{ photo_item.photo.type|default:'Фото автомобиля' }}">
+                      </a>
+                    {% endif %}
+                    <div class="car-photo-info">
+                      <strong>{{ photo_item.photo.type|default:"Фото" }}</strong>
+                      <small>{{ photo_item.photo.description|default:"Без описания" }}</small>
+                      <small>Статус: {{ photo_item.photo.status|default:"—" }}</small>
+                    </div>
+                  </div>
+                {% empty %}<p>Фотографии не загружены.</p>{% endfor %}
+              </div>
+            </article>
+          {% empty %}<p>Автомобили не зарегистрированы.</p>{% endfor %}
         </div>
       </div>
+
+      {% if car_documents %}
+        <div class="moderation-card">
+          <h2>Общие документы автомобиля</h2>
+          <p>Эти документы не привязаны к конкретному автомобилю.</p>
+          <div class="document-list">
+            {% for document in car_documents %}
+              <div class="document-item">
+                <strong>{{ document.doc_type }}</strong>
+                {% if document.file_bucket_key %}
+                  <a href="{% url 'admin:admin_driver_document_preview' document.id %}" target="_blank" rel="noopener">
+                    <img class="document-preview" src="{% url 'admin:admin_driver_document_preview' document.id %}" alt="{{ document.doc_type }}">
+                  </a>
+                {% else %}<p>Файл отсутствует.</p>{% endif %}
+                <small>Статус: {{ document.status|default:"—" }}</small>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
     </main>
 
     <aside>
@@ -124,6 +164,7 @@
           <p>Аватарка не загружена.</p>
         {% endif %}
         <p>Телефон: {{ profile_user.phone|default:"—" }}</p>
+        <p>User ID: {{ profile_user_link }}</p>
         <p>Email: {{ profile_user.email|default:"—" }}</p>
         <p>Город: {{ profile_user.city|default:"—" }}</p>
         <p>Активен: {% if profile_user.is_active %}да{% else %}нет{% endif %}</p>

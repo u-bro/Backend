@@ -18,6 +18,7 @@ from admin_ride_drivers_requests.models import RideDriversRequest
 from admin_rides.models import Ride
 from admin_users.models import User
 from utils.api_client import api_client
+from utils.admin_links import car_link, safe_external_url, user_link
 
 from .forms import DriverModerationForm
 from .models import DriverModerationInfo, DriverProfile, DriverProfileModeration
@@ -88,6 +89,24 @@ def _status_url_params(request):
     return urlencode(params)
 
 
+def _build_car_cards(cars, car_photos, current_car_id):
+    photos_by_car_id = defaultdict(list)
+    for photo in car_photos:
+        photos_by_car_id[photo.car_id].append(
+            {"photo": photo, "url": safe_external_url(photo.photo_url)}
+        )
+
+    return [
+        {
+            "car": car,
+            "is_current": car.id == current_car_id,
+            "photos": photos_by_car_id[car.id],
+            "admin_link": car_link(car.id),
+        }
+        for car in cars
+    ]
+
+
 def moderation_list(request):
     if not _is_moderator(request):
         raise Http404()
@@ -140,6 +159,7 @@ def moderation_detail(request, profile_id: int):
     user = User.objects.filter(id=profile.user_id).first()
     if not user:
         raise Http404("User not found")
+    source = request.GET.get("from")
 
     form = DriverModerationForm(instance=profile)
     if request.method == "POST":
@@ -150,7 +170,7 @@ def moderation_detail(request, profile_id: int):
                 with transaction.atomic():
                     form.save_related_data()
                 messages.success(request, "Профиль водителя сохранён.")
-                return HttpResponseRedirect(request.path)
+                return HttpResponseRedirect(request.get_full_path())
         elif action in ("approved", "rejected"):
             reason_ids = [int(value) for value in request.POST.getlist("moderation_info_ids") if value.isdigit()]
             success = api_client.moderate_driver(
@@ -161,19 +181,23 @@ def moderation_detail(request, profile_id: int):
             )
             if success:
                 messages.success(request, "Решение модерации сохранено.")
-                return HttpResponseRedirect(request.path)
+                return HttpResponseRedirect(request.get_full_path())
             messages.error(request, "Не удалось сохранить решение через backend. Проверьте MODERATION_INTERNAL_TOKEN.")
         elif action == "block":
             user.is_active = False
             user.save(update_fields=["is_active"])
             messages.success(request, "Пользователь заблокирован.")
-            return HttpResponseRedirect(request.path)
+            return HttpResponseRedirect(request.get_full_path())
         elif action == "delete":
             with transaction.atomic():
                 _delete_driver_related_records(profile)
                 profile.delete()
             messages.success(request, "Профиль водителя удалён.")
-            return HttpResponseRedirect(reverse("driver-moderation-list"))
+            return HttpResponseRedirect(
+                reverse("driver-moderation-list")
+                if source == "moderation"
+                else reverse("admin:admin_drivers_driverprofile_changelist")
+            )
         else:
             form = DriverModerationForm(instance=profile)
     else:
@@ -183,22 +207,12 @@ def moderation_detail(request, profile_id: int):
     car_ids = [car.id for car in cars]
     documents = DriverDocument.objects.filter(driver_profile_id=profile.id).order_by("doc_type", "-created_at")
     car_photos = list(CarPhoto.objects.filter(car_id__in=car_ids).order_by("car_id", "type")) if car_ids else []
-    car_images_by_key = defaultdict(list)
-    image_keys = set()
+    car_cards = _build_car_cards(cars, car_photos, profile.current_car_id)
+    car_documents = []
     for document in documents:
         document_key = (document.doc_type or "").upper()
-        if "CAR" not in document_key:
-            continue
-        image_keys.add((document_key, document.file_bucket_key))
-        car_images_by_key[document_key].append({"kind": "document", "document": document})
-
-    for photo in car_photos:
-        photo_key = (photo.type or "CAR_PHOTO").upper()
-        if "CAR" not in photo_key:
-            photo_key = f"CAR_PHOTO_{photo_key}"
-        if (photo_key, photo.photo_url) in image_keys:
-            continue
-        car_images_by_key[photo_key].append({"kind": "photo", "photo": photo})
+        if "CAR" in document_key:
+            car_documents.append(document)
     moderation_rows = DriverProfileModeration.objects.filter(
         driver_profile_id=profile.id
     ).select_related("driver_moderation_info")
@@ -224,17 +238,29 @@ def moderation_detail(request, profile_id: int):
             **_moderation_context(request),
             "profile": profile,
             "profile_user": user,
-            "avatar_url": profile.photo_url or user.photo_url,
+            "profile_user_link": user_link(user.id),
+            "avatar_url": safe_external_url(profile.photo_url) or safe_external_url(user.photo_url),
             "form": form,
             "cars": cars,
+            "car_cards": car_cards,
+            "car_documents": car_documents,
             "documents": documents,
-            "car_photo_groups": sorted(car_images_by_key.items()),
             "document_groups": sorted(document_groups.items()),
             "reasons": reasons,
             "all_reasons": all_reasons,
             "warning_documents": warning_documents,
             "missing_documents": missing_documents,
             "status_label": STATUS_LABELS.get(profile.status, profile.status),
+            "back_url": (
+                reverse("driver-moderation-list")
+                if source == "moderation"
+                else reverse("admin:admin_drivers_driverprofile_changelist")
+            ),
+            "back_label": (
+                "К списку модерации"
+                if source == "moderation"
+                else "К списку профилей"
+            ),
         },
     )
 

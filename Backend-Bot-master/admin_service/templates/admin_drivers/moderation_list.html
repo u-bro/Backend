@@ -53,9 +53,9 @@
       </thead>
       <tbody>
         {% for profile in profiles %}
-          <tr data-href="{% url 'driver-moderation-detail' profile.id %}" onclick="window.location.href=this.dataset.href" tabindex="0" onkeydown="if(event.key==='Enter'){window.location.href=this.dataset.href}">
-            <td><a href="{% url 'driver-moderation-detail' profile.id %}">{{ profile.first_name|default:"—" }}</a></td>
-            <td><a href="{% url 'driver-moderation-detail' profile.id %}">{{ profile.last_name|default:"—" }}</a></td>
+          <tr data-href="{% url 'driver-moderation-detail' profile.id %}?from=moderation" onclick="window.location.href=this.dataset.href" tabindex="0" onkeydown="if(event.key==='Enter'){window.location.href=this.dataset.href}">
+            <td><a href="{% url 'driver-moderation-detail' profile.id %}?from=moderation">{{ profile.first_name|default:"—" }}</a></td>
+            <td><a href="{% url 'driver-moderation-detail' profile.id %}?from=moderation">{{ profile.last_name|default:"—" }}</a></td>
             <td>{{ profile.user_phone|default:"—" }}</td>
             <td>{{ profile.user_email|default:"—" }}</td>
             <td><span class="status-badge status-{{ profile.status }}">{{ profile.get_status_display }}</span></td>

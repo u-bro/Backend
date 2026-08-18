@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.utils import timezone
 from utils.api_client import api_client
+from utils.admin_links import user_link
 from utils.schema_choices import RIDE_CLASS_CHOICES
 
 from admin_car_photos.models import CarPhoto
@@ -123,7 +124,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
     inlines = (DriverProfileModerationInline,)
     list_display = (
         "id",
-        "user_id",
+        "user_id_link",
         "user_phone",
         "display_name",
         "first_name",
@@ -146,6 +147,14 @@ class DriverProfileAdmin(admin.ModelAdmin):
     actions = ["approve_drivers", "reject_drivers", "block_drivers", "unblock_drivers"]
 
     readonly_fields = ('id', 'created_at', 'updated_at', 'approved_at')
+
+    @admin.display(description="User ID", ordering="user_id")
+    def user_id_link(self, obj):
+        return user_link(obj.user_id)
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        url = reverse("driver-moderation-detail", args=[object_id])
+        return HttpResponseRedirect(f"{url}?from=profiles")
 
     def get_changelist_form(self, request, **kwargs):
         kwargs["form"] = DriverProfileChangelistForm

@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 
 from .models import CarPhoto
+from utils.admin_links import safe_external_url
 
 
 @admin.register(CarPhoto)
@@ -23,25 +24,27 @@ class CarPhotoAdmin(admin.ModelAdmin):
 
     @admin.display(description="Превью")
     def photo_preview(self, obj):
-        if not obj.photo_url:
+        photo_url = safe_external_url(obj.photo_url)
+        if not photo_url:
             return "Нет фото"
 
         return format_html(
             '<a href="{}" target="_blank" rel="noopener">'
             '<img src="{}" alt="car photo" style="max-height: 120px; max-width: 120px; object-fit: cover; border: 1px solid #ddd; background: #fff;" />'
             "</a>",
-            obj.photo_url,
-            obj.photo_url,
+            photo_url,
+            photo_url,
         )
 
     @admin.display(description="Файл")
     def photo_link(self, obj):
-        if not obj.photo_url:
+        photo_url = safe_external_url(obj.photo_url)
+        if not photo_url:
             return "Нет фото"
 
         return format_html(
             '<a href="{}" target="_blank" rel="noopener">Открыть</a>',
-            obj.photo_url,
+            photo_url,
         )
 
     def has_add_permission(self, request):

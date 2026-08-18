@@ -15,15 +15,22 @@ content_types = ContentType.objects.filter(
     app_label__in=[
         'admin_users', 'admin_drivers', 'admin_rides',
         'admin_roles', 'admin_driver_documents', 'admin_chat_messages',
-        'admin_commissions', 'admin_ride_status_history'
+        'admin_commissions', 'admin_commission_payments',
+        'admin_ride_status_history', 'admin_cars', 'admin_car_photos',
+        'admin_driver_locations', 'admin_ride_drivers_requests'
     ]
 )
 
 all_permissions = Permission.objects.filter(content_type__in=content_types)
+auth_view_permissions = Permission.objects.filter(
+    content_type__app_label='auth',
+    codename__in=['view_user', 'view_group'],
+)
+admin_permissions = all_permissions | auth_view_permissions
 
-admin_group.permissions.set(all_permissions)
+admin_group.permissions.set(admin_permissions)
 
-view_permissions = all_permissions.filter(codename__startswith='view_')
+view_permissions = all_permissions.filter(codename__startswith='view_') | auth_view_permissions
 change_permissions = all_permissions.filter(
     codename__in=[
         'change_user', 'change_driverprofile', 'change_ride',

@@ -1,0 +1,10 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .user-avatar-link { display: inline-block; }
+    .user-avatar { background: #f8f9fa; border: 1px solid #d9dee3; border-radius: 50%; height: 144px; object-fit: cover; width: 144px; }
+    @media (max-width: 767px) { .user-avatar { height: 112px; width: 112px; } }
+  </style>
+{% endblock %}
