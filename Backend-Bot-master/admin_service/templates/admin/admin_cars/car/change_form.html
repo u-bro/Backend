@@ -4,6 +4,9 @@
   {{ block.super }}
   <style>
     .car-photo-gallery { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); max-width: 1100px; }
+    .car-photo-section + .car-photo-section { border-top: 1px solid #d9dee3; margin-top: 20px; padding-top: 18px; }
+    .car-photo-section h3 { margin: 0 0 10px; }
+    .car-photo-section .help { margin: -4px 0 12px; }
     .car-photo-card { background: #fff; border: 1px solid #d9dee3; border-radius: 8px; overflow: hidden; }
     .car-photo-card img { background: #f8f9fa; display: block; height: 160px; object-fit: cover; width: 100%; }
     .car-photo-card div { display: grid; gap: 3px; padding: 10px; }

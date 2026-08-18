@@ -100,17 +100,28 @@ class ImagePreviewTests(SimpleTestCase):
         self.assertIn("https://cdn.example/avatar.jpg", preview)
         self.assertIn("user-avatar", preview)
 
+    @patch("admin_cars.admin.DriverDocument.objects.filter")
+    @patch("admin_cars.admin.DriverProfile.objects.filter")
     @patch("admin_cars.admin.CarPhoto.objects.filter")
-    def test_car_gallery_and_empty_state(self, filter_mock):
-        queryset = MagicMock()
-        filter_mock.return_value = queryset
+    def test_current_car_gallery_combines_photos_and_driver_documents(
+        self,
+        photo_filter_mock,
+        profile_filter_mock,
+        document_filter_mock,
+    ):
+        photo_queryset = MagicMock()
+        photo_filter_mock.return_value = photo_queryset
+        profile_filter_mock.return_value.exists.return_value = True
+        document_queryset = MagicMock()
+        document_filter_mock.return_value = document_queryset
         model_admin = CarAdmin(Car, admin.site)
-        car = SimpleNamespace(pk=42)
+        car = SimpleNamespace(pk=42, driver_profile_id=15)
 
-        queryset.order_by.return_value = []
+        photo_queryset.order_by.return_value = []
+        document_queryset.order_by.return_value = []
         self.assertEqual(model_admin.photo_gallery(car), "Фотографии не загружены.")
 
-        queryset.order_by.return_value = [
+        photo_queryset.order_by.return_value = [
             SimpleNamespace(
                 photo_url="https://cdn.example/car.jpg",
                 type="CAR_FRONT",
@@ -118,9 +129,45 @@ class ImagePreviewTests(SimpleTestCase):
                 status="approved",
             )
         ]
+        document_queryset.order_by.return_value = [
+            SimpleNamespace(
+                id=99,
+                doc_type="CAR_PHOTO_FRONT",
+                file_bucket_key="drivers/15/car-front.jpg",
+                status="approved",
+                created_at=None,
+            )
+        ]
         gallery = str(model_admin.photo_gallery(car))
         self.assertIn("https://cdn.example/car.jpg", gallery)
         self.assertIn("CAR_FRONT", gallery)
+        self.assertIn("CAR_PHOTO_FRONT", gallery)
+        self.assertIn(reverse("admin:admin_driver_document_preview", args=[99]), gallery)
+        document_filter_mock.assert_called_with(
+            driver_profile_id=15,
+            doc_type__startswith="CAR_PHOTO_",
+        )
+
+    @patch("admin_cars.admin.DriverDocument.objects.filter")
+    @patch("admin_cars.admin.DriverProfile.objects.filter")
+    @patch("admin_cars.admin.CarPhoto.objects.filter")
+    def test_non_current_car_does_not_show_profile_documents(
+        self,
+        photo_filter_mock,
+        profile_filter_mock,
+        document_filter_mock,
+    ):
+        photo_queryset = MagicMock()
+        photo_queryset.order_by.return_value = []
+        photo_filter_mock.return_value = photo_queryset
+        profile_filter_mock.return_value.exists.return_value = False
+
+        gallery = str(CarAdmin(Car, admin.site).photo_gallery(
+            SimpleNamespace(pk=42, driver_profile_id=15)
+        ))
+
+        self.assertIn("только у текущего автомобиля", gallery)
+        document_filter_mock.assert_not_called()
 
     def test_direct_car_photo_admin_rejects_unsafe_url(self):
         model_admin = CarPhotoAdmin(CarPhoto, admin.site)
