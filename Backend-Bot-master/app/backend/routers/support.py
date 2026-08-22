@@ -24,12 +24,12 @@ async def max_link(user: User = Depends(require_role([RoleCode.USER, RoleCode.DR
 @support_router.post("/integrations/max/webhook", status_code=202)
 async def max_webhook(
     request: Request,
-    body: MaxWebhookRequest,
+    body: dict,
     x_max_bot_api_secret: str | None = Header(None, alias="X-Max-Bot-Api-Secret"),
 ):
     if not max_bot_service.verify_webhook_secret(x_max_bot_api_secret):
         raise HTTPException(status_code=403, detail="Invalid MAX webhook secret")
-    event = max_bot_service.parse_incoming_event(body.model_dump(exclude_none=True))
+    event = max_bot_service.parse_incoming_event(body)
     if event is None:
         raise HTTPException(status_code=400, detail="Unsupported MAX webhook event")
     session = request.state.session
@@ -46,7 +46,8 @@ async def max_webhook(
     elif event.user_id is not None and conversation.max_user_id is None:
         conversation.max_user_id = event.user_id
     conversation.updated_at = datetime.now(timezone.utc)
-    session.add(SupportMessage(conversation_id=conversation.id, sender_type="USER", user_id=None, text=event.text, external_message_id=event.external_message_id))
+    if event.text is not None:
+        session.add(SupportMessage(conversation_id=conversation.id, sender_type="USER", user_id=None, text=event.text, external_message_id=event.external_message_id))
     # A greeting is deliberately sent only through the adapter; persistence is independent of transport availability.
     await session.commit()
     if first_message:
