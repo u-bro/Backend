@@ -29,7 +29,11 @@ from admin_users.admin import UserAdmin
 from admin_users.models import User
 from utils.admin_links import admin_change_link, driver_profile_link, safe_external_url
 
-from .settings import JAZZMIN_SETTINGS
+from .settings import (
+    DRIVER_PROFILE_INITIAL_RATING_AVG,
+    DRIVER_PROFILE_INITIAL_RATING_COUNT,
+    JAZZMIN_SETTINGS,
+)
 
 
 class AdminLinkTests(SimpleTestCase):
@@ -72,6 +76,16 @@ class AdminLinkTests(SimpleTestCase):
 
 
 class DriverDetailTests(SimpleTestCase):
+    def test_new_driver_profile_rating_defaults(self):
+        self.assertEqual(
+            DriverProfile._meta.get_field("rating_avg").default,
+            DRIVER_PROFILE_INITIAL_RATING_AVG,
+        )
+        self.assertEqual(
+            DriverProfile._meta.get_field("rating_count").default,
+            DRIVER_PROFILE_INITIAL_RATING_COUNT,
+        )
+
     def test_standard_change_view_redirects_to_extended_detail(self):
         model_admin = DriverProfileAdmin(DriverProfile, admin.site)
         response = model_admin.change_view(SimpleNamespace(), "23")

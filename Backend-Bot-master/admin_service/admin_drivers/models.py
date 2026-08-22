@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from utils.schema_choices import DRIVER_PROFILE_STATUS_CHOICES, RIDE_CLASS_CHOICES
 
@@ -58,8 +59,8 @@ class DriverProfile(models.Model):
     classes_allowed = models.JSONField(null=False, blank=False, default=default_classes_allowed)
     current_class = models.CharField(max_length=50, null=True, blank=True, choices=RIDE_CLASS_CHOICES)
     current_car_id = models.BigIntegerField(null=True, blank=True)
-    rating_avg = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, default=5.0, validators=[MinValueValidator(0)])
-    rating_count = models.IntegerField(null=True, blank=True, default=0, validators=[MinValueValidator(0)])
+    rating_avg = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True, default=settings.DRIVER_PROFILE_INITIAL_RATING_AVG, validators=[MinValueValidator(0)])
+    rating_count = models.IntegerField(null=True, blank=True, default=settings.DRIVER_PROFILE_INITIAL_RATING_COUNT, validators=[MinValueValidator(0)])
     ride_count = models.IntegerField(null=True, blank=True, default=0, validators=[MinValueValidator(0)])
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)

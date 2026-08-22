@@ -2,6 +2,7 @@ from sqlalchemy import BigInteger, Integer, String, TIMESTAMP, func, Boolean, Fo
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
+from app.config import DRIVER_PROFILE_INITIAL_RATING_AVG, DRIVER_PROFILE_INITIAL_RATING_COUNT
 
 
 class DriverProfile(Base):
@@ -26,8 +27,8 @@ class DriverProfile(Base):
     classes_allowed = mapped_column(JSONB, nullable=False)
     current_class = mapped_column(String(50), nullable=True)
     current_car_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('cars.id'), nullable=True)
-    rating_avg = mapped_column(DECIMAL(3,2), nullable=True)
-    rating_count = mapped_column(Integer, nullable=True, default=0)
+    rating_avg = mapped_column(DECIMAL(3,2), nullable=True, default=DRIVER_PROFILE_INITIAL_RATING_AVG)
+    rating_count = mapped_column(Integer, nullable=True, default=DRIVER_PROFILE_INITIAL_RATING_COUNT)
     ride_count = mapped_column(Integer, nullable=True, default=0)
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())

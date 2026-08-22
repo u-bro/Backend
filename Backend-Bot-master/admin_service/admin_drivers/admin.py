@@ -8,6 +8,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.utils import timezone
+from django.conf import settings
 from utils.api_client import api_client
 from utils.admin_links import user_link
 from utils.schema_choices import RIDE_CLASS_CHOICES
@@ -219,6 +220,9 @@ class DriverProfileAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         try:
+            if not change:
+                obj.rating_avg = settings.DRIVER_PROFILE_INITIAL_RATING_AVG
+                obj.rating_count = settings.DRIVER_PROFILE_INITIAL_RATING_COUNT
             if obj.status == DriverProfile.STATUS_APPROVED:
                 obj.approved = True
                 if not obj.approved_at:

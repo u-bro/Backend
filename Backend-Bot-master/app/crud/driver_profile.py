@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 from .driver_location import driver_location_crud
 from app.models import Car, DriverProfileModeration
+from app.config import DRIVER_PROFILE_INITIAL_RATING_AVG, DRIVER_PROFILE_INITIAL_RATING_COUNT
 from datetime import datetime, timezone
 
 CLASS_VALUE = {
@@ -62,7 +63,12 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         existing_item = existing.scalar_one_or_none()
         if existing_item:
             raise HTTPException(status_code=409, detail=f"Driver profile for user {create_obj.user_id} already created")
-        stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
+        create_data = create_obj.model_dump()
+        create_data.update(
+            rating_avg=DRIVER_PROFILE_INITIAL_RATING_AVG,
+            rating_count=DRIVER_PROFILE_INITIAL_RATING_COUNT,
+        )
+        stmt = insert(self.model).values(create_data).returning(self.model)
         result = await self.execute_get_one(session, stmt)
 
         driver_location = await driver_location_crud.get_by_driver_profile_id(session, result.id)

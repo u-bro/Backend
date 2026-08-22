@@ -5,6 +5,7 @@ from pydantic import Field, model_validator
 from .car import CarSchema
 from .driver_moderation_info import DriverModerationInfoSchema
 from app.enum import RideClass
+from app.config import DRIVER_PROFILE_INITIAL_RATING_AVG, DRIVER_PROFILE_INITIAL_RATING_COUNT
 
 
 RIDE_CLASSES_LITERAL = Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]
@@ -34,8 +35,8 @@ class DriverProfileCreate(DriverProfileValidated):
     license_expires_at: Optional[datetime] = None
     classes_allowed: list[RIDE_CLASSES_LITERAL] = []
     ride_count: int = Field(0, ge=0)
-    rating_avg: float = Field(0, ge=0)
-    rating_count: int = Field(0, ge=0)
+    rating_avg: float = Field(DRIVER_PROFILE_INITIAL_RATING_AVG, ge=0)
+    rating_count: int = Field(DRIVER_PROFILE_INITIAL_RATING_COUNT, ge=0)
     status: Literal['waiting_register'] | None = Field('waiting_register', max_length=50)
     created_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
