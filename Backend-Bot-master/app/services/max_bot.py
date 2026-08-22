@@ -3,7 +3,7 @@ from typing import Any, Awaitable, Callable
 
 import httpx
 
-from app.config import MAX_API_BASE_URL, MAX_BOT_TOKEN, MAX_SUPPORT_LINK_TEMPLATE, MAX_WEBHOOK_SECRET
+from app.config import MAX_API_BASE_URL, MAX_BOT_TOKEN, MAX_BOT_USERNAME, MAX_SUPPORT_LINK_TEMPLATE, MAX_WEBHOOK_SECRET
 from app.logger import logger
 
 
