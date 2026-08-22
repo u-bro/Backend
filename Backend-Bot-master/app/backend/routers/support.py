@@ -22,8 +22,12 @@ async def max_link(user: User = Depends(require_role([RoleCode.USER, RoleCode.DR
 
 
 @support_router.post("/integrations/max/webhook", status_code=202)
-async def max_webhook(request: Request, body: MaxWebhookRequest, x_max_webhook_secret: str | None = Header(None)):
-    if not max_bot_service.verify_webhook_secret(x_max_webhook_secret):
+async def max_webhook(
+    request: Request,
+    body: MaxWebhookRequest,
+    x_max_bot_api_secret: str | None = Header(None, alias="X-Max-Bot-Api-Secret"),
+):
+    if not max_bot_service.verify_webhook_secret(x_max_bot_api_secret):
         raise HTTPException(status_code=403, detail="Invalid MAX webhook secret")
     event = max_bot_service.parse_incoming_event(body.model_dump(exclude_none=True))
     if event is None:
