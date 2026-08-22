@@ -62,3 +62,9 @@ TBANK_TERMINAL_KEY = os.getenv("TBANK_TERMINAL_KEY")
 TBANK_TERMINAL_PASSWORD = os.getenv("TBANK_TERMINAL_PASSWORD")
 TBANK_PAYMENT_NOTIFICATION_URL = os.getenv("TBANK_PAYMENT_NOTIFICATION_URL", 'https://u-bro.ru/api/v1/webhooks/tbank')
 TBANK_WEBHOOK_EXAMPLE = os.getenv("TBANK_WEBHOOK_EXAMPLE", os.getenv("TOCHKA_WEBHOOK_EXAMPLE"))
+
+MAX_BOT_TOKEN = (os.getenv("MAX_BOT_TOKEN") or "").strip() or None
+MAX_BOT_USERNAME = (os.getenv("MAX_BOT_USERNAME") or "").strip() or None
+MAX_WEBHOOK_SECRET = (os.getenv("MAX_WEBHOOK_SECRET") or "").strip() or None
+MAX_SUPPORT_LINK_TEMPLATE = (os.getenv("MAX_SUPPORT_LINK_TEMPLATE") or "").strip() or None
+MAX_API_BASE_URL = (os.getenv("MAX_API_BASE_URL") or "").strip() or None

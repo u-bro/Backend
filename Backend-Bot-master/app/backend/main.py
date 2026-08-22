@@ -72,6 +72,7 @@ app.include_router(tbank_webhook_router, tags=['TBank(Webhooks)'], prefix=API_PR
 app.include_router(ride_drivers_request_router, tags=['RideDriversRequests'], prefix=API_PREFIX)
 app.include_router(car_router, tags=['Cars'], prefix=API_PREFIX)
 app.include_router(car_photo_router, tags=['CarPhotos'], prefix=API_PREFIX)
+app.include_router(support_router, tags=['Support'], prefix=API_PREFIX)
 
 
 @app.exception_handler(HTTPException)
