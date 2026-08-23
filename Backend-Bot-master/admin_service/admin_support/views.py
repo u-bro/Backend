@@ -71,11 +71,12 @@ def workspace(request, conversation_id=None):
     if unread_only:
         conversations = conversations.filter(unread_count__gt=0)
     if query:
-        search = Q(user__phone__icontains=query) | Q(user__first_name__icontains=query) | Q(user__last_name__icontains=query)
         numeric = query.lstrip("#")
         if numeric.isdigit():
-            search |= Q(id=int(numeric)) | Q(max_user_id=int(numeric))
-        conversations = conversations.filter(search)
+            conversations = conversations.filter(Q(id=int(numeric)) | Q(max_user_id=int(numeric)))
+        else:
+            search = Q(user__phone__icontains=query) | Q(user__first_name__icontains=query) | Q(user__last_name__icontains=query)
+            conversations = conversations.filter(search)
     conversations = list(conversations.order_by("-updated_at", "-id")[:100])
 
     selected = None

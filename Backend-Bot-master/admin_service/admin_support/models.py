@@ -44,6 +44,23 @@ class SupportConversation(models.Model):
             return " ".join(filter(None, (self.user.first_name, self.user.last_name))) or self.user.phone
         return None
 
+    @property
+    def contact_phone(self):
+        if self.user_id and self.user:
+            return self.user.phone or "—"
+        return "—"
+
+    @property
+    def contact_label(self):
+        if self.user_id and self.user:
+            name = " ".join(filter(None, (self.user.first_name, self.user.last_name)))
+            return name or self.user.phone or "Пользователь приложения"
+        if self.source == "LANDING":
+            return "Гость лендинга"
+        if self.source == "DIRECT":
+            return "Пользователь MAX"
+        return "Гость MAX"
+
 
 class SupportMessage(models.Model):
     id = models.BigAutoField(primary_key=True)

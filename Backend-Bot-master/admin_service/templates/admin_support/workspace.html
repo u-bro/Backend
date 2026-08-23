@@ -25,9 +25,9 @@
     <div class="support-list">
       {% for conversation in conversations %}
       <a class="support-list-item{% if selected.id == conversation.id %} selected{% endif %}" href="{% url 'support-conversation' conversation.id %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}">
-        <span class="support-avatar">{{ conversation.display_name|default:"?"|slice:":1"|upper }}</span>
+        <span class="support-avatar">{{ conversation.contact_label|first|upper }}</span>
         <span class="support-list-copy">
-          <strong>{{ conversation.display_name|default:conversation.user.phone|default:"Гость MAX" }}</strong>
+          <strong>{{ conversation.contact_label }}</strong>
           <small>#{{ conversation.id }} · {{ conversation.get_source_display|default:conversation.source }}</small>
           <span>{% if conversation.latest_sender == "OPERATOR" %}Вы: {% endif %}{{ conversation.latest_text|default:"Вложение"|truncatechars:55 }}</span>
         </span>
@@ -47,8 +47,8 @@
     <header class="support-detail-header">
       <a class="support-mobile-back" href="{% url 'support-workspace' %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}"><i class="fas fa-chevron-left"></i></a>
       <div>
-        <h2>{{ selected.display_name|default:selected.user.phone|default:"Гость MAX" }}</h2>
-        <span>#{{ selected.id }} · {% if selected.user.phone %}{{ selected.user.phone }} · {% endif %}MAX {{ selected.max_user_id|default:"—" }}</span>
+        <h2>{{ selected.contact_label }}</h2>
+        <span>#{{ selected.id }} · Телефон: {{ selected.contact_phone }} · MAX {{ selected.max_user_id|default:"—" }}</span>
       </div>
       <div class="support-actions">
         {% if selected.unread_count and selected.visible_last_inbound_id %}<form id="support-auto-read" method="post" action="{% url 'support-action' selected.id 'read' %}">{% csrf_token %}<input type="hidden" name="up_to_message_id" value="{{ selected.visible_last_inbound_id }}"></form>{% endif %}
