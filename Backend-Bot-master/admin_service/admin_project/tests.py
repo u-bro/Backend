@@ -203,6 +203,10 @@ class SidebarSettingsTests(SimpleTestCase):
         auth_links = [item["name"] for item in JAZZMIN_SETTINGS["custom_links"]["auth"]]
         self.assertEqual(auth_links, ["Администраторы", "Пользователи"])
         self.assertEqual(JAZZMIN_SETTINGS["order_with_respect_to"][-1], "axes")
+        top_links = [item["name"] for item in JAZZMIN_SETTINGS["topmenu_links"]]
+        self.assertEqual(top_links.index("Поддержка"), top_links.index("Модерация водителей") + 1)
+        self.assertEqual(JAZZMIN_SETTINGS["custom_css"], "admin_support/support.css")
+        self.assertEqual(JAZZMIN_SETTINGS["custom_js"], "admin_support/support.js")
 
 
 class ModelAdminCheckTests(SimpleTestCase):
@@ -227,6 +231,7 @@ class ModelAdminCheckTests(SimpleTestCase):
             "admin_drivers/moderation_detail.html",
             "admin/admin_cars/car/change_form.html",
             "admin/admin_users/user/change_form.html",
+            "admin_support/workspace.html",
         ):
             with self.subTest(template=template_name):
                 self.assertIsNotNone(get_template(template_name))

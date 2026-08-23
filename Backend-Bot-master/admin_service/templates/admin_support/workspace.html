@@ -1,0 +1,95 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Поддержка{% endblock %}
+
+{% block content %}
+<div id="content-main" class="support-workspace{% if selected %} has-selection{% endif %}">
+  <aside class="support-sidebar">
+    <div class="support-heading">
+      <h1>Поддержка</h1>
+      <span class="support-live"><i></i> MAX</span>
+    </div>
+    <nav class="support-tabs" aria-label="Статус диалогов">
+      <a href="{% url 'support-workspace' %}?status=OPEN" class="{% if selected_status == 'OPEN' and not unread_only %}active{% endif %}">Открытые</a>
+      <a href="{% url 'support-workspace' %}?status=OPEN&amp;unread=1" class="{% if unread_only %}active{% endif %}">Непрочитанные</a>
+      <a href="{% url 'support-workspace' %}?status=CLOSED" class="{% if selected_status == 'CLOSED' %}active{% endif %}">Закрытые</a>
+    </nav>
+    <form method="get" class="support-search">
+      <input type="hidden" name="status" value="{{ selected_status }}">
+      {% if unread_only %}<input type="hidden" name="unread" value="1">{% endif %}
+      <label class="sr-only" for="support-q">Поиск диалогов</label>
+      <input id="support-q" type="search" name="q" value="{{ search_query }}" placeholder="Имя, телефон или #ID">
+      <button type="submit" aria-label="Найти"><i class="fas fa-search"></i></button>
+    </form>
+    <div class="support-list">
+      {% for conversation in conversations %}
+      <a class="support-list-item{% if selected.id == conversation.id %} selected{% endif %}" href="{% url 'support-conversation' conversation.id %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}">
+        <span class="support-avatar">{{ conversation.display_name|default:"?"|slice:":1"|upper }}</span>
+        <span class="support-list-copy">
+          <strong>{{ conversation.display_name|default:conversation.user.phone|default:"Гость MAX" }}</strong>
+          <small>#{{ conversation.id }} · {{ conversation.get_source_display|default:conversation.source }}</small>
+          <span>{% if conversation.latest_sender == "OPERATOR" %}Вы: {% endif %}{{ conversation.latest_text|default:"Вложение"|truncatechars:55 }}</span>
+        </span>
+        <span class="support-list-meta">
+          <time>{{ conversation.latest_created_at|date:"H:i" }}</time>
+          {% if conversation.unread_count %}<b>{{ conversation.unread_count }}</b>{% endif %}
+        </span>
+      </a>
+      {% empty %}
+      <div class="support-empty-list">Диалоги не найдены.</div>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <section class="support-detail">
+    {% if selected %}
+    <header class="support-detail-header">
+      <a class="support-mobile-back" href="{% url 'support-workspace' %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}"><i class="fas fa-chevron-left"></i></a>
+      <div>
+        <h2>{{ selected.display_name|default:selected.user.phone|default:"Гость MAX" }}</h2>
+        <span>#{{ selected.id }} · {% if selected.user.phone %}{{ selected.user.phone }} · {% endif %}MAX {{ selected.max_user_id|default:"—" }}</span>
+      </div>
+      <div class="support-actions">
+        {% if selected.unread_count and selected.visible_last_inbound_id %}<form id="support-auto-read" method="post" action="{% url 'support-action' selected.id 'read' %}">{% csrf_token %}<input type="hidden" name="up_to_message_id" value="{{ selected.visible_last_inbound_id }}"></form>{% endif %}
+        {% if selected.status == "OPEN" %}
+        <form method="post" action="{% url 'support-action' selected.id 'close' %}">{% csrf_token %}<button type="submit"><i class="fas fa-lock"></i><span>Закрыть</span></button></form>
+        {% else %}
+        <form method="post" action="{% url 'support-action' selected.id 'reopen' %}">{% csrf_token %}<button type="submit"><i class="fas fa-lock-open"></i><span>Открыть</span></button></form>
+        {% endif %}
+      </div>
+    </header>
+    <div class="support-messages" id="support-messages">
+      {% for item in selected_messages %}
+      <article class="support-message {{ item.sender_type|lower }}">
+        <div class="support-bubble">
+          {% if item.text %}<div class="support-message-text">{{ item.text|linebreaksbr }}</div>{% endif %}
+          {% for attachment in item.attachments.all %}
+          <div class="support-attachment">
+            <i class="fas fa-paperclip"></i>
+            <div><strong>{{ attachment.file_name|default:attachment.attachment_type }}</strong><small>{{ attachment.mime_type|default:"Файл" }}{% if attachment.file_size %} · {{ attachment.file_size|filesizeformat }}{% endif %}</small></div>
+            {% if attachment.safe_url %}<a href="{{ attachment.safe_url }}" target="_blank" rel="noopener noreferrer">Открыть</a>{% endif %}
+          </div>
+          {% endfor %}
+          <footer>{% if item.sender_type == "OPERATOR" %}{{ item.operator_name|default:"Оператор" }} · {% endif %}{{ item.created_at|date:"d.m.Y H:i" }}{% if item.delivery_status == "PENDING" %} · Отправляется{% elif item.delivery_status == "SENT" and item.sender_type == "OPERATOR" %} · Отправлено{% elif item.delivery_status == "FAILED" %} · <em title="{{ item.delivery_error }}">Не доставлено</em>{% endif %}</footer>
+          {% if item.delivery_status == "FAILED" and item.sender_type == "OPERATOR" %}<form method="post" action="{% url 'support-action' selected.id 'retry' %}" class="support-retry">{% csrf_token %}<input type="hidden" name="message_id" value="{{ item.id }}"><button type="submit">Повторить</button></form>{% endif %}
+        </div>
+      </article>
+      {% empty %}<div class="support-empty-list">В диалоге пока нет сообщений.</div>{% endfor %}
+    </div>
+    {% if selected.status == "OPEN" %}
+    <form method="post" action="{% url 'support-action' selected.id 'reply' %}" class="support-composer">
+      {% csrf_token %}
+      <label class="sr-only" for="support-reply">Ответ</label>
+      <textarea id="support-reply" name="text" rows="2" maxlength="4000" required placeholder="Напишите ответ... (только текст)"></textarea>
+      <button type="submit" aria-label="Отправить"><i class="fas fa-paper-plane"></i></button>
+    </form>
+    {% endif %}
+    {% else %}
+    <div class="support-empty-detail"><i class="far fa-comments"></i><h2>Выберите диалог</h2><p>История переписки и действия появятся здесь.</p></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+{% block extrajs %}{{ block.super }}<script>document.addEventListener("DOMContentLoaded",function(){var e=document.getElementById("support-messages");if(e)e.scrollTop=e.scrollHeight;var read=document.getElementById("support-auto-read");if(read)read.submit();});</script>{% endblock %}

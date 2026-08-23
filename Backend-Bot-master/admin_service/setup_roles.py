@@ -17,7 +17,7 @@ content_types = ContentType.objects.filter(
         'admin_roles', 'admin_driver_documents', 'admin_chat_messages',
         'admin_commissions', 'admin_commission_payments',
         'admin_ride_status_history', 'admin_cars', 'admin_car_photos',
-        'admin_driver_locations', 'admin_ride_drivers_requests'
+        'admin_driver_locations', 'admin_ride_drivers_requests', 'admin_support'
     ]
 )
 
@@ -34,7 +34,7 @@ view_permissions = all_permissions.filter(codename__startswith='view_') | auth_v
 change_permissions = all_permissions.filter(
     codename__in=[
         'change_user', 'change_driverprofile', 'change_ride',
-        'change_commission'
+        'change_commission', 'change_supportconversation'
     ]
 )
 

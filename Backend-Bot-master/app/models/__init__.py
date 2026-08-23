@@ -19,4 +19,4 @@ from .car import Car
 from .car_photo import CarPhoto
 from .driver_moderation_info import DriverModerationInfo
 from .driver_profile_moderation import DriverProfileModeration
-from .support import SupportConversation, SupportMessage
+from .support import SupportConversation, SupportEntryToken, SupportMessage, SupportMessageAttachment

@@ -16,7 +16,7 @@ class Command(BaseCommand):
             app_label__in=[
                 'admin_users', 'admin_drivers', 'admin_rides',
                 'admin_roles', 'admin_driver_documents', 'admin_chat_messages',
-                'admin_commissions', 'admin_ride_status_history'
+                'admin_commissions', 'admin_ride_status_history', 'admin_support'
             ]
         )
         
@@ -30,7 +30,7 @@ class Command(BaseCommand):
         change_permissions = all_permissions.filter(
             codename__in=[
                 'change_user', 'change_driverprofile', 'change_ride',
-                'change_commission'
+                'change_commission', 'change_supportconversation'
             ]
         )
         

@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'admin_car_photos.apps.AdminCarPhotosConfig',
     'admin_driver_locations.apps.AdminDriverLocationsConfig',
     'admin_ride_drivers_requests.apps.AdminRideDriversRequestsConfig',
+    'admin_support.apps.AdminSupportConfig',
 ]
 
 MIDDLEWARE = [
@@ -98,6 +99,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+SUPPORT_API_BASE_URL = os.getenv('SUPPORT_API_BASE_URL', 'http://fastapi_app:5000')
+SUPPORT_API_TIMEOUT = int(os.getenv('SUPPORT_API_TIMEOUT', '10'))
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGGING = {
@@ -130,6 +134,7 @@ JAZZMIN_SETTINGS = {
     "topmenu_links": [
         {"name": "Главная", "url": "admin:index", "permissions": ["auth.view_user"]},
         {"name": "Модерация водителей", "url": "driver-moderation-list"},
+        {"name": "Поддержка", "url": "support-workspace", "permissions": ["admin_support.view_supportconversation"]},
         {"name": "Политики", "url": "admin-policies", "permissions": ["auth.view_user"]},
     ],
     "hide_apps": [
@@ -173,6 +178,8 @@ JAZZMIN_SETTINGS = {
         "admin_roles",
         "axes",
     ],
+    "custom_css": "admin_support/support.css",
+    "custom_js": "admin_support/support.js",
 }
 
 CSRF_TRUSTED_ORIGINS = [

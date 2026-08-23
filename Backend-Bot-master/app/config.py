@@ -68,3 +68,6 @@ MAX_BOT_USERNAME = (os.getenv("MAX_BOT_USERNAME") or "").strip() or None
 MAX_WEBHOOK_SECRET = (os.getenv("MAX_WEBHOOK_SECRET") or "").strip() or None
 MAX_SUPPORT_LINK_TEMPLATE = (os.getenv("MAX_SUPPORT_LINK_TEMPLATE") or "").strip() or None
 MAX_API_BASE_URL = (os.getenv("MAX_API_BASE_URL") or "").strip() or None
+MAX_SUPPORT_ENTRY_TTL_SECONDS = int(os.getenv("MAX_SUPPORT_ENTRY_TTL_SECONDS", "900"))
+MAX_SUPPORT_LANDING_LINKS_PER_MINUTE = int(os.getenv("MAX_SUPPORT_LANDING_LINKS_PER_MINUTE", "10"))
+SUPPORT_INTERNAL_TOKEN = (os.getenv("SUPPORT_INTERNAL_TOKEN") or "").strip() or None
