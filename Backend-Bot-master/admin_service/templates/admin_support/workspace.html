@@ -9,7 +9,7 @@
     <div class="support-sidebar-header">
       <div class="support-sidebar-title">
         <h1>
-          <i class="fas fa-headset" style="color: var(--support-primary);"></i>
+          <i class="fas fa-headset" style="color: var(--support-primary);" aria-hidden="true"></i>
           Поддержка
         </h1>
         <span class="support-live-indicator">
@@ -18,16 +18,31 @@
         </span>
       </div>
       <nav class="support-tabs" aria-label="Фильтр диалогов">
-        <a href="{% url 'support-workspace' %}?status=OPEN" class="support-tab {% if selected_status == 'OPEN' and not unread_only %}active{% endif %}">
+        <a href="{% url 'support-workspace' %}?status=OPEN" class="support-tab {% if selected_status == 'OPEN' and not unread_only %}active{% endif %}" aria-current="{% if selected_status == 'OPEN' and not unread_only %}page{% endif %}">
           Открытые
         </a>
-        <a href="{% url 'support-workspace' %}?status=OPEN&amp;unread=1" class="support-tab {% if unread_only %}active{% endif %}">
+        <a href="{% url 'support-workspace' %}?status=OPEN&amp;unread=1" class="support-tab {% if unread_only %}active{% endif %}" aria-current="{% if unread_only %}page{% endif %}">
           Новые
         </a>
-        <a href="{% url 'support-workspace' %}?status=CLOSED" class="support-tab {% if selected_status == 'CLOSED' %}active{% endif %}">
+        <a href="{% url 'support-workspace' %}?status=CLOSED" class="support-tab {% if selected_status == 'CLOSED' %}active{% endif %}" aria-current="{% if selected_status == 'CLOSED' %}page{% endif %}">
           Закрытые
         </a>
       </nav>
+    </div>
+
+    <div class="support-stats">
+      <div class="support-stat">
+        <span class="support-stat-value">{{ open_count }}</span>
+        <span class="support-stat-label">Открытые</span>
+      </div>
+      <div class="support-stat">
+        <span class="support-stat-value">{{ new_count }}</span>
+        <span class="support-stat-label">Новые</span>
+      </div>
+      <div class="support-stat">
+        <span class="support-stat-value">{{ closed_count }}</span>
+        <span class="support-stat-label">Закрытые</span>
+      </div>
     </div>
 
     <div class="support-search">
@@ -80,8 +95,9 @@
 
   <section class="support-chat">
     {% if selected %}
+    <a href="#support-messages" class="support-skip-link">Перейти к сообщениям</a>
     <header class="support-chat-header">
-      <a class="support-chat-back" href="{% url 'support-workspace' %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}">
+      <a class="support-chat-back" href="{% url 'support-workspace' %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}" title="Назад к списку" aria-label="Назад к списку диалогов">
         <i class="fas fa-arrow-left"></i>
       </a>
       <div class="support-chat-user">
@@ -103,15 +119,15 @@
         {% endif %}
         {% if selected.status == "OPEN" %}
         <form method="post" action="{% url 'support-action' selected.id 'close' %}">{% csrf_token %}
-          <button type="submit" class="support-btn support-btn-danger" onclick="return confirm('Закрыть обращение?')">
-            <i class="fas fa-lock"></i>
+          <button type="submit" class="support-btn support-btn-danger" aria-label="Закрыть обращение" title="Закрыть обращение">
+            <i class="fas fa-lock" aria-hidden="true"></i>
             <span>Закрыть</span>
           </button>
         </form>
         {% else %}
         <form method="post" action="{% url 'support-action' selected.id 'reopen' %}">{% csrf_token %}
-          <button type="submit" class="support-btn support-btn-secondary">
-            <i class="fas fa-lock-open"></i>
+          <button type="submit" class="support-btn support-btn-secondary" aria-label="Открыть обращение" title="Открыть обращение">
+            <i class="fas fa-lock-open" aria-hidden="true"></i>
             <span>Открыть</span>
           </button>
         </form>
@@ -119,9 +135,9 @@
       </div>
     </header>
 
-    <div class="support-messages" id="support-messages">
+    <div class="support-messages" id="support-messages" role="log" aria-live="polite" aria-label="История сообщений">
       {% for item in selected_messages %}
-      <article class="support-message {{ item.sender_type|lower }}">
+      <article class="support-message {{ item.sender_type|lower }}" data-message-id="{{ item.id }}">
         <div class="support-message-avatar">
           {% if item.sender_type == "OPERATOR" %}
             <i class="fas fa-headset"></i>
@@ -222,44 +238,4 @@
 </div>
 {% endblock %}
 
-{% block extrajs %}{{ block.super }}
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-  var messagesContainer = document.getElementById("support-messages");
-  if (messagesContainer) {
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  }
-
-  var autoReadForm = document.getElementById("support-auto-read");
-  if (autoReadForm) {
-    autoReadForm.submit();
-  }
-
-  var textarea = document.getElementById("support-reply");
-  if (textarea) {
-    textarea.addEventListener("input", function() {
-      this.style.height = "auto";
-      this.style.height = Math.min(this.scrollHeight, 120) + "px";
-    });
-
-    textarea.addEventListener("keydown", function(e) {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        this.form.submit();
-      }
-    });
-  }
-
-  var searchInput = document.getElementById("support-q");
-  var searchTimeout;
-  if (searchInput) {
-    searchInput.addEventListener("input", function() {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(function() {
-        document.getElementById("support-search-form").submit();
-      }, 500);
-    });
-  }
-});
-</script>
-{% endblock %}
+{% block extrajs %}{{ block.super }}{% endblock %}

@@ -1,3 +1,8 @@
+/* ============================================================
+   Admin Support Workspace
+   ============================================================ */
+
+/* --- CSS Custom Properties --- */
 :root {
   --support-primary: #4f46e5;
   --support-primary-light: #eef2ff;
@@ -15,19 +20,26 @@
   --support-text-muted: #94a3b8;
   --support-border: #e2e8f0;
   --support-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --support-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --support-shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.1);
   --support-radius: 16px;
   --support-radius-sm: 10px;
+  --support-radius-xs: 6px;
 }
 
+/* --- Workspace Layout --- */
 .support-workspace {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 360px 1fr;
   height: calc(100vh - 120px);
   background: var(--support-bg);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  border-radius: var(--support-radius-sm);
+  overflow: hidden;
+  box-shadow: var(--support-shadow-md);
 }
 
+/* --- Sidebar --- */
 .support-sidebar {
   background: var(--support-sidebar-bg);
   border-right: 1px solid var(--support-border);
@@ -37,7 +49,7 @@
 }
 
 .support-sidebar-header {
-  padding: 20px;
+  padding: 24px 20px 16px;
   border-bottom: 1px solid var(--support-border);
 }
 
@@ -50,7 +62,7 @@
 
 .support-sidebar-title h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--support-text-primary);
   display: flex;
@@ -59,7 +71,7 @@
 }
 
 .support-live-indicator {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 11px;
@@ -83,6 +95,41 @@
   50% { opacity: 0.6; transform: scale(0.85); }
 }
 
+/* --- Stats Row --- */
+.support-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.support-stat {
+  text-align: center;
+  padding: 10px 8px;
+  background: var(--support-bg);
+  border-radius: var(--support-radius-xs);
+  border: 1px solid var(--support-border);
+}
+
+.support-stat-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--support-text-primary);
+  line-height: 1.2;
+}
+
+.support-stat-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--support-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-top: 2px;
+}
+
+/* --- Tabs --- */
 .support-tabs {
   display: flex;
   gap: 4px;
@@ -108,6 +155,7 @@
 
 .support-tab:hover {
   color: var(--support-text-primary);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .support-tab.active {
@@ -116,8 +164,9 @@
   box-shadow: var(--support-shadow);
 }
 
+/* --- Search --- */
 .support-search {
-  padding: 12px 20px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--support-border);
 }
 
@@ -149,8 +198,10 @@
   transform: translateY(-50%);
   color: var(--support-text-muted);
   font-size: 14px;
+  pointer-events: none;
 }
 
+/* --- Conversations List --- */
 .support-conversations {
   flex: 1;
   overflow-y: auto;
@@ -159,7 +210,7 @@
 .support-conversation-item {
   display: flex;
   gap: 12px;
-  padding: 14px 20px;
+  padding: 14px 16px;
   cursor: pointer;
   transition: all 0.15s;
   border-bottom: 1px solid #f1f5f9;
@@ -187,6 +238,7 @@
   font-size: 16px;
   color: white;
   flex-shrink: 0;
+  box-shadow: var(--support-shadow);
 }
 
 .support-avatar.source-app { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
@@ -254,8 +306,10 @@
   border-radius: 10px;
   min-width: 18px;
   text-align: center;
+  box-shadow: 0 0 0 2px white;
 }
 
+/* --- Chat Panel --- */
 .support-chat {
   display: flex;
   flex-direction: column;
@@ -270,6 +324,7 @@
   padding: 16px 24px;
   background: white;
   border-bottom: 1px solid var(--support-border);
+  box-shadow: var(--support-shadow);
 }
 
 .support-chat-back {
@@ -283,6 +338,7 @@
   align-items: center;
   justify-content: center;
   color: var(--support-text-secondary);
+  transition: all 0.2s;
 }
 
 .support-chat-back:hover {
@@ -294,6 +350,7 @@
   align-items: center;
   gap: 12px;
   flex: 1;
+  min-width: 0;
 }
 
 .support-chat-avatar {
@@ -306,6 +363,11 @@
   font-weight: 700;
   font-size: 15px;
   color: white;
+  flex-shrink: 0;
+}
+
+.support-chat-info {
+  min-width: 0;
 }
 
 .support-chat-info h2 {
@@ -313,18 +375,26 @@
   font-size: 16px;
   font-weight: 600;
   color: var(--support-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .support-chat-info span {
   font-size: 12px;
   color: var(--support-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .support-chat-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
+/* --- Buttons --- */
 .support-btn {
   padding: 8px 16px;
   border-radius: var(--support-radius-sm);
@@ -333,9 +403,10 @@
   cursor: pointer;
   transition: all 0.2s;
   border: none;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .support-btn-secondary {
@@ -346,6 +417,7 @@
 
 .support-btn-secondary:hover {
   background: var(--support-border);
+  color: var(--support-text-primary);
 }
 
 .support-btn-danger {
@@ -358,19 +430,26 @@
   background: #fee2e2;
 }
 
+/* --- Messages --- */
 .support-messages {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 4px;
 }
 
 .support-message {
   display: flex;
   gap: 10px;
   max-width: 75%;
+  animation: support-fade-in 0.3s ease;
+}
+
+@keyframes support-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .support-message.user {
@@ -409,18 +488,19 @@
   font-size: 14px;
   line-height: 1.5;
   position: relative;
+  box-shadow: var(--support-shadow);
 }
 
 .support-message.user .support-bubble {
   background: white;
   border-bottom-left-radius: 4px;
-  box-shadow: var(--support-shadow);
 }
 
 .support-message.operator .support-bubble {
   background: var(--support-bubble-operator);
   color: white;
   border-bottom-right-radius: 4px;
+  box-shadow: var(--support-shadow-md);
 }
 
 .support-message.system {
@@ -434,6 +514,7 @@
   font-size: 12px;
   text-align: center;
   border-radius: 20px;
+  box-shadow: none;
 }
 
 .support-message-time {
@@ -457,6 +538,7 @@
 .support-message-status.pending { color: var(--support-warning); }
 .support-message-status.failed { color: var(--support-danger); }
 
+/* --- Attachments --- */
 .support-attachment {
   display: flex;
   align-items: center;
@@ -481,6 +563,7 @@
   align-items: center;
   justify-content: center;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
 .support-message.operator .support-attachment-icon {
@@ -511,12 +594,14 @@
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .support-attachment-link:hover {
   text-decoration: underline;
 }
 
+/* --- Composer --- */
 .support-composer {
   padding: 16px 24px;
   background: white;
@@ -565,6 +650,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .support-composer-send:hover {
@@ -578,6 +664,7 @@
   transform: none;
 }
 
+/* --- Empty States --- */
 .support-empty {
   flex: 1;
   display: flex;
@@ -590,28 +677,33 @@
 }
 
 .support-empty-icon {
-  width: 80px;
-  height: 80px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: var(--support-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
-  margin-bottom: 20px;
+  font-size: 40px;
+  margin-bottom: 24px;
+  border: 2px dashed var(--support-border);
 }
 
 .support-empty h2 {
   margin: 0 0 8px;
   font-size: 18px;
   color: var(--support-text-primary);
+  font-weight: 600;
 }
 
 .support-empty p {
   margin: 0;
   font-size: 14px;
+  color: var(--support-text-secondary);
+  max-width: 280px;
 }
 
+/* --- Retry Button --- */
 .support-retry-btn {
   margin-top: 8px;
   padding: 4px 10px;
@@ -621,12 +713,34 @@
   border: 1px solid #fecaca;
   border-radius: 6px;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .support-retry-btn:hover {
   background: #fee2e2;
 }
 
+/* --- Skip Link --- */
+.support-skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--support-primary);
+  color: white;
+  padding: 8px 16px;
+  z-index: 100;
+  transition: top 0.2s;
+  text-decoration: none;
+  border-radius: 0 0 var(--support-radius-sm) 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.support-skip-link:focus {
+  top: 0;
+}
+
+/* --- Responsive --- */
 @media (max-width: 900px) {
   .support-workspace {
     grid-template-columns: 1fr;
@@ -678,11 +792,31 @@
     padding: 16px;
   }
 
+  .support-stats {
+    gap: 6px;
+  }
+
+  .support-stat {
+    padding: 8px 4px;
+  }
+
+  .support-stat-value {
+    font-size: 16px;
+  }
+
+  .support-stat-label {
+    font-size: 9px;
+  }
+
   .support-conversation-item {
     padding: 12px 16px;
   }
 
   .support-chat-actions .support-btn span {
     display: none;
+  }
+
+  .support-chat-actions .support-btn {
+    padding: 8px;
   }
 }

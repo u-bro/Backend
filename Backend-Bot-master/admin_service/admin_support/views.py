@@ -79,6 +79,10 @@ def workspace(request, conversation_id=None):
             conversations = conversations.filter(search)
     conversations = list(conversations.order_by("-updated_at", "-id")[:100])
 
+    open_count = SupportConversation.objects.filter(status="OPEN").count()
+    new_count = SupportConversation.objects.filter(status="OPEN", last_read_message_id__isnull=True).count()
+    closed_count = SupportConversation.objects.filter(status="CLOSED").count()
+
     selected = None
     selected_messages = []
     if conversation_id is not None:
@@ -104,6 +108,9 @@ def workspace(request, conversation_id=None):
         "selected_status": status,
         "search_query": query,
         "unread_only": unread_only,
+        "open_count": open_count,
+        "new_count": new_count,
+        "closed_count": closed_count,
     }
     return render(request, "admin_support/workspace.html", context)
 
