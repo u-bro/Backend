@@ -3,6 +3,23 @@ from django.db import models
 from admin_users.models import User
 
 
+class SafeJSONField(models.JSONField):
+    """JSONField that tolerates already-deserialized values from PostgreSQL JSONB.
+
+    SQLAlchemy stores provider_metadata as JSONB. psycopg2 reads JSONB back as
+    a Python dict/list, but Django's JSONField.from_db_value() unconditionally
+    calls json.loads(), which raises TypeError on dict/list input. This field
+    passes through values that are already dict/list and only decodes str/bytes.
+    """
+
+    def from_db_value(self, value, expression, connection):
+        if value is None:
+            return value
+        if isinstance(value, (dict, list)):
+            return value
+        return super().from_db_value(value, expression, connection)
+
+
 class SupportConversation(models.Model):
     SOURCE_CHOICES = (
         ("APP", "Приложение"),
@@ -102,7 +119,7 @@ class SupportMessageAttachment(models.Model):
     mime_type = models.CharField(max_length=255, null=True, blank=True)
     file_size = models.BigIntegerField(null=True, blank=True)
     provider_url = models.TextField(null=True, blank=True)
-    provider_metadata = models.JSONField(null=True, blank=True)
+    provider_metadata = SafeJSONField(null=True, blank=True)
     created_at = models.DateTimeField()
 
     class Meta:
