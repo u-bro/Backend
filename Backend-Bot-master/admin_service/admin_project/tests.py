@@ -1,8 +1,10 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.contrib import admin
-from django.test import SimpleTestCase
+from django.contrib.auth.models import AnonymousUser
+from django.test import RequestFactory, SimpleTestCase
 from django.template.loader import get_template
 from django.urls import reverse
 
@@ -235,3 +237,92 @@ class ModelAdminCheckTests(SimpleTestCase):
         ):
             with self.subTest(template=template_name):
                 self.assertIsNotNone(get_template(template_name))
+
+
+class SupportWorkspaceTemplateTests(SimpleTestCase):
+    def setUp(self):
+        self.request = RequestFactory().get("/admin/support/")
+        self.request.user = AnonymousUser()
+        self.template = get_template("admin_support/workspace.html")
+
+    def context(self, **overrides):
+        context = {
+            **admin.site.each_context(self.request),
+            "title": "Поддержка",
+            "conversations": [],
+            "selected": None,
+            "selected_messages": [],
+            "selected_status": "OPEN",
+            "search_query": "",
+            "unread_only": False,
+            "open_count": 0,
+            "new_count": 0,
+            "closed_count": 0,
+        }
+        context.update(overrides)
+        return context
+
+    def test_empty_workspace_renders_filters_search_and_selection_prompt(self):
+        rendered = self.template.render(self.context(open_count=4, new_count=2, closed_count=7), self.request)
+
+        self.assertIn("Центр обращений", rendered)
+        self.assertIn("Имя, телефон или #ID", rendered)
+        self.assertIn("Выберите обращение", rendered)
+        self.assertIn("Открытые", rendered)
+        self.assertIn("Новые", rendered)
+        self.assertIn("Закрытые", rendered)
+
+    def test_selected_dialog_renders_message_states_and_preserves_filters(self):
+        created_at = datetime(2026, 8, 24, 12, 30, tzinfo=timezone.utc)
+        attachment = SimpleNamespace(
+            attachment_type="image",
+            file_name="photo.jpg",
+            mime_type="image/jpeg",
+            file_size=2048,
+            safe_url="https://files.example/photo.jpg",
+        )
+        empty_attachments = SimpleNamespace(all=lambda: [])
+        image_attachments = SimpleNamespace(all=lambda: [attachment])
+        selected_messages = [
+            SimpleNamespace(id=1, sender_type="USER", text="Нужна помощь", created_at=created_at, delivery_status="SENT", operator_name=None, attachments=image_attachments),
+            SimpleNamespace(id=2, sender_type="OPERATOR", text="Уточняем информацию", created_at=created_at, delivery_status="FAILED", operator_name="Анна", attachments=empty_attachments),
+            SimpleNamespace(id=3, sender_type="BOT", text="Автоматический ответ", created_at=created_at, delivery_status="SENT", operator_name=None, attachments=empty_attachments),
+            SimpleNamespace(id=4, sender_type="SYSTEM", text="Диалог создан", created_at=created_at, delivery_status="SENT", operator_name=None, attachments=empty_attachments),
+        ]
+        conversation = SimpleNamespace(
+            id=42,
+            contact_label="Иван Петров",
+            contact_phone="+79990000000",
+            max_user_id=101,
+            source="APP",
+            get_source_display=lambda: "Приложение",
+            status="OPEN",
+            unread_count=3,
+            visible_last_inbound_id=1,
+            latest_sender="USER",
+            latest_text="Нужна помощь",
+            latest_created_at=created_at,
+            updated_at=created_at,
+        )
+        rendered = self.template.render(
+            self.context(
+                conversations=[conversation],
+                selected=conversation,
+                selected_messages=selected_messages,
+                selected_status="OPEN",
+                search_query="Иван Петров",
+                unread_only=True,
+                open_count=1,
+                new_count=1,
+            ),
+            self.request,
+        )
+
+        self.assertIn("support-conversation-item active unread", rendered)
+        self.assertIn("Непрочитанных сообщений: 3", rendered)
+        for sender_type in ("user", "operator", "bot", "system"):
+            self.assertIn(f"support-message {sender_type}", rendered)
+        self.assertIn("Не доставлено", rendered)
+        self.assertIn("Повторить отправку", rendered)
+        self.assertIn("photo.jpg", rendered)
+        self.assertIn("status=OPEN&amp;unread=1&amp;q=%D0%98%D0%B2%D0%B0%D0%BD%20%D0%9F%D0%B5%D1%82%D1%80%D0%BE%D0%B2", rendered)

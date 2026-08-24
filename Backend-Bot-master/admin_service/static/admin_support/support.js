@@ -1,6 +1,8 @@
 (function() {
   'use strict';
 
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   function supportLink() {
     return document.querySelector('.navbar a[href="/admin/support/"],.main-header a[href="/admin/support/"]');
   }
@@ -40,7 +42,7 @@
     if (!container) return;
     container.scrollTo({
       top: container.scrollHeight,
-      behavior: behavior || 'auto',
+      behavior: reduceMotion ? 'auto' : (behavior || 'auto'),
     });
   }
 
@@ -57,7 +59,33 @@
     textarea.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        this.form.submit();
+        if (this.form.requestSubmit) {
+          this.form.requestSubmit();
+        } else {
+          this.form.submit();
+        }
+      }
+    });
+  }
+
+  function handleReplySubmit(form) {
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+      if (form.classList.contains('is-submitting')) {
+        e.preventDefault();
+        return;
+      }
+
+      var textarea = form.querySelector('textarea[name="text"]');
+      if (!textarea || !textarea.value.trim() || !form.checkValidity()) return;
+
+      var button = form.querySelector('button[type="submit"]');
+      form.classList.add('is-submitting');
+      if (button) {
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        var label = button.querySelector('.support-send-label');
+        if (label) label.textContent = 'Отправка...';
       }
     });
   }
@@ -74,6 +102,9 @@
   }
 
   function initWorkspace() {
+    var workspace = document.querySelector('.support-workspace');
+    if (!workspace) return;
+
     scrollToBottom('auto');
 
     var autoReadForm = document.getElementById('support-auto-read');
@@ -81,8 +112,10 @@
       autoReadForm.submit();
     }
 
-    autoResizeTextarea(document.getElementById('support-reply'));
-    handleReplyKeydown(document.getElementById('support-reply'));
+    var reply = document.getElementById('support-reply');
+    autoResizeTextarea(reply);
+    handleReplyKeydown(reply);
+    handleReplySubmit(reply && reply.form);
     handleSearch(document.getElementById('support-q'), document.getElementById('support-search-form'));
   }
 

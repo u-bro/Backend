@@ -5,233 +5,254 @@
 
 {% block content %}
 <div id="content-main" class="support-workspace{% if selected %} has-selection{% endif %}">
-  <aside class="support-sidebar">
-    <div class="support-sidebar-header">
-      <div class="support-sidebar-title">
-        <h1>
-          <i class="fas fa-headset" style="color: var(--support-primary);" aria-hidden="true"></i>
-          Поддержка
-        </h1>
-        <span class="support-live-indicator">
-          <span class="support-live-dot"></i>
+  <aside class="support-sidebar" aria-label="Диалоги поддержки">
+    <header class="support-sidebar-header">
+      <div class="support-sidebar-heading">
+        <div>
+          <span class="support-eyebrow">Центр обращений</span>
+          <h1><i class="fas fa-headset" aria-hidden="true"></i> Поддержка</h1>
+        </div>
+        <span class="support-channel" title="Канал поддержки MAX">
+          <span class="support-live-dot" aria-hidden="true"></span>
           MAX
         </span>
       </div>
+
       <nav class="support-tabs" aria-label="Фильтр диалогов">
-        <a href="{% url 'support-workspace' %}?status=OPEN" class="support-tab {% if selected_status == 'OPEN' and not unread_only %}active{% endif %}" aria-current="{% if selected_status == 'OPEN' and not unread_only %}page{% endif %}">
-          Открытые
+        <a href="{% url 'support-workspace' %}?status=OPEN"
+           class="support-tab{% if selected_status == 'OPEN' and not unread_only %} active{% endif %}"
+           {% if selected_status == 'OPEN' and not unread_only %}aria-current="page"{% endif %}>
+          <span>Открытые</span>
+          <span class="support-tab-count">{{ open_count }}</span>
         </a>
-        <a href="{% url 'support-workspace' %}?status=OPEN&amp;unread=1" class="support-tab {% if unread_only %}active{% endif %}" aria-current="{% if unread_only %}page{% endif %}">
-          Новые
+        <a href="{% url 'support-workspace' %}?status=OPEN&amp;unread=1"
+           class="support-tab{% if unread_only %} active{% endif %}"
+           {% if unread_only %}aria-current="page"{% endif %}>
+          <span>Новые</span>
+          <span class="support-tab-count support-tab-count-alert">{{ new_count }}</span>
         </a>
-        <a href="{% url 'support-workspace' %}?status=CLOSED" class="support-tab {% if selected_status == 'CLOSED' %}active{% endif %}" aria-current="{% if selected_status == 'CLOSED' %}page{% endif %}">
-          Закрытые
+        <a href="{% url 'support-workspace' %}?status=CLOSED"
+           class="support-tab{% if selected_status == 'CLOSED' %} active{% endif %}"
+           {% if selected_status == 'CLOSED' %}aria-current="page"{% endif %}>
+          <span>Закрытые</span>
+          <span class="support-tab-count">{{ closed_count }}</span>
         </a>
       </nav>
-    </div>
-
-    <div class="support-stats">
-      <div class="support-stat">
-        <span class="support-stat-value">{{ open_count }}</span>
-        <span class="support-stat-label">Открытые</span>
-      </div>
-      <div class="support-stat">
-        <span class="support-stat-value">{{ new_count }}</span>
-        <span class="support-stat-label">Новые</span>
-      </div>
-      <div class="support-stat">
-        <span class="support-stat-value">{{ closed_count }}</span>
-        <span class="support-stat-label">Закрытые</span>
-      </div>
-    </div>
+    </header>
 
     <div class="support-search">
-      <div class="support-search-wrapper">
-        <i class="fas fa-search support-search-icon"></i>
-        <label class="sr-only" for="support-q">Поиск диалогов</label>
-        <input id="support-q" type="search" name="q" value="{{ search_query }}" placeholder="Поиск по имени, телефону или #ID" form="support-search-form">
-      </div>
-      <form id="support-search-form" method="get" style="display: none;">
+      <form id="support-search-form" method="get" role="search">
         <input type="hidden" name="status" value="{{ selected_status }}">
         {% if unread_only %}<input type="hidden" name="unread" value="1">{% endif %}
+        <div class="support-search-field">
+          <i class="fas fa-search" aria-hidden="true"></i>
+          <label class="sr-only" for="support-q">Поиск диалогов</label>
+          <input id="support-q" type="search" name="q" value="{{ search_query }}" placeholder="Имя, телефон или #ID" autocomplete="off">
+          {% if search_query %}
+          <a class="support-search-clear"
+             href="{% url 'support-workspace' %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}"
+             aria-label="Очистить поиск" title="Очистить поиск">
+            <i class="fas fa-times" aria-hidden="true"></i>
+          </a>
+          {% endif %}
+        </div>
       </form>
+    </div>
+
+    <div class="support-list-heading">
+      <span>{% if unread_only %}Непрочитанные{% elif selected_status == "CLOSED" %}Архив обращений{% else %}Активные обращения{% endif %}</span>
+      <span>{{ conversations|length }}</span>
     </div>
 
     <div class="support-conversations">
       {% for conversation in conversations %}
-      <a class="support-conversation-item{% if selected and selected.id == conversation.id %} active{% endif %}"
-         href="{% url 'support-conversation' conversation.id %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}">
-        <div class="support-avatar source-{{ conversation.source|lower }}">
+      <a class="support-conversation-item{% if selected and selected.id == conversation.id %} active{% endif %}{% if conversation.unread_count %} unread{% endif %}"
+         href="{% url 'support-conversation' conversation.id %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}"
+         {% if selected and selected.id == conversation.id %}aria-current="page"{% endif %}>
+        <div class="support-avatar source-{{ conversation.source|lower }}" aria-hidden="true">
           {{ conversation.contact_label|first|upper }}
         </div>
         <div class="support-conversation-content">
           <div class="support-conversation-header">
             <span class="support-conversation-name">{{ conversation.contact_label }}</span>
-            <span class="support-conversation-time">{{ conversation.last_inbound_at|date:"H:i" }}</span>
+            <time class="support-conversation-time" datetime="{{ conversation.latest_created_at|date:'c' }}">
+              {% if conversation.latest_created_at %}{{ conversation.latest_created_at|date:"d.m H:i" }}{% else %}{{ conversation.updated_at|date:"d.m H:i" }}{% endif %}
+            </time>
           </div>
           <div class="support-conversation-preview">
-            {% if conversation.latest_sender == "OPERATOR" %}<span style="color: var(--support-primary);">Вы: </span>{% endif %}
-            {{ conversation.latest_text|default:"Вложение"|truncatechars:40 }}
+            {% if conversation.latest_sender == "OPERATOR" %}<span class="support-preview-author">Вы:</span>{% endif %}
+            {{ conversation.latest_text|default:"Вложение"|truncatechars:76 }}
           </div>
           <div class="support-conversation-meta">
             <span class="support-source-badge {{ conversation.source|lower }}">{{ conversation.get_source_display|default:conversation.source }}</span>
+            <span class="support-conversation-id">#{{ conversation.id }}</span>
             {% if conversation.unread_count %}
-            <span class="support-unread-badge">{{ conversation.unread_count }}</span>
+            <span class="support-list-unread" aria-label="Непрочитанных сообщений: {{ conversation.unread_count }}">{{ conversation.unread_count }}</span>
             {% endif %}
           </div>
         </div>
       </a>
       {% empty %}
-      <div class="support-empty">
-        <div class="support-empty-icon">
-          <i class="far fa-comments"></i>
-        </div>
-        <h2>Нет диалогов</h2>
-        <p>В выбранной категории пока нет обращений</p>
+      <div class="support-empty support-empty-list">
+        <div class="support-empty-icon"><i class="far fa-comments" aria-hidden="true"></i></div>
+        <h2>{% if search_query %}Ничего не найдено{% else %}Нет диалогов{% endif %}</h2>
+        <p>{% if search_query %}Попробуйте изменить запрос или очистить поиск.{% else %}В выбранной категории пока нет обращений.{% endif %}</p>
+        {% if search_query %}
+        <a class="support-empty-action" href="{% url 'support-workspace' %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}">Очистить поиск</a>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
   </aside>
 
-  <section class="support-chat">
+  <section class="support-chat" aria-label="Переписка с пользователем">
     {% if selected %}
     <a href="#support-messages" class="support-skip-link">Перейти к сообщениям</a>
     <header class="support-chat-header">
-      <a class="support-chat-back" href="{% url 'support-workspace' %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}" title="Назад к списку" aria-label="Назад к списку диалогов">
-        <i class="fas fa-arrow-left"></i>
+      <a class="support-chat-back"
+         href="{% url 'support-workspace' %}?status={{ selected_status }}{% if unread_only %}&amp;unread=1{% endif %}{% if search_query %}&amp;q={{ search_query|urlencode }}{% endif %}"
+         title="Назад к списку" aria-label="Назад к списку диалогов">
+        <i class="fas fa-arrow-left" aria-hidden="true"></i>
       </a>
       <div class="support-chat-user">
-        <div class="support-chat-avatar support-avatar source-{{ selected.source|lower }}">
+        <div class="support-chat-avatar support-avatar source-{{ selected.source|lower }}" aria-hidden="true">
           {{ selected.contact_label|first|upper }}
         </div>
         <div class="support-chat-info">
-          <h2>{{ selected.contact_label }}</h2>
-          <span>
-            #{{ selected.id }} ·
-            {% if selected.contact_phone != "—" %}Тел: {{ selected.contact_phone }} · {% endif %}
-            MAX ID: {{ selected.max_user_id|default:"—" }}
-          </span>
+          <div class="support-chat-title">
+            <h2>{{ selected.contact_label }}</h2>
+            <span class="support-status support-status-{{ selected.status|lower }}">
+              <span aria-hidden="true"></span>
+              {% if selected.status == "OPEN" %}Открыт{% else %}Закрыт{% endif %}
+            </span>
+          </div>
+          <div class="support-chat-meta">
+            <span>#{{ selected.id }}</span>
+            {% if selected.contact_phone != "—" %}<span><i class="fas fa-phone-alt" aria-hidden="true"></i> {{ selected.contact_phone }}</span>{% endif %}
+            <span><i class="far fa-id-card" aria-hidden="true"></i> MAX ID: {{ selected.max_user_id|default:"—" }}</span>
+          </div>
         </div>
       </div>
       <div class="support-chat-actions">
         {% if selected.unread_count and selected.visible_last_inbound_id %}
-        <form id="support-auto-read" method="post" action="{% url 'support-action' selected.id 'read' %}">{% csrf_token %}<input type="hidden" name="up_to_message_id" value="{{ selected.visible_last_inbound_id }}"></form>
+        <form id="support-auto-read" method="post" action="{% url 'support-action' selected.id 'read' %}">
+          {% csrf_token %}<input type="hidden" name="up_to_message_id" value="{{ selected.visible_last_inbound_id }}">
+        </form>
         {% endif %}
         {% if selected.status == "OPEN" %}
         <form method="post" action="{% url 'support-action' selected.id 'close' %}">{% csrf_token %}
           <button type="submit" class="support-btn support-btn-danger" aria-label="Закрыть обращение" title="Закрыть обращение">
-            <i class="fas fa-lock" aria-hidden="true"></i>
-            <span>Закрыть</span>
+            <i class="fas fa-lock" aria-hidden="true"></i><span>Закрыть</span>
           </button>
         </form>
         {% else %}
         <form method="post" action="{% url 'support-action' selected.id 'reopen' %}">{% csrf_token %}
-          <button type="submit" class="support-btn support-btn-secondary" aria-label="Открыть обращение" title="Открыть обращение">
-            <i class="fas fa-lock-open" aria-hidden="true"></i>
-            <span>Открыть</span>
+          <button type="submit" class="support-btn support-btn-primary" aria-label="Открыть обращение" title="Открыть обращение">
+            <i class="fas fa-lock-open" aria-hidden="true"></i><span>Открыть снова</span>
           </button>
         </form>
         {% endif %}
       </div>
     </header>
 
-    <div class="support-messages" id="support-messages" role="log" aria-live="polite" aria-label="История сообщений">
-      {% for item in selected_messages %}
-      <article class="support-message {{ item.sender_type|lower }}" data-message-id="{{ item.id }}">
-        <div class="support-message-avatar">
-          {% if item.sender_type == "OPERATOR" %}
-            <i class="fas fa-headset"></i>
-          {% elif item.sender_type == "BOT" %}
-            <i class="fas fa-robot"></i>
-          {% else %}
-            {{ selected.contact_label|first|upper }}
+    <div class="support-messages" id="support-messages" role="log" aria-live="polite" aria-label="История сообщений" tabindex="-1">
+      <div class="support-messages-inner">
+        {% for item in selected_messages %}
+        <article class="support-message {{ item.sender_type|lower }}" data-message-id="{{ item.id }}">
+          {% if item.sender_type != "SYSTEM" %}
+          <div class="support-message-avatar" aria-hidden="true">
+            {% if item.sender_type == "OPERATOR" %}<i class="fas fa-headset"></i>
+            {% elif item.sender_type == "BOT" %}<i class="fas fa-robot"></i>
+            {% else %}{{ selected.contact_label|first|upper }}{% endif %}
+          </div>
           {% endif %}
-        </div>
-        <div>
-          <div class="support-bubble">
-            {% if item.text %}<div>{{ item.text|linebreaksbr }}</div>{% endif %}
-            {% for attachment in item.attachments.all %}
-            <div class="support-attachment">
-              <div class="support-attachment-icon">
-                {% if attachment.attachment_type == "image" %}
-                  <i class="fas fa-image"></i>
-                {% elif attachment.attachment_type == "video" %}
-                  <i class="fas fa-video"></i>
-                {% else %}
-                  <i class="fas fa-file"></i>
+          <div class="support-message-body">
+            {% if item.sender_type != "SYSTEM" %}
+            <div class="support-message-sender">
+              {% if item.sender_type == "OPERATOR" %}{{ item.operator_name|default:"Оператор" }}
+              {% elif item.sender_type == "BOT" %}Бот
+              {% else %}{{ selected.contact_label }}{% endif %}
+            </div>
+            {% endif %}
+            <div class="support-bubble">
+              {% if item.text %}<div class="support-message-text">{{ item.text|linebreaksbr }}</div>{% endif %}
+              {% for attachment in item.attachments.all %}
+              <div class="support-attachment">
+                <div class="support-attachment-icon" aria-hidden="true">
+                  {% if attachment.attachment_type == "image" %}<i class="fas fa-image"></i>
+                  {% elif attachment.attachment_type == "video" %}<i class="fas fa-video"></i>
+                  {% else %}<i class="fas fa-file"></i>{% endif %}
+                </div>
+                <div class="support-attachment-info">
+                  <div class="support-attachment-name">{{ attachment.file_name|default:attachment.attachment_type }}</div>
+                  <div class="support-attachment-meta">{{ attachment.mime_type|default:"Файл" }}{% if attachment.file_size %} · {{ attachment.file_size|filesizeformat }}{% endif %}</div>
+                </div>
+                {% if attachment.safe_url %}
+                <a class="support-attachment-link" href="{{ attachment.safe_url }}" target="_blank" rel="noopener noreferrer" aria-label="Открыть вложение {{ attachment.file_name|default:attachment.attachment_type }}">
+                  <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                </a>
                 {% endif %}
               </div>
-              <div class="support-attachment-info">
-                <div class="support-attachment-name">{{ attachment.file_name|default:attachment.attachment_type }}</div>
-                <div class="support-attachment-meta">
-                  {{ attachment.mime_type|default:"Файл" }}{% if attachment.file_size %} · {{ attachment.file_size|filesizeformat }}{% endif %}
-                </div>
-              </div>
-              {% if attachment.safe_url %}
-              <a class="support-attachment-link" href="{{ attachment.safe_url }}" target="_blank" rel="noopener noreferrer">
-                <i class="fas fa-external-link-alt"></i>
-              </a>
+              {% endfor %}
+            </div>
+            <div class="support-message-time">
+              <time datetime="{{ item.created_at|date:'c' }}">{{ item.created_at|date:"d.m.Y H:i" }}</time>
+              {% if item.sender_type == "OPERATOR" %}
+              <span class="support-message-status {{ item.delivery_status|lower }}" title="Статус: {{ item.delivery_status }}">
+                {% if item.delivery_status == "SENT" %}<i class="fas fa-check" aria-hidden="true"></i><span class="sr-only">Отправлено</span>
+                {% elif item.delivery_status == "PENDING" %}<i class="fas fa-clock" aria-hidden="true"></i><span class="sr-only">Отправляется</span>
+                {% elif item.delivery_status == "FAILED" %}<i class="fas fa-exclamation-circle" aria-hidden="true"></i><span>Не доставлено</span>{% endif %}
+              </span>
               {% endif %}
             </div>
-            {% endfor %}
-          </div>
-          <div class="support-message-time">
-            {% if item.sender_type == "OPERATOR" %}
-              <span>{{ item.operator_name|default:"Оператор" }} · </span>
-            {% endif %}
-            {{ item.created_at|date:"d.m.Y H:i" }}
-            {% if item.sender_type == "OPERATOR" %}
-              <span class="support-message-status {{ item.delivery_status|lower }}">
-                {% if item.delivery_status == "SENT" %}
-                  <i class="fas fa-check"></i>
-                {% elif item.delivery_status == "PENDING" %}
-                  <i class="fas fa-clock"></i>
-                {% elif item.delivery_status == "FAILED" %}
-                  <i class="fas fa-exclamation-circle"></i>
-                {% endif %}
-              </span>
+            {% if item.delivery_status == "FAILED" and item.sender_type == "OPERATOR" %}
+            <form class="support-retry-form" method="post" action="{% url 'support-action' selected.id 'retry' %}">
+              {% csrf_token %}<input type="hidden" name="message_id" value="{{ item.id }}">
+              <button type="submit" class="support-retry-btn"><i class="fas fa-redo" aria-hidden="true"></i> Повторить отправку</button>
+            </form>
             {% endif %}
           </div>
-          {% if item.delivery_status == "FAILED" and item.sender_type == "OPERATOR" %}
-          <form method="post" action="{% url 'support-action' selected.id 'retry' %}">{% csrf_token %}<input type="hidden" name="message_id" value="{{ item.id }}">
-            <button type="submit" class="support-retry-btn"><i class="fas fa-redo"></i> Повторить</button>
-          </form>
-          {% endif %}
+        </article>
+        {% empty %}
+        <div class="support-empty support-empty-chat">
+          <div class="support-empty-icon"><i class="far fa-comment-dots" aria-hidden="true"></i></div>
+          <h2>Пока нет сообщений</h2>
+          <p>Новые сообщения пользователя появятся в этом диалоге.</p>
         </div>
-      </article>
-      {% empty %}
-      <div class="support-empty">
-        <div class="support-empty-icon">
-          <i class="far fa-comment-dots"></i>
-        </div>
-        <h2>Пока нет сообщений</h2>
-        <p>Ожидайте сообщение от пользователя</p>
+        {% endfor %}
       </div>
-      {% endfor %}
     </div>
 
     {% if selected.status == "OPEN" %}
-    <div class="support-composer">
+    <footer class="support-composer">
       <form method="post" action="{% url 'support-action' selected.id 'reply' %}" class="support-composer-form">
         {% csrf_token %}
         <div class="support-composer-input">
           <label class="sr-only" for="support-reply">Ваш ответ</label>
-          <textarea id="support-reply" name="text" rows="1" maxlength="4000" required placeholder="Напишите ответ..."></textarea>
+          <textarea id="support-reply" name="text" rows="1" maxlength="4000" required placeholder="Напишите ответ пользователю..."></textarea>
+          <span class="support-composer-hint">Enter — отправить · Shift + Enter — новая строка</span>
         </div>
-        <button type="submit" class="support-composer-send" aria-label="Отправить">
-          <i class="fas fa-paper-plane"></i>
+        <button type="submit" class="support-composer-send" aria-label="Отправить сообщение" title="Отправить сообщение">
+          <i class="fas fa-paper-plane" aria-hidden="true"></i>
+          <span class="support-send-label">Отправить</span>
         </button>
       </form>
-    </div>
-    {% endif %}
-
+    </footer>
     {% else %}
-    <div class="support-empty">
-      <div class="support-empty-icon">
-        <i class="fas fa-comments"></i>
+    <footer class="support-composer support-composer-closed">
+      <i class="fas fa-lock" aria-hidden="true"></i>
+      <span>Диалог закрыт. Откройте его снова, чтобы отправить сообщение.</span>
+    </footer>
+    {% endif %}
+    {% else %}
+    <div class="support-empty support-empty-workspace">
+      <div class="support-empty-illustration" aria-hidden="true">
+        <span><i class="fas fa-comment-alt"></i></span>
+        <span><i class="fas fa-check"></i></span>
       </div>
-      <h2>Выберите диалог</h2>
-      <p>Выберите обращение из списка слева, чтобы просмотреть историю переписки</p>
+      <span class="support-eyebrow">Рабочее пространство</span>
+      <h2>Выберите обращение</h2>
+      <p>Откройте диалог из списка слева, чтобы увидеть историю и ответить пользователю.</p>
     </div>
     {% endif %}
   </section>
