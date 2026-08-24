@@ -4,19 +4,14 @@ from admin_users.models import User
 
 
 class SafeJSONField(models.JSONField):
-    """JSONField that tolerates already-deserialized values from PostgreSQL JSONB.
-
-    SQLAlchemy stores provider_metadata as JSONB. psycopg2 reads JSONB back as
-    a Python dict/list, but Django's JSONField.from_db_value() unconditionally
-    calls json.loads(), which raises TypeError on dict/list input. This field
-    passes through values that are already dict/list and only decodes str/bytes.
-    """
-
     def from_db_value(self, value, expression, connection):
         if value is None:
+            return None
+
+        # PostgreSQL driver may already deserialize JSON/JSONB.
+        if isinstance(value, (dict, list, int, float, bool)):
             return value
-        if isinstance(value, (dict, list)):
-            return value
+
         return super().from_db_value(value, expression, connection)
 
 
