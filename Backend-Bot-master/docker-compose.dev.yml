@@ -4,8 +4,6 @@ services:
       - .env-dev
     ports:
       - "6666:5000"
-    volumes:
-      - /www/api.dev.u-bro.ru/staticfiles:/app/staticfiles
 
   db:
     env_file:
@@ -31,3 +29,5 @@ services:
       - .env-dev
     ports:
       - "8001:8000"
+    volumes:
+      - /www/api.dev.u-bro.ru/staticfiles:/app/staticfiles

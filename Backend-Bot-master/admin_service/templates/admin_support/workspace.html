@@ -177,6 +177,18 @@
             <div class="support-bubble">
               {% if item.text %}<div class="support-message-text">{{ item.text|linebreaksbr }}</div>{% endif %}
               {% for attachment in item.attachments.all %}
+              {% if attachment.attachment_type == "image" and attachment.safe_url %}
+              <figure class="support-image-attachment">
+                <a href="{{ attachment.safe_url }}" target="_blank" rel="noopener noreferrer" aria-label="Открыть изображение {{ attachment.file_name|default:'Вложение' }} в полном размере">
+                  <img src="{{ attachment.safe_url }}" alt="{{ attachment.file_name|default:'Изображение от пользователя' }}" loading="lazy" decoding="async">
+                  <span class="support-image-expand" aria-hidden="true"><i class="fas fa-expand-alt"></i></span>
+                </a>
+                <figcaption>
+                  <span>{{ attachment.file_name|default:"Изображение" }}</span>
+                  {% if attachment.file_size %}<small>{{ attachment.file_size|filesizeformat }}</small>{% endif %}
+                </figcaption>
+              </figure>
+              {% else %}
               <div class="support-attachment">
                 <div class="support-attachment-icon" aria-hidden="true">
                   {% if attachment.attachment_type == "image" %}<i class="fas fa-image"></i>
@@ -193,6 +205,7 @@
                 </a>
                 {% endif %}
               </div>
+              {% endif %}
               {% endfor %}
             </div>
             <div class="support-message-time">

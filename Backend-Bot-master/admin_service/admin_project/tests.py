@@ -325,4 +325,7 @@ class SupportWorkspaceTemplateTests(SimpleTestCase):
         self.assertIn("Не доставлено", rendered)
         self.assertIn("Повторить отправку", rendered)
         self.assertIn("photo.jpg", rendered)
+        self.assertIn('class="support-image-attachment"', rendered)
+        self.assertIn('src="https://files.example/photo.jpg"', rendered)
+        self.assertIn('loading="lazy"', rendered)
         self.assertIn("status=OPEN&amp;unread=1&amp;q=%D0%98%D0%B2%D0%B0%D0%BD%20%D0%9F%D0%B5%D1%82%D1%80%D0%BE%D0%B2", rendered)
