@@ -5,20 +5,80 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
-    steps:       
-    - name: Deploy using ssh
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        port: 22
-        script: |
-          cd /home/deploy-dev/ubro_backend
-          git checkout master
-          git pull origin master
-          cd Backend-Bot-master/
-          docker compose -p ubro-prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+    steps:
+      - name: Deploy production
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+
+            cd /home/deploy-dev/ubro_backend
+
+            echo "=== Sync repository ==="
+            git fetch origin master
+            git checkout master
+            git reset --hard origin/master
+
+            echo "=== Current commit ==="
+            git log -1 --oneline
+
+            cd Backend-Bot-master
+
+            echo "=== Build and start ==="
+            docker compose -p ubro-prod \
+              -f docker-compose.yml \
+              -f docker-compose.prod.yml \
+              up -d --build
+
+            echo "=== Wait for startup ==="
+            sleep 10
+
+            echo "=== Containers ==="
+            docker compose -p ubro-prod \
+              -f docker-compose.yml \
+              -f docker-compose.prod.yml \
+              ps -a
+
+            echo "=== Check migration ==="
+            MIGRATION_EXIT_CODE=$(docker inspect \
+              -f '{{.State.ExitCode}}' \
+              ubro-prod-migration-1)
+
+            if [ "$MIGRATION_EXIT_CODE" != "0" ]; then
+              echo "Migration failed with exit code $MIGRATION_EXIT_CODE"
+              docker compose -p ubro-prod \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                logs --tail=200 migration
+              exit 1
+            fi
+
+            echo "=== Check FastAPI container ==="
+            FASTAPI_RUNNING=$(docker inspect \
+              -f '{{.State.Running}}' \
+              ubro-prod-fastapi_app-1)
+
+            if [ "$FASTAPI_RUNNING" != "true" ]; then
+              echo "FastAPI container is not running"
+              docker compose -p ubro-prod \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                logs --tail=200 fastapi_app
+              exit 1
+            fi
+
+            echo "=== FastAPI logs ==="
+            docker compose -p ubro-prod \
+              -f docker-compose.yml \
+              -f docker-compose.prod.yml \
+              logs --tail=50 fastapi_app
+
+            echo "=== Deploy completed successfully ==="
