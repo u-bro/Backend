@@ -1,10 +1,11 @@
 import asyncio
 from typing import Any
 from fastapi import BackgroundTasks, Request, Depends, HTTPException
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.backend.routers.base import BaseRouter
 from app.crud.ride import ride_crud, RideCrud
-from app.models import Ride
+from app.models import Ride, CommissionPayment
 from app.schemas.ride import RideSchema, RideSchemaIn, RideSchemaCreate, RideSchemaUpdateByClient, RideSchemaUpdateByDriver, RideSchemaFinishWithAnomaly, RideSchemaFinishByDriver, RideSchemaAcceptByDriver, RideSchemaWithRating
 from app.schemas.push import PushNotificationData
 from app.schemas.in_app_notification import InAppNotificationCreate
@@ -120,6 +121,22 @@ class RideRouter(BaseRouter[RideCrud]):
         old_ride = await self.model_crud.get_by_id(session, id)
         if not old_ride:
             raise HTTPException(status_code=404, detail="Ride not found")
+        if update_obj.status == "canceled":
+            payment = await session.scalar(
+                select(CommissionPayment.id)
+                .where(
+                    CommissionPayment.ride_id == old_ride.id,
+                    CommissionPayment.user_id == old_ride.client_id,
+                    CommissionPayment.is_refund == False,
+                    or_(
+                        CommissionPayment.status.in_(("CONFIRMED", "AUTHORIZED")),
+                        CommissionPayment.paid_at.is_not(None),
+                    ),
+                )
+                .limit(1)
+            )
+            if payment is not None:
+                raise HTTPException(status_code=409, detail="RIDE_COMMISSION_ALREADY_PAID")
         ride = await self.model_crud.update(session, id, update_obj, user_id)
         await self.send_notifications(session, ride.client_id, "ride_status_changed", UPDATE_MESSAGE.get(ride.status, 'Поездка обновлена'), "Проверьте информацию о поездке", ride.model_dump(mode="json"), f"{ride.id}_{old_ride.status}_{ride.status}")
         await manager_driver_feed.send_personal_message(user_id, {"type": "ride_changed", "message": "Поездка изменена вами", "data": ride.model_dump(mode="json")})
