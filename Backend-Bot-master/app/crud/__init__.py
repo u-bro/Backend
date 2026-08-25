@@ -1,17 +1,36 @@
-from .base import CrudBase
-from .user import user_crud
-from .ride import ride_crud
-from .role import role_crud
-from .driver_profile import driver_profile_crud
-from .driver_document import driver_document_crud
-from .phone_verification import phone_verification_crud
-from .commission import commission_crud
-from .document import document_crud
-from .driver_location import driver_location_crud
-from .in_app_notification import in_app_notification_crud
-from .device_token import device_token_crud
-from .commission_payment import commission_payment_crud
-from .ride_drivers_request import ride_drivers_request_crud
-from .car import car_crud
-from .driver_feed import driver_feed
-from .driver_tracker import driver_tracker
+from importlib import import_module
+from typing import Any
+
+
+_EXPORTS = {
+    "CrudBase": ("app.crud.base", "CrudBase"),
+    "user_crud": ("app.crud.user", "user_crud"),
+    "ride_crud": ("app.crud.ride", "ride_crud"),
+    "role_crud": ("app.crud.role", "role_crud"),
+    "driver_profile_crud": ("app.crud.driver_profile", "driver_profile_crud"),
+    "driver_document_crud": ("app.crud.driver_document", "driver_document_crud"),
+    "phone_verification_crud": ("app.crud.phone_verification", "phone_verification_crud"),
+    "commission_crud": ("app.crud.commission", "commission_crud"),
+    "document_crud": ("app.crud.document", "document_crud"),
+    "driver_location_crud": ("app.crud.driver_location", "driver_location_crud"),
+    "in_app_notification_crud": ("app.crud.in_app_notification", "in_app_notification_crud"),
+    "device_token_crud": ("app.crud.device_token", "device_token_crud"),
+    "commission_payment_crud": ("app.crud.commission_payment", "commission_payment_crud"),
+    "ride_drivers_request_crud": ("app.crud.ride_drivers_request", "ride_drivers_request_crud"),
+    "car_crud": ("app.crud.car", "car_crud"),
+    "driver_feed": ("app.crud.driver_feed", "driver_feed"),
+    "driver_tracker": ("app.crud.driver_tracker", "driver_tracker"),
+}
+
+__all__ = list(_EXPORTS)
+
+
+def __getattr__(name: str) -> Any:
+    try:
+        module_name, attribute_name = _EXPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
+
+    value = getattr(import_module(module_name), attribute_name)
+    globals()[name] = value
+    return value
