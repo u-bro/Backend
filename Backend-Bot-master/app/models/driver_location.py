@@ -1,10 +1,11 @@
-from sqlalchemy import BigInteger, String, TIMESTAMP, func, DECIMAL, Boolean, ForeignKey
+from sqlalchemy import BigInteger, String, TIMESTAMP, func, DECIMAL, Boolean, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 
 
 class DriverLocation(Base):
     __tablename__ = 'driver_locations'
+    __table_args__ = (Index("uq_driver_locations_driver", "driver_profile_id", unique=True),)
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     driver_profile_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('driver_profiles.id'), nullable=False)

@@ -4,9 +4,19 @@ HTTP_ERROR_MESSAGES = {
     401: ("UNAUTHORIZED", "CODE_EXPIRED", "CODE_INVALID"),
     403: ("FORBIDDEN", "DRIVER_PROFILE_NOT_APPROVED", "FORBIDDEN_DRIVER_SEARCH"),
     404: ("NOT_FOUND",),
-    409: ("CONFLICT",),
+    409: ("CONFLICT", "DRIVER_PENDING_REQUEST_LIMIT", "RIDE_REQUEST_ALREADY_EXISTS", "DRIVER_ALREADY_ASSIGNED", "RIDE_ALREADY_ASSIGNED", "RIDE_REQUEST_NOT_PENDING"),
     429: ("RATE_LIMIT_EXCEEDED",),
 }
+
+ACTIVE_RIDE_STATUSES = ("waiting_commission", "accepted", "on_the_way", "arrived", "started")
+RIDE_REQUEST_REMOVAL_REASONS = (
+    "selected_other_driver",
+    "ride_canceled",
+    "ride_expired",
+    "driver_withdrawn",
+    "driver_offline",
+    "driver_assigned_elsewhere",
+)
 
 TEST_PHONES = ('79999999997', '79999999999', '79999999991', '79999999990', '79999999992', '79999999993')
 TEST_PHONE_OTP = '111111'

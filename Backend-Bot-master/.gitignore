@@ -10,6 +10,9 @@ __pycache__/
 *.pyd
 *.db
 test*.py
+!tests/test_ride_request_contracts.py
+!tests/services/test_after_commit.py
+!tests/services/test_new_ride_notifications.py
 !admin_service/admin_project/tests.py
 
 # Virtual Environment

@@ -13,6 +13,7 @@ from app.models import Ride, CommissionPayment
 from app.backend.routers.base import BaseRouter
 from app.enum import RoleCode
 from app.db import async_session_maker
+from app.services.after_commit import commit_with_callbacks
 
 
 REUSABLE_PAYMENT_STATUSES = {"NEW", "FORM_SHOWED", "AUTHORIZED", "CONFIRMED"}
@@ -124,7 +125,7 @@ class CommissionPaymentRouter(BaseRouter[CommissionPaymentCrud]):
                     "ErrorCode": "0",
                     "Amount": amount_to_minor_units(item.amount),
                 }, verify_token=False)
-                await session.commit()
+                await commit_with_callbacks(session)
 
 
 commission_payment_router = CommissionPaymentRouter(commission_payment_crud, "/commissions/payments").router

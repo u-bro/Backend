@@ -17,6 +17,7 @@ from app.services import fcm_service, manager_driver_feed
 from app.services.new_ride_notifications import notify_about_new_ride
 from app.crud.driver_tracker import driver_tracker
 from app.enum import RoleCode
+from app.services.after_commit import add_after_commit
 
 UPDATE_MESSAGE = {
     'on_the_way': 'Водитель в пути',
@@ -101,18 +102,18 @@ class RideRouter(BaseRouter[RideCrud]):
         driver_profile = await driver_profile_crud.get_by_id(session, driver_profile_id)
         if not driver_profile:
             raise HTTPException(status_code=404, detail="Driver profile not found")
-        request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, car_id=driver_profile.current_car_id, eta=update_obj.eta, offer_fare=update_obj.offer_fare, status="requested"))
+        ride_request = await ride_drivers_request_crud.create(session, RideDriversRequestCreate(ride_id=id, driver_profile_id=driver_profile_id, car_id=driver_profile.current_car_id, eta=update_obj.eta, offer_fare=update_obj.offer_fare, status="requested"))
         ride = await ride_crud.get_by_id(session, id)
-        await manager_driver_feed.send_personal_message(user_id, {"type": "ride_request_sent", "data": ride.model_dump(mode="json")})
-        return request
+        add_after_commit(session, lambda: manager_driver_feed.send_personal_message(user_id, {"type": "ride_request_sent", "data": ride.model_dump(mode="json")}))
+        return ride_request
 
     async def cancel_ride_request(self, request: Request, id: int, driver_profile_id: int = Depends(get_current_driver_profile_id)) -> RideDriversRequestSchema:
         session = request.state.session
         existing = await ride_drivers_request_crud.get_requested_by_ride_id_and_driver_profile_id(session, id, driver_profile_id)
         if not existing:
             raise HTTPException(status_code=404, detail="Ride request not found")
-        request = await ride_drivers_request_crud.update(session, existing.id, RideDriversRequestUpdate(status="canceled"))
-        return request
+        ride_request = await ride_drivers_request_crud.withdraw(session, existing.id)
+        return ride_request
 
     async def update_by_driver(self, request: Request, id: int, update_obj: RideSchemaUpdateByDriver, user_id: int = Depends(get_current_user_id)) -> RideSchema:
         session = request.state.session

@@ -23,6 +23,8 @@ from fastapi import HTTPException
 from app.config import RIDE_SECONDS_LIMIT
 from app.db import async_session_maker
 from app.services.fcm_service import fcm_service
+from app.const import ACTIVE_RIDE_STATUSES
+from app.services.after_commit import add_after_commit, commit_with_callbacks
 
 
 STATUSES = {
@@ -131,7 +133,7 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         expected_fare = update_obj.offer_fare
         stmt = (
             update(self.model)
-            .where(and_(self.model.id == id, self.model.driver_profile_id.is_(None)))
+            .where(and_(self.model.id == id, self.model.status == "requested", self.model.driver_profile_id.is_(None)))
             .values(driver_profile_id=update_obj.driver_profile_id, status=update_obj.status, expected_fare=expected_fare, commission_amount=self._calculate_commission_amount(expected_fare, commission))
             .returning(self.model)
         )
@@ -151,7 +153,7 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         return self.schema.model_validate(result)
     
     async def cancel_rides_by_user_id(self, session: AsyncSession, user_id: int):
-        stmt = select(self.model).where(and_(self.model.status.in_(["requested", "waiting_commission", "accepted", "on_the_way", "arrived", "started"]), self.model.client_id == user_id))
+        stmt = select(self.model).where(and_(self.model.status.in_(("requested", *ACTIVE_RIDE_STATUSES)), self.model.client_id == user_id))
         result = await session.execute(stmt)
         existing_rides = result.scalars().all()
         if not existing_rides or not len(existing_rides):
@@ -169,9 +171,10 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         for id in client_ids:
             await driver_location_sender.stop_task(id)
         
-        requests = await session.execute(update(RideDriversRequest).where(RideDriversRequest.ride_id.in_(ids)).values(status="rejected").returning(RideDriversRequest))
-        for request in requests.scalars().all():
-            await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
+        from .ride_drivers_request import ride_drivers_request_crud
+
+        for ride_id in ids:
+            await ride_drivers_request_crud.reject_by_ride_id(session, ride_id, "ride_canceled")
         
         ride = self.schema.model_validate(existing_rides[0])
         await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена, т.к. была создана новая", data=ride.model_dump(mode='json'), dedup_key=f"{ride.id}_canceled"))
@@ -329,7 +332,7 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         return self.schema.model_validate(ride) if ride else None
 
     async def get_active_ride_by_driver_profile_id(self, session: AsyncSession, driver_profile_id: int) -> RideSchema | None:
-        result = await session.execute(select(self.model).where(and_(self.model.status.in_(["waiting_commission", "accepted", "on_the_way", "arrived", "started"]), Ride.driver_profile_id == driver_profile_id)))
+        result = await session.execute(select(self.model).where(and_(self.model.status.in_(ACTIVE_RIDE_STATUSES), Ride.driver_profile_id == driver_profile_id)))
         ride = result.scalar_one_or_none()
         return self.schema.model_validate(ride) if ride else None
 
@@ -351,14 +354,34 @@ class RideCrud(CrudBase[Ride, RideSchema]):
     async def cancel_ride_if_timeout(self, id: int, client_id: int) -> None:
         await asyncio.sleep(RIDE_SECONDS_LIMIT)
         async with async_session_maker() as session:
-            ride = await self.get_by_id(session, id)
-            if ride and ride.status == 'requested':
-                updated_ride = await self.update(session, id, RideSchemaUpdateByClient(status='canceled'), client_id)
-                requests = await session.execute(update(RideDriversRequest).where(RideDriversRequest.ride_id == updated_ride.id).values(status="rejected").returning(RideDriversRequest))
-                for request in requests.scalars().all():
-                    await driver_tracker.set_status_by_driver(session, request.driver_profile_id, DriverStatus.ONLINE)
-                await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за таймаута", data=updated_ride.model_dump(mode='json'), dedup_key=f"{updated_ride.id}_canceled"))
-                await fcm_service.send_to_user(session, client_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за таймаута'))
-            await session.commit()
+            stmt = (
+                update(self.model)
+                .where(
+                    self.model.id == id,
+                    self.model.status == "requested",
+                    self.model.driver_profile_id.is_(None),
+                )
+                .values(status="canceled", canceled_at=datetime.now(timezone.utc))
+                .returning(self.model)
+            )
+            result = await self.execute_get_one(session, stmt)
+            if result:
+                updated_ride = self.schema.model_validate(result)
+                await ride_status_history_crud.create(
+                    session,
+                    RideStatusHistoryCreate(
+                        ride_id=id,
+                        from_status="requested",
+                        to_status="canceled",
+                        changed_by=client_id,
+                        created_at=datetime.now(timezone.utc),
+                    ),
+                )
+                from .ride_drivers_request import ride_drivers_request_crud
+
+                await ride_drivers_request_crud.reject_by_ride_id(session, id, "ride_expired")
+                await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за таймаута", data=updated_ride.model_dump(mode='json'), dedup_key=f"{id}_canceled"))
+                add_after_commit(session, lambda: fcm_service.send_to_user(session, client_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за таймаута')))
+            await commit_with_callbacks(session)
 
 ride_crud = RideCrud(Ride, RideSchema)

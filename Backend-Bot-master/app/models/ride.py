@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Integer, String, TIMESTAMP, func, DECIMAL, Boolean, ForeignKey, Text
+from sqlalchemy import BigInteger, Integer, String, TIMESTAMP, func, DECIMAL, Boolean, ForeignKey, Text, Index, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base, metadata
@@ -6,6 +6,14 @@ from app.db import Base, metadata
 
 class Ride(Base):
     __tablename__ = 'rides'
+    __table_args__ = (
+        Index(
+            "uq_rides_one_active_per_driver",
+            "driver_profile_id",
+            unique=True,
+            postgresql_where=text("driver_profile_id IS NOT NULL AND status IN ('waiting_commission','accepted','on_the_way','arrived','started')"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     client_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=True)

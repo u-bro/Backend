@@ -1,5 +1,5 @@
 from django.db import models
-from utils.schema_choices import RIDE_DRIVERS_REQUEST_STATUS_CHOICES
+from utils.schema_choices import RIDE_DRIVERS_REQUEST_STATUS_CHOICES, RIDE_REQUEST_REMOVAL_REASON_CHOICES
 
 
 class RideDriversRequest(models.Model):
@@ -15,6 +15,8 @@ class RideDriversRequest(models.Model):
     car_id = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=50, choices=RIDE_DRIVERS_REQUEST_STATUS_CHOICES)
     offer_fare = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    commission_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    removal_reason = models.CharField(max_length=50, choices=RIDE_REQUEST_REMOVAL_REASON_CHOICES, null=True, blank=True)
     eta = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)

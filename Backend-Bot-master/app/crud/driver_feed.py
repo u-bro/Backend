@@ -4,9 +4,10 @@ import math, asyncio, logging, app.config
 from app.services.websocket_manager import manager_driver_feed
 from app.services.driver_state_storage import driver_state_storage
 from app.db import async_session_maker
-from app.models import Ride
+from app.models import Ride, RideDriversRequest
+from app.const import ACTIVE_RIDE_STATUSES
 from app.schemas.ride import RideSchema
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,23 @@ class DriverFeed:
     async def get_driver_feed(self, session: AsyncSession, driver_profile_id: int, limit: int = 20) -> List[dict]:
         driver = driver_state_storage.get_driver(driver_profile_id)
         if not driver or not driver.is_available() or driver.latitude is None or driver.longitude is None :
+            return []
+
+        active_ride_id = await session.scalar(
+            select(Ride.id).where(
+                Ride.driver_profile_id == driver_profile_id,
+                Ride.status.in_(ACTIVE_RIDE_STATUSES),
+            ).limit(1)
+        )
+        if active_ride_id is not None:
+            return []
+        pending_count = await session.scalar(
+            select(func.count(RideDriversRequest.id)).where(
+                RideDriversRequest.driver_profile_id == driver_profile_id,
+                RideDriversRequest.status == "requested",
+            )
+        )
+        if pending_count >= app.config.DRIVER_PENDING_REQUEST_LIMIT:
             return []
 
         rides = await self.get_requested_rides(session, limit=limit * 2)

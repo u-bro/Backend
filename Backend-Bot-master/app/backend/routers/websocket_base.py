@@ -3,6 +3,7 @@ from typing import Any, Awaitable, Callable, Dict
 from fastapi import APIRouter, WebSocket
 from starlette.websockets import WebSocketDisconnect
 from app.logger import logger
+from app.services.after_commit import commit_with_callbacks, rollback_with_callbacks
 
 MessageHandler = Callable[[WebSocket, Dict[str, Any], Dict[str, Any]], Awaitable[None]]
 
@@ -20,24 +21,28 @@ class BaseWebsocketRouter:
         self._handlers[msg_type] = handler
 
     async def run(self, websocket: WebSocket, **context: Any) -> None:
-        await self.on_connect(websocket, **context)
         session = context.get('session')
         try:
+            await self.on_connect(websocket, **context)
+            if session:
+                await commit_with_callbacks(session)
             while True:
                 data = await websocket.receive_json()
                 await self.dispatch_message(websocket, data, **context)
-                if session: 
-                    await session.commit()
+                if session:
+                    await commit_with_callbacks(session)
         except WebSocketDisconnect:
-            await self.on_disconnect(websocket, **context)
-            if session: 
-                await session.rollback()
+            pass
         except Exception as exc:
             logger.error(f"WebSocket error: {exc}")
             await self.on_error(websocket, exc, **context)
-            await self.on_disconnect(websocket, **context)
-            if session: 
-                await session.rollback()
+        finally:
+            if session:
+                await rollback_with_callbacks(session)
+            try:
+                await self.on_disconnect(websocket, **context)
+            except Exception:
+                logger.exception("WebSocket disconnect cleanup failed")
 
     async def dispatch_message(self, websocket: WebSocket, data: Dict[str, Any], **context: Any) -> None:
         message_type = data.get("type")

@@ -1,11 +1,13 @@
 from fastapi import Request, Depends, HTTPException
 from app.crud.user import user_crud, UserCrud
-from app.crud import driver_location_crud, ride_crud
+from app.crud import ride_crud
 from app.schemas.user import UserSchemaCreate, UserSchema, UserSchemaMe, UserSchemaUpdate, UserSchemaUpdateMe
 from app.backend.routers.base import BaseRouter
 from app.backend.deps import require_role, get_current_user, get_current_user_id
-from app.models import User
+from app.models import Ride, User
 from app.enum import RoleCode
+from app.const import ACTIVE_RIDE_STATUSES
+from sqlalchemy import select
 
 
 class UserRouter(BaseRouter[UserCrud]):
@@ -42,12 +44,12 @@ class UserRouter(BaseRouter[UserCrud]):
     async def get_me(self, request: Request, user: User = Depends(get_current_user)) ->  UserSchemaMe:
         role_name = user.role.code
         if role_name == RoleCode.DRIVER:
-            driver_location = await driver_location_crud.get_by_driver_profile_id(request.state.session, user.driver_profile.id)
-            is_active_ride = driver_location.status in ['busy', 'waiting_ride'] if driver_location else False
+            active_ride_id = await request.state.session.scalar(select(Ride.id).where(Ride.driver_profile_id == user.driver_profile.id, Ride.status.in_(ACTIVE_RIDE_STATUSES)).limit(1))
+            is_active_ride = active_ride_id is not None
             return UserSchemaMe(**user.__dict__, role_name=role_name, is_active_ride=is_active_ride)
 
         rides = await ride_crud.get_by_client_id(request.state.session, user.id)
-        statuses = [ride.status for ride in rides if ride.status in ['requested', 'waiting_commission', 'accepted', 'on_the_way', 'arrived', 'started']]
+        statuses = [ride.status for ride in rides if ride.status in ('requested', *ACTIVE_RIDE_STATUSES)]
         return UserSchemaMe(**user.__dict__, role_name=role_name, is_active_ride=len(statuses) > 0)
 
     async def update_me(self, request: Request, update_obj: UserSchemaUpdateMe, user_id: int = Depends(get_current_user_id)) -> UserSchema:

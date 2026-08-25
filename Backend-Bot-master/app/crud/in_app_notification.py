@@ -2,10 +2,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.base import CrudBase
 from app.models.in_app_notification import InAppNotification
 from app.schemas.in_app_notification import InAppNotificationSchema, InAppNotificationCreate
-from sqlalchemy import select, and_, insert
+from sqlalchemy import select, and_
+from sqlalchemy.dialects.postgresql import insert
 from datetime import datetime, timezone
 from fastapi import HTTPException
 from app.services.websocket_manager import manager_notifications
+from app.services.after_commit import add_after_commit
 
 
 class InAppNotificationCrud(CrudBase[InAppNotification, InAppNotificationSchema]):
@@ -18,13 +20,19 @@ class InAppNotificationCrud(CrudBase[InAppNotification, InAppNotificationSchema]
             if existing.scalar_one_or_none():
                 return None
         
-        stmt = insert(self.model).values(create_obj.model_dump()).returning(self.model)
+        stmt = insert(self.model).values(create_obj.model_dump())
+        if create_obj.dedup_key:
+            stmt = stmt.on_conflict_do_nothing(
+                index_elements=[self.model.user_id, self.model.type, self.model.dedup_key],
+                index_where=self.model.dedup_key.is_not(None),
+            )
+        stmt = stmt.returning(self.model)
         result = await self.execute_get_one(session, stmt)
         if not result:
             return None
 
         result_model = self.schema.model_validate(result)
-        await manager_notifications.send_personal_message(create_obj.user_id, result_model.model_dump())
+        add_after_commit(session, lambda: manager_notifications.send_personal_message(create_obj.user_id, result_model.model_dump(mode="json")))
         return result_model
 
     async def get_by_user_id(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10):

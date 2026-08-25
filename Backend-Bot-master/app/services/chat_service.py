@@ -12,6 +12,7 @@ from .websocket_manager import manager
 from app.crud.ride import ride_crud
 from app.crud.user import user_crud
 from app.enum import MessageType, RoleCode
+from app.services.after_commit import add_after_commit
 
 
 class ChatService:
@@ -62,7 +63,6 @@ class ChatService:
         await session.flush()
         await session.refresh(message)
         result = ChatMessageSchema.model_validate(message)
-        await session.commit()
         return result
 
     async def save_message_and_send_to_ride(self, session: AsyncSession, ride_id: int, text: str, sender_id: int | None = None, message_type: str = MessageType.TEXT, receiver_id: Optional[int] = None, attachments: Optional[Dict[str, Any]] = None, is_moderated: bool = True) -> ChatMessageSchema:
@@ -77,7 +77,7 @@ class ChatService:
             "created_at": datetime.now(timezone.utc),
         }
         result = await self.save_message(session, ChatMessage(**message))
-        await manager.send_to_ride(session, ride_id, message)
+        add_after_commit(session, lambda: manager.send_to_ride(session, ride_id, message))
         return result
 
     async def get_my_chats(self, session: AsyncSession, user_id: int, page: int = 1, page_size: int = 10) -> List[ChatMessageHistory]:

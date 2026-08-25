@@ -59,6 +59,15 @@ CAR_PHOTO_STATUS_CHOICES = tuple((value, value) for value in CAR_PHOTO_STATUS_VA
 
 RIDE_DRIVERS_REQUEST_STATUS_VALUES = ("requested", "accepted", "rejected", "canceled")
 RIDE_DRIVERS_REQUEST_STATUS_CHOICES = tuple((value, value) for value in RIDE_DRIVERS_REQUEST_STATUS_VALUES)
+RIDE_REQUEST_REMOVAL_REASON_VALUES = (
+    "selected_other_driver",
+    "ride_canceled",
+    "ride_expired",
+    "driver_withdrawn",
+    "driver_offline",
+    "driver_assigned_elsewhere",
+)
+RIDE_REQUEST_REMOVAL_REASON_CHOICES = tuple((value, value) for value in RIDE_REQUEST_REMOVAL_REASON_VALUES)
 
 DRIVER_LOCATION_STATUS_VALUES = ("offline", "online", "busy", "waiting_ride")
 DRIVER_LOCATION_STATUS_CHOICES = tuple((value, value) for value in DRIVER_LOCATION_STATUS_VALUES)

@@ -18,9 +18,10 @@ class DriverState:
 
     def is_available(self) -> bool:
         return (
-            self.status == DriverStatus.ONLINE
+            self.status in (DriverStatus.ONLINE, DriverStatus.WAITING_RIDE)
             and self.current_ride_id is None
             and self.latitude is not None
+            and self.longitude is not None
         )
 
     def has_permit(self, ride_class: str, ride_type: str) -> bool:

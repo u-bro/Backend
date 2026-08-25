@@ -4,6 +4,9 @@ from datetime import datetime, timezone
 from pydantic import Field
 from .driver_profile import DriverProfileSchema
 from .car import CarSchema
+from .ride import RideSchema
+
+REMOVAL_REASONS = Literal['selected_other_driver', 'ride_canceled', 'ride_expired', 'driver_withdrawn', 'driver_offline', 'driver_assigned_elsewhere']
 
 
 class RideDriversRequestCreate(BaseSchema):
@@ -17,7 +20,7 @@ class RideDriversRequestCreate(BaseSchema):
 
 
 class RideDriversRequestUpdate(BaseSchema):
-    status: Literal['accepted', 'rejected', 'canceled'] = Field(...)
+    status: Literal['accepted'] = Field(...)
     eta: dict | None = Field(None)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -26,6 +29,7 @@ class RideDriversRequestSchema(RideDriversRequestCreate):
     id: int = Field(..., gt=0)
     status: Literal['requested', 'accepted', 'rejected', 'canceled'] = Field(...)
     commission_amount: float | None = Field(None)
+    removal_reason: REMOVAL_REASONS | None = Field(None)
     updated_at: datetime | None = None
 
 
@@ -33,3 +37,6 @@ class RideDriversRequestSchemaDetailed(RideDriversRequestSchema):
     driver_profile: DriverProfileSchema = Field(...)
     car: CarSchema | None = Field(None)
 
+
+class RideDriversRequestSchemaWithRide(RideDriversRequestSchema):
+    ride: RideSchema = Field(...)

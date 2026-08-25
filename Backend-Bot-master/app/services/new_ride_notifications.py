@@ -3,26 +3,26 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, func, select
 
 import app.config
 from app.crud.driver_feed import driver_feed
 from app.crud.in_app_notification import in_app_notification_crud
 from app.db import async_session_maker
-from app.models import DriverLocation, DriverProfile, Ride
+from app.models import DriverLocation, DriverProfile, Ride, RideDriversRequest
 from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.push import PushNotificationData
 from app.services.fcm_service import fcm_service
 
 
 logger = logging.getLogger(__name__)
-
-ACTIVE_RIDE_STATUSES = ("waiting_commission", "accepted", "on_the_way", "arrived", "started")
+from app.const import ACTIVE_RIDE_STATUSES
+from app.services.after_commit import add_after_commit, commit_with_callbacks, rollback_with_callbacks
 
 
 def is_matching_driver(driver_location: Any, driver_profile: Any, ride: Any) -> bool:
     """Return whether a persisted driver matches the current feed rules."""
-    if driver_location.status != "online":
+    if driver_location.status not in ("online", "waiting_ride"):
         return False
     if driver_location.latitude is None or driver_location.longitude is None:
         return False
@@ -85,16 +85,26 @@ async def notify_about_new_ride(ride_id: int) -> None:
                     Ride.status.in_(ACTIVE_RIDE_STATUSES),
                 )
             )
+            pending_count = (
+                select(func.count(RideDriversRequest.id))
+                .where(
+                    RideDriversRequest.driver_profile_id == DriverProfile.id,
+                    RideDriversRequest.status == "requested",
+                )
+                .correlate(DriverProfile)
+                .scalar_subquery()
+            )
             candidates_result = await session.execute(
                 select(DriverLocation, DriverProfile)
                 .join(DriverProfile, DriverProfile.id == DriverLocation.driver_profile_id)
                 .where(
                     DriverProfile.approved.is_(True),
                     DriverProfile.user_id.is_not(None),
-                    DriverLocation.status == "online",
+                    DriverLocation.status.in_(("online", "waiting_ride")),
                     DriverLocation.latitude.is_not(None),
                     DriverLocation.longitude.is_not(None),
                     ~active_ride_exists,
+                    pending_count < app.config.DRIVER_PENDING_REQUEST_LIMIT,
                 )
             )
 
@@ -134,20 +144,16 @@ async def notify_about_new_ride(ride_id: int) -> None:
                 if notification is None:
                     continue
 
-                try:
-                    await fcm_service.send_to_user(
+                add_after_commit(
+                    session,
+                    lambda user_id=driver_profile.user_id, title=title, body=body, data=data: fcm_service.send_to_user(
                         session,
-                        driver_profile.user_id,
+                        user_id,
                         PushNotificationData(title=title, body=body, data=data),
-                    )
-                except Exception:
-                    logger.exception(
-                        "Failed to send new ride push ride_id=%s user_id=%s",
-                        ride.id,
-                        driver_profile.user_id,
-                    )
+                    ),
+                )
 
-            await session.commit()
+            await commit_with_callbacks(session)
         except Exception:
-            await session.rollback()
+            await rollback_with_callbacks(session)
             logger.exception("New ride notification task failed ride_id=%s", ride_id)

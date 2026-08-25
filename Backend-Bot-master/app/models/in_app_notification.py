@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Integer, String, TIMESTAMP, func, ForeignKey
+from sqlalchemy import BigInteger, Integer, String, TIMESTAMP, func, ForeignKey, Index, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
@@ -6,6 +6,16 @@ from app.db import Base
 
 class InAppNotification(Base):
     __tablename__ = 'in_app_notifications'
+    __table_args__ = (
+        Index(
+            "uq_in_app_notifications_dedup",
+            "user_id",
+            "type",
+            "dedup_key",
+            unique=True,
+            postgresql_where=text("dedup_key IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=False)

@@ -2,6 +2,7 @@ from fastapi import Request, FastAPI
 from app.logger import logger
 from app.db import async_session_maker
 from app.config import API_IGNORE
+from app.services.after_commit import commit_with_callbacks, rollback_with_callbacks
 
 
 def install_db_middleware(app: FastAPI) -> None:
@@ -22,9 +23,9 @@ def install_db_middleware(app: FastAPI) -> None:
             request.state.session = session
             try:
                 response = await call_next(request)
-                await session.commit()
+                await commit_with_callbacks(session)
                 return response
             except Exception:
                 logger.error("Rollback session")
-                await session.rollback()
+                await rollback_with_callbacks(session)
                 raise
