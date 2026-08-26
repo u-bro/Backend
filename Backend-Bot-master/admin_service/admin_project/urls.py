@@ -5,6 +5,7 @@ from django.urls import path
 from .policy_views import policy_management_view, policy_preview_view
 from admin_drivers.views import moderation_detail, moderation_list
 from admin_support.views import conversation_action, unread_count, workspace
+from admin_push_notifications.views import send_push_view
 
 
 class AdminAuthenticationForm(AuthenticationForm):
@@ -19,6 +20,7 @@ class AdminAuthenticationForm(AuthenticationForm):
 admin.site.login_form = AdminAuthenticationForm
 
 urlpatterns = [
+    path('admin/push-notifications/send/', admin.site.admin_view(send_push_view), name='admin-push-send'),
     path('admin/driver-moderation/', admin.site.admin_view(moderation_list), name='driver-moderation-list'),
     path('admin/driver-moderation/<int:profile_id>/', admin.site.admin_view(moderation_detail), name='driver-moderation-detail'),
     path('admin/support/', admin.site.admin_view(workspace), name='support-workspace'),

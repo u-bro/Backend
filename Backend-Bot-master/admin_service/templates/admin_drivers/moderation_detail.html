@@ -29,6 +29,9 @@
   .car-photo { border-radius: 5px; overflow: hidden; background: #fff; border: 1px solid #ddd; }
   .car-photo img { display: block; width: 100%; height: 140px; object-fit: cover; }
   .car-photo-info { display: grid; gap: 2px; padding: 7px; }
+  .car-editor-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .car-editor-actions form { margin: 0; }
+  .car-editor[hidden] { display: none; }
   @media (max-width: 900px) { .moderation-grid { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
@@ -47,6 +50,35 @@
             {% if missing_documents %}<p>Не загружены: {{ missing_documents|join:", " }}</p>{% endif %}
             <ul>{% for document in warning_documents %}<li>{{ document.doc_type }}: {{ document.status|default:"не загружен" }}</li>{% endfor %}</ul>
           </div>
+        {% endif %}
+      </div>
+
+      <div class="moderation-card">
+        <h2>Автомобиль</h2>
+        {% if current_car %}
+          <form method="post" class="car-editor">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_car">
+            {{ car_form.non_field_errors }}
+            {{ car_form.as_p }}
+            <button type="submit" class="button default">Сохранить изменения</button>
+          </form>
+          <form method="post" onsubmit="return confirm('Удалить автомобиль и связанные фотографии? Это действие необратимо.');">
+            {% csrf_token %}
+            <button type="submit" name="action" value="delete_car" class="button delete-link">Удалить автомобиль</button>
+          </form>
+        {% else %}
+          <button type="button" class="button" id="show-car-editor">Добавить автомобиль</button>
+          <form method="post" class="car-editor" id="car-editor"{% if not car_form.errors %} hidden{% endif %}>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_car">
+            {{ car_form.non_field_errors }}
+            {{ car_form.as_p }}
+            <div class="car-editor-actions">
+              <button type="submit" class="button default">Сохранить автомобиль</button>
+              <button type="button" class="button" id="hide-car-editor">Отмена</button>
+            </div>
+          </form>
         {% endif %}
       </div>
 
@@ -178,4 +210,22 @@
     </aside>
   </div>
 </div>
+{% if not current_car %}
+<script>
+  (function () {
+    const editor = document.getElementById("car-editor");
+    const showButton = document.getElementById("show-car-editor");
+    const hideButton = document.getElementById("hide-car-editor");
+    showButton.addEventListener("click", function () {
+      editor.hidden = false;
+      showButton.hidden = true;
+    });
+    hideButton.addEventListener("click", function () {
+      editor.hidden = true;
+      showButton.hidden = false;
+      editor.reset();
+    });
+  }());
+</script>
+{% endif %}
 {% endblock %}

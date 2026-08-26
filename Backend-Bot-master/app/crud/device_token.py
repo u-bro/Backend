@@ -14,6 +14,14 @@ class DeviceTokenCrud(CrudBase[DeviceToken, DeviceTokenSchema]):
         items = result.scalars().all()
         return [self.schema.model_validate(item) for item in items]
 
+    async def get_recipients(self, session: AsyncSession, user_id: int | None = None) -> tuple[list[str], int]:
+        stmt = select(self.model.token, self.model.user_id)
+        if user_id is not None:
+            stmt = stmt.where(self.model.user_id == user_id)
+        result = await session.execute(stmt)
+        rows = result.all()
+        return [row.token for row in rows if row.token], len({row.user_id for row in rows})
+
     async def get_by_user_id_and_token(self, session: AsyncSession, user_id: int, token: str) -> DeviceTokenSchema | None:
         result = await session.execute(
             select(self.model).where(self.model.user_id == user_id, self.model.token == token)

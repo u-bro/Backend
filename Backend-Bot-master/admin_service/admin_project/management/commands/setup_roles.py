@@ -16,7 +16,8 @@ class Command(BaseCommand):
             app_label__in=[
                 'admin_users', 'admin_drivers', 'admin_rides',
                 'admin_roles', 'admin_driver_documents', 'admin_chat_messages',
-                'admin_commissions', 'admin_ride_status_history', 'admin_support'
+                'admin_commissions', 'admin_ride_status_history', 'admin_support',
+                'admin_push_notifications'
             ]
         )
         
@@ -26,7 +27,7 @@ class Command(BaseCommand):
         admin_group.permissions.set(all_permissions)
 
         # Operator получает только view права + некоторые change
-        view_permissions = all_permissions.filter(codename__startswith='view_')
+        view_permissions = all_permissions.exclude(content_type__app_label='admin_push_notifications').filter(codename__startswith='view_')
         change_permissions = all_permissions.filter(
             codename__in=[
                 'change_user', 'change_driverprofile', 'change_ride',

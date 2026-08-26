@@ -20,7 +20,7 @@ from admin_users.models import User
 from utils.api_client import api_client
 from utils.admin_links import car_link, safe_external_url, user_link
 
-from .forms import DriverModerationForm
+from .forms import DriverCarForm, DriverModerationForm
 from .models import DriverModerationInfo, DriverProfile, DriverProfileModeration
 
 
@@ -161,7 +161,9 @@ def moderation_detail(request, profile_id: int):
         raise Http404("User not found")
     source = request.GET.get("from")
 
+    current_car = _get_current_car(profile)
     form = DriverModerationForm(instance=profile)
+    car_form = DriverCarForm(initial=_car_form_initial(current_car))
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "save":
@@ -171,6 +173,47 @@ def moderation_detail(request, profile_id: int):
                     form.save_related_data()
                 messages.success(request, "Профиль водителя сохранён.")
                 return HttpResponseRedirect(request.get_full_path())
+        elif action == "add_car":
+            car_form = DriverCarForm(request.POST)
+            if current_car:
+                car_form.add_error(None, "У водителя уже есть текущий автомобиль.")
+            elif car_form.is_valid():
+                with transaction.atomic():
+                    locked_profile = DriverProfile.objects.select_for_update().get(pk=profile.pk)
+                    if _get_current_car(locked_profile):
+                        car_form.add_error(None, "У водителя уже есть текущий автомобиль.")
+                    else:
+                        current_car = Car.objects.create(
+                            driver_profile_id=locked_profile.pk,
+                            **car_form.cleaned_car_values(),
+                        )
+                        locked_profile.current_car_id = current_car.pk
+                        locked_profile.save(update_fields=["current_car_id"])
+                if not car_form.errors:
+                    messages.success(request, "Автомобиль добавлен.")
+                    return HttpResponseRedirect(request.get_full_path())
+        elif action == "update_car":
+            car_form = DriverCarForm(request.POST)
+            if not current_car:
+                car_form.add_error(None, "Текущий автомобиль не найден.")
+            elif car_form.is_valid():
+                with transaction.atomic():
+                    updated = Car.objects.filter(
+                        pk=current_car.pk,
+                        driver_profile_id=profile.pk,
+                    ).update(**car_form.cleaned_car_values())
+                    if not updated:
+                        raise Car.DoesNotExist
+                    DriverProfile.objects.filter(pk=profile.pk).update(current_car_id=current_car.pk)
+                messages.success(request, "Изменения автомобиля сохранены.")
+                return HttpResponseRedirect(request.get_full_path())
+        elif action == "delete_car":
+            if current_car:
+                with transaction.atomic():
+                    _delete_car(current_car)
+                messages.success(request, "Автомобиль удалён.")
+                return HttpResponseRedirect(request.get_full_path())
+            messages.error(request, "Текущий автомобиль не найден.")
         elif action in ("approved", "rejected"):
             reason_ids = [int(value) for value in request.POST.getlist("moderation_info_ids") if value.isdigit()]
             success = api_client.moderate_driver(
@@ -241,6 +284,8 @@ def moderation_detail(request, profile_id: int):
             "profile_user_link": user_link(user.id),
             "avatar_url": safe_external_url(profile.photo_url) or safe_external_url(user.photo_url),
             "form": form,
+            "car_form": car_form,
+            "current_car": current_car,
             "cars": cars,
             "car_cards": car_cards,
             "car_documents": car_documents,
@@ -263,6 +308,31 @@ def moderation_detail(request, profile_id: int):
             ),
         },
     )
+
+
+def _get_current_car(profile):
+    if not profile.current_car_id:
+        return None
+    return Car.objects.filter(pk=profile.current_car_id, driver_profile_id=profile.pk).first()
+
+
+def _car_form_initial(car):
+    if not car:
+        return {}
+    return {
+        "car_model": car.model,
+        "car_number": car.number,
+        "car_region": car.region,
+        "car_vin": car.vin,
+        "car_year": car.year,
+    }
+
+
+def _delete_car(car):
+    DriverProfile.objects.filter(current_car_id=car.pk).update(current_car_id=None)
+    CarPhoto.objects.filter(car_id=car.pk).delete()
+    RideDriversRequest.objects.filter(car_id=car.pk).update(car_id=None)
+    Car.objects.filter(pk=car.pk, driver_profile_id=car.driver_profile_id).delete()
 
 
 def _delete_driver_related_records(profile):

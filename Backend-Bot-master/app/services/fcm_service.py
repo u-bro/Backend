@@ -1,12 +1,22 @@
 import asyncio, json, firebase_admin
+from collections import Counter
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Optional, Union
 from firebase_admin import credentials, messaging
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import FIREBASE_SERVICE_ACCOUNT_PATH, ROOT_DIR
 from app.logger import logger
-from app.schemas.push import PushSendToTokenRequest, PushSendToTopicRequest, PushSendToUserRequest
+from app.schemas.push import PushNotificationData, PushSendToTokenRequest, PushSendToTopicRequest, PushSendToUserRequest
 from app.crud.device_token import device_token_crud
+
+
+@dataclass(frozen=True)
+class BatchSendResult:
+    attempted_count: int
+    success_count: int
+    failure_count: int
+    errors: tuple[str, ...] = ()
 
 
 class FCMService:
@@ -36,7 +46,7 @@ class FCMService:
                 normalized[k] = str(v)
         return normalized
 
-    def _build_data_payload(self, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> Dict[str, str]:
+    def _build_data_payload(self, payload: Union[PushNotificationData, PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> Dict[str, str]:
         base: Dict[str, Any] = dict(payload.data or {})
         if payload.title is not None:
             base["title"] = payload.title
@@ -48,7 +58,7 @@ class FCMService:
             base["data"] = payload.data
         return self._normalize_data(base)
 
-    def _build_notification(self, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.Notification | None:
+    def _build_notification(self, payload: Union[PushNotificationData, PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.Notification | None:
         if payload.title is None and payload.body is None and payload.image is None:
             return None
 
@@ -58,7 +68,7 @@ class FCMService:
             image=payload.image,
         )
 
-    def _build_apns_config(self, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.APNSConfig | None:
+    def _build_apns_config(self, payload: Union[PushNotificationData, PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.APNSConfig | None:
         notification = self._build_notification(payload)
         if notification is None:
             return None
@@ -116,7 +126,7 @@ class FCMService:
 
         return await asyncio.to_thread(messaging.send, message)
 
-    async def send_to_tokens(self, tokens: Iterable[str], payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest], dry_run: bool = False) -> messaging.BatchResponse:
+    async def send_to_tokens(self, tokens: Iterable[str], payload: Union[PushNotificationData, PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest], dry_run: bool = False) -> messaging.BatchResponse:
         await self.initialize()
 
         tokens_list = [t for t in tokens if t]
@@ -130,6 +140,43 @@ class FCMService:
         )
 
         return await asyncio.to_thread(messaging.send_each_for_multicast, message, dry_run)
+
+    async def send_to_tokens_batched(
+        self,
+        tokens: Iterable[str],
+        payload: Union[PushNotificationData, PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest],
+        batch_size: int = 500,
+    ) -> BatchSendResult:
+        unique_tokens = list(dict.fromkeys(token for token in tokens if token))
+        success_count = 0
+        failure_count = 0
+        errors: list[str] = []
+
+        for offset in range(0, len(unique_tokens), batch_size):
+            batch = unique_tokens[offset:offset + batch_size]
+            try:
+                response = await self.send_to_tokens(batch, payload)
+                success_count += response.success_count
+                failure_count += response.failure_count
+                failure_types = Counter(
+                    type(item.exception).__name__
+                    for item in getattr(response, "responses", ())
+                    if not item.success and item.exception is not None
+                )
+                if failure_types:
+                    summary = ", ".join(f"{name}={count}" for name, count in sorted(failure_types.items()))
+                    errors.append(f"FCM token failures: {summary}")
+            except Exception as exc:
+                logger.exception(f"FCM batch send failed at offset {offset}")
+                failure_count += len(batch)
+                errors.append(f"FCM batch failed: {type(exc).__name__}")
+
+        return BatchSendResult(
+            attempted_count=len(unique_tokens),
+            success_count=success_count,
+            failure_count=failure_count,
+            errors=tuple(errors),
+        )
 
     async def send_to_user(self, session: AsyncSession, user_id: int, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.BatchResponse | None:
         tokens = await device_token_crud.get_by_user_id(session, user_id)

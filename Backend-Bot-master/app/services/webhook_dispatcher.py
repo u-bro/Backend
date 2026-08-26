@@ -7,6 +7,7 @@ from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.ride import RideschemaUpdateAfterCommission
 from .websocket_manager import manager_driver_feed
 from app.crud.driver_location_sender import driver_location_sender
+from app.services.after_commit import add_after_commit
 from .tbank_acquiring import amount_to_minor_units, tbank_acquiring_client
 
 
@@ -92,8 +93,25 @@ class WebhookDispatcher:
         ))
         driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
         driver_id = driver_profile.user_id if driver_profile else 0
-        await manager_driver_feed.send_personal_message(driver_id, {"type": "ride_commission_paid", "message": "Клиент оплатил комиссию за поездку", "data": updated_ride.model_dump(mode="json")})
-        await driver_location_sender.start_task(updated_ride.client_id, updated_ride.driver_profile_id)
+        ride_payload = updated_ride.model_dump(mode="json")
+        add_after_commit(
+            session,
+            lambda driver_id=driver_id, ride_payload=ride_payload: manager_driver_feed.send_personal_message(
+                driver_id,
+                {
+                    "type": "ride_commission_paid",
+                    "message": "Клиент оплатил комиссию за поездку",
+                    "data": ride_payload,
+                },
+            ),
+        )
+        add_after_commit(
+            session,
+            lambda client_id=updated_ride.client_id, driver_profile_id=updated_ride.driver_profile_id: driver_location_sender.start_task(
+                client_id,
+                driver_profile_id,
+            ),
+        )
 
     async def _handle_failure(self, session: AsyncSession, commission_payment, updated) -> None:
         logger.warning("T-Bank acquiring payment failed: payment_id=%s status=%s", updated.payment_id, updated.status)

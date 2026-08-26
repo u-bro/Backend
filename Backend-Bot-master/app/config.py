@@ -55,6 +55,7 @@ AWS_SECRET_KEY=os.environ.get('AWS_SECRET_KEY') or 'test-aws-secret-access-key'
 
 FIREBASE_SERVICE_ACCOUNT_PATH=os.environ.get('FIREBASE_SERVICE_ACCOUNT_PATH') or 'firebase-service-account.json'
 MODERATION_INTERNAL_TOKEN = (os.getenv('MODERATION_INTERNAL_TOKEN') or '').strip() or None
+PUSH_INTERNAL_TOKEN = (os.getenv('PUSH_INTERNAL_TOKEN') or '').strip() or None
 
 TBANK_USE_SANDBOX = (os.getenv("TBANK_USE_SANDBOX", os.getenv("TOCHKA_USE_SANDBOX", "false")).lower() in ("1", "true", "yes"))
 TBANK_BASE_URL = os.getenv("TBANK_BASE_URL", "https://securepay.tinkoff.ru/v2/")

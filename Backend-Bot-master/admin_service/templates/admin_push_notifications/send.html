@@ -1,0 +1,42 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div id="content-main">
+  <p><a href="{{ history_url }}">Открыть историю отправок</a></p>
+  <form method="post" id="push-send-form" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <fieldset class="module aligned">
+      {% for field in form.visible_fields %}
+      <div class="form-row field-{{ field.name }}">
+        {{ field.errors }}
+        <div>{{ field.label_tag }} {{ field }}</div>
+        {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      {{ form.confirm_all }}
+      {{ form.confirm_all.errors }}
+    </fieldset>
+    <div class="submit-row">
+      <input type="submit" value="Отправить" class="default">
+    </div>
+  </form>
+</div>
+<script>
+  (() => {
+    const form = document.getElementById("push-send-form");
+    const userRow = document.querySelector(".field-user");
+    const confirmInput = document.getElementById("id_confirm_all");
+    const selectedAudience = () => document.querySelector('input[name="audience"]:checked')?.value;
+    const syncAudience = () => { userRow.hidden = selectedAudience() === "all"; };
+    document.querySelectorAll('input[name="audience"]').forEach((input) => input.addEventListener("change", syncAudience));
+    form.addEventListener("submit", (event) => {
+      if (selectedAudience() !== "all") return;
+      const confirmed = window.confirm("Отправить push всем аккаунтам с токенами, включая неактивные и заблокированные?");
+      if (!confirmed) event.preventDefault();
+      confirmInput.value = confirmed ? "on" : "";
+    });
+    syncAudience();
+  })();
+</script>
+{% endblock %}

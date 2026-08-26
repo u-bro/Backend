@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'admin_driver_locations.apps.AdminDriverLocationsConfig',
     'admin_ride_drivers_requests.apps.AdminRideDriversRequestsConfig',
     'admin_support.apps.AdminSupportConfig',
+    'admin_push_notifications.apps.AdminPushNotificationsConfig',
 ]
 
 MIDDLEWARE = [
@@ -101,6 +102,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 SUPPORT_API_BASE_URL = os.getenv('SUPPORT_API_BASE_URL', 'http://fastapi_app:5000')
 SUPPORT_API_TIMEOUT = int(os.getenv('SUPPORT_API_TIMEOUT', '10'))
+PUSH_API_BASE_URL = os.getenv('PUSH_API_BASE_URL', SUPPORT_API_BASE_URL)
+PUSH_API_TIMEOUT = int(os.getenv('PUSH_API_TIMEOUT', '120'))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

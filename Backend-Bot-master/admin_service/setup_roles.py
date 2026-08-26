@@ -17,7 +17,8 @@ content_types = ContentType.objects.filter(
         'admin_roles', 'admin_driver_documents', 'admin_chat_messages',
         'admin_commissions', 'admin_commission_payments',
         'admin_ride_status_history', 'admin_cars', 'admin_car_photos',
-        'admin_driver_locations', 'admin_ride_drivers_requests', 'admin_support'
+        'admin_driver_locations', 'admin_ride_drivers_requests', 'admin_support',
+        'admin_push_notifications'
     ]
 )
 
@@ -30,7 +31,7 @@ admin_permissions = all_permissions | auth_view_permissions
 
 admin_group.permissions.set(admin_permissions)
 
-view_permissions = all_permissions.filter(codename__startswith='view_') | auth_view_permissions
+view_permissions = all_permissions.exclude(content_type__app_label='admin_push_notifications').filter(codename__startswith='view_') | auth_view_permissions
 change_permissions = all_permissions.filter(
     codename__in=[
         'change_user', 'change_driverprofile', 'change_ride',
