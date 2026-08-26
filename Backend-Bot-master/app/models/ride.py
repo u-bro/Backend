@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Integer, String, TIMESTAMP, func, DECIMAL, Boolean, ForeignKey, Text, Index, text
+from sqlalchemy import BigInteger, Integer, String, TIMESTAMP, func, DECIMAL, Boolean, ForeignKey, Text, Index, CheckConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base, metadata
@@ -13,12 +13,16 @@ class Ride(Base):
             unique=True,
             postgresql_where=text("driver_profile_id IS NOT NULL AND status IN ('waiting_commission','accepted','on_the_way','arrived','started')"),
         ),
+        CheckConstraint(
+            "status IN ('requested','waiting_commission','accepted','on_the_way','arrived','started','completed','canceled')",
+            name="ck_rides_status_valid",
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     client_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=True)
     driver_profile_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('driver_profiles.id'), nullable=True)
-    status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)
     status_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     pickup_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     pickup_lat: Mapped[float] = mapped_column(DECIMAL(12, 8), nullable=False)
@@ -44,7 +48,7 @@ class Ride(Base):
     anomaly_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
     updated_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
-    commission_paid_at = mapped_column(TIMESTAMP(timezone=True), nullable=True, default=func.now())
+    commission_paid_at = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     ride_class: Mapped[str] = mapped_column(Text, nullable=False)
     comment = mapped_column(Text, nullable=True)
     ride_type: Mapped[str] = mapped_column(Text, nullable=False)

@@ -26,6 +26,6 @@ def install_db_middleware(app: FastAPI) -> None:
                 await commit_with_callbacks(session)
                 return response
             except Exception:
-                logger.error("Rollback session")
+                logger.exception("Rolling back request transaction method=%s path=%s", request.method, request.url.path)
                 await rollback_with_callbacks(session)
                 raise

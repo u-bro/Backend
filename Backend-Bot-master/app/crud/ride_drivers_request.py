@@ -114,7 +114,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.WAITING_RIDE)
         notification = InAppNotificationCreate(user_id=ride.client_id, type="ride_offer", title="Новый отклик", message="На поездку откликнулся ещё один водитель", data={"offer_id": result.id, "ride_id": result.ride_id, "driver_profile_id": result.driver_profile_id}, dedup_key=f"ride_request:{result.id}:created")
         await in_app_notification_crud.create(session, notification)
-        add_after_commit(session, lambda: fcm_service.send_to_user(session, ride.client_id, PushNotificationData(title=notification.title, body=notification.message)))
+        add_after_commit(session, lambda client_id=ride.client_id, title=notification.title, message=notification.message: fcm_service.send_to_user_after_commit(client_id, PushNotificationData(title=title, body=message)))
         return self.schema.model_validate(result)
 
     async def update(self, session: AsyncSession, id: int, update_obj: RideDriversRequestUpdate) -> RideDriversRequestSchema:
@@ -172,7 +172,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         await self._remove(session, other_driver_requests, "canceled", "driver_assigned_elsewhere")
 
         driver = await driver_profile_crud.get_by_id(session, request_row.driver_profile_id)
-        add_after_commit(session, lambda: manager_driver_feed.send_personal_message(driver.user_id, {"type": "ride_offer_accepted", "message": "Ваш отклик принят, ждите, пока клиент оплатит комиссию за поездку", "data": accepted.model_dump(mode="json")}))
+        accepted_payload = accepted.model_dump(mode="json")
+        add_after_commit(session, lambda driver_id=driver.user_id, accepted_payload=accepted_payload: manager_driver_feed.send_personal_message(driver_id, {"type": "ride_status_changed", "data": accepted_payload, "meta": {"previous_status": "requested", "actor": "client", "reason": "driver_selected"}}))
         add_after_commit(session, lambda: _start_background_task(commission_payment_crud.cancel_commission_payment_if_timeout(request_row.ride_id, ride.client_id)))
         return self.schema.model_validate(request_row)
 

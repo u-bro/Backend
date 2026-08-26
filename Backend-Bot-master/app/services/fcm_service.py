@@ -9,6 +9,7 @@ from app.config import FIREBASE_SERVICE_ACCOUNT_PATH, ROOT_DIR
 from app.logger import logger
 from app.schemas.push import PushNotificationData, PushSendToTokenRequest, PushSendToTopicRequest, PushSendToUserRequest
 from app.crud.device_token import device_token_crud
+from app.db import async_session_maker
 
 
 @dataclass(frozen=True)
@@ -191,6 +192,10 @@ class FCMService:
             logger.error(f"Error sending push notification to user {user_id}: {e}")
         
         return result
+
+    async def send_to_user_after_commit(self, user_id: int, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.BatchResponse | None:
+        async with async_session_maker() as session:
+            return await self.send_to_user(session, user_id, payload)
 
     async def send_to_topic(self, payload: PushSendToTopicRequest) -> str:
         await self.initialize()

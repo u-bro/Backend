@@ -24,7 +24,12 @@ class ErrorHandlingMiddleware:
                 content={"detail": error_messages[0]}
             )
         except Exception as exc:
-            logger.error(f"Unexpected error occurred: {exc}")
+            logger.exception(
+                "Unexpected request error method=%s path=%s error_type=%s",
+                request.method,
+                request.url.path,
+                type(exc).__name__,
+            )
             error_messages = HTTP_ERROR_MESSAGES.get(500, ('UNKNOWN',))
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

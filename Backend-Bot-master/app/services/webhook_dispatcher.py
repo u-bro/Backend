@@ -4,7 +4,6 @@ from fastapi import HTTPException
 from app.logger import logger
 from app.crud import commission_payment_crud, ride_crud, in_app_notification_crud, driver_profile_crud
 from app.schemas.in_app_notification import InAppNotificationCreate
-from app.schemas.ride import RideschemaUpdateAfterCommission
 from .websocket_manager import manager_driver_feed
 from app.crud.driver_location_sender import driver_location_sender
 from app.services.after_commit import add_after_commit
@@ -74,7 +73,17 @@ class WebhookDispatcher:
         if not ride:
             return
 
-        updated_ride = await ride_crud.update(session, ride.id, RideschemaUpdateAfterCommission(), updated.user_id)
+        transition = await ride_crud.transition(
+            session,
+            ride.id,
+            "accepted",
+            {"waiting_commission"},
+            updated.user_id,
+            values={"commission_paid_at": datetime.now(timezone.utc)},
+        )
+        updated_ride = transition.ride
+        if not transition.changed:
+            return
         await in_app_notification_crud.create(session, InAppNotificationCreate(
             user_id=commission_payment.user_id,
             type='ride_status_changed',
@@ -99,9 +108,13 @@ class WebhookDispatcher:
             lambda driver_id=driver_id, ride_payload=ride_payload: manager_driver_feed.send_personal_message(
                 driver_id,
                 {
-                    "type": "ride_commission_paid",
-                    "message": "Клиент оплатил комиссию за поездку",
+                    "type": "ride_status_changed",
                     "data": ride_payload,
+                    "meta": {
+                        "previous_status": transition.previous_status,
+                        "actor": "system",
+                        "reason": "commission_paid",
+                    },
                 },
             ),
         )

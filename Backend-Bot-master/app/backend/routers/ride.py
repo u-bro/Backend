@@ -11,12 +11,12 @@ from app.schemas.push import PushNotificationData
 from app.schemas.in_app_notification import InAppNotificationCreate
 from app.schemas.ride_drivers_request import RideDriversRequestCreate, RideDriversRequestSchema, RideDriversRequestUpdate
 from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id, require_owner, require_driver_profile, get_current_driver_profile_id_without_approve
-from app.models import Ride
 from app.crud import in_app_notification_crud, ride_drivers_request_crud, driver_profile_crud
 from app.services.chat_service import chat_service
 from app.services import fcm_service, manager_driver_feed
 from app.services.new_ride_notifications import notify_about_new_ride
 from app.crud.driver_tracker import driver_tracker
+from app.crud.driver_location_sender import driver_location_sender
 from app.enum import RoleCode
 from app.services.after_commit import add_after_commit
 
@@ -79,23 +79,34 @@ class RideRouter(BaseRouter[RideCrud]):
         session = request.state.session
         old_ride = await self.model_crud.get_by_id(session, id)
         if not old_ride:
-            raise HTTPException(status_code=404, detail="Ride not found")
-        
-        if old_ride.status in ('started'):
-            raise HTTPException(status_code=400, detail="Ride is already started, client can't cancel it")
-        
-        ride = await self.model_crud.update(session, id, update_obj, user_id)
+            raise HTTPException(status_code=404, detail="NOT_FOUND")
+
+        transition = None
+        if update_obj.status == "canceled":
+            transition = await self.model_crud.transition(
+                session,
+                id,
+                "canceled",
+                {"requested", "waiting_commission", "accepted", "on_the_way", "arrived"},
+                user_id,
+                values=update_obj.model_dump(exclude_none=True, exclude={"status", "updated_at"}),
+            )
+            ride = transition.ride
+        else:
+            ride = await self.model_crud.update(session, id, update_obj, user_id)
 
         driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
         if driver_profile and update_obj.status != 'canceled':
-            await manager_driver_feed.send_personal_message(driver_profile.user_id, {"type": "ride_changed", "message": "Клиент обновил данные поездки", "data": ride.model_dump(mode="json")})
+            payload = ride.model_dump(mode="json")
+            add_after_commit(session, lambda driver_id=driver_profile.user_id, payload=payload: manager_driver_feed.send_personal_message(driver_id, {"type": "ride_changed", "message": "Клиент обновил данные поездки", "data": payload}))
 
-        if update_obj.status == 'canceled':
+        if transition and transition.changed:
             await ride_drivers_request_crud.reject_by_ride_id(session, id)
             await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride.id, text="Поездка отменена клиентом", message_type="system")
-            await manager_driver_feed.send_personal_message(getattr(driver_profile, 'user_id', None), {"type": "ride_canceled", "message": "Поездка отменена клиентом", "data": ride.model_dump(mode="json")})
-            await self.send_notifications(session, ride.client_id, "ride_canceled", "Поездка отменена", "Проверьте информацию о поездке", ride.model_dump(mode="json"), f"{ride.id}_{old_ride.status}_{ride.status}")
+            self.queue_ride_status_event(session, getattr(driver_profile, 'user_id', None), ride, transition.previous_status, "client", update_obj.status_reason)
+            await self.send_notifications(session, ride.client_id, "ride_status_changed", "Поездка отменена", "Проверьте информацию о поездке", ride.model_dump(mode="json"), f"{ride.id}_{transition.previous_status}_{ride.status}")
             await driver_tracker.release_ride(session, ride.driver_profile_id)
+            add_after_commit(session, lambda client_id=ride.client_id: driver_location_sender.stop_task(client_id))
         return ride
 
     async def accept_ride(self, request: Request, id: int, update_obj: RideSchemaAcceptByDriver, driver_profile_id: int = Depends(get_current_driver_profile_id), user_id: int = Depends(get_current_user_id)) -> RideDriversRequestSchema:
@@ -120,7 +131,7 @@ class RideRouter(BaseRouter[RideCrud]):
         session = request.state.session
         old_ride = await self.model_crud.get_by_id(session, id)
         if not old_ride:
-            raise HTTPException(status_code=404, detail="Ride not found")
+            raise HTTPException(status_code=404, detail="NOT_FOUND")
         if update_obj.status == "canceled":
             payment = await session.scalar(
                 select(CommissionPayment.id)
@@ -137,20 +148,52 @@ class RideRouter(BaseRouter[RideCrud]):
             )
             if payment is not None:
                 raise HTTPException(status_code=409, detail="RIDE_COMMISSION_ALREADY_PAID")
-        ride = await self.model_crud.update(session, id, update_obj, user_id)
-        await self.send_notifications(session, ride.client_id, "ride_status_changed", UPDATE_MESSAGE.get(ride.status, 'Поездка обновлена'), "Проверьте информацию о поездке", ride.model_dump(mode="json"), f"{ride.id}_{old_ride.status}_{ride.status}")
-        await manager_driver_feed.send_personal_message(user_id, {"type": "ride_changed", "message": "Поездка изменена вами", "data": ride.model_dump(mode="json")})
+        expected_statuses = {
+            "on_the_way": {"accepted"},
+            "arrived": {"on_the_way"},
+            "started": {"arrived"},
+            "canceled": {"waiting_commission", "accepted", "on_the_way", "arrived"},
+        }
+        target_status = update_obj.status
+        if target_status is None:
+            raise HTTPException(status_code=400, detail="VALIDATION_ERROR")
+        transition = await self.model_crud.transition(
+            session,
+            id,
+            target_status,
+            expected_statuses[target_status],
+            user_id,
+            values=update_obj.model_dump(exclude_none=True, exclude={"status", "updated_at"}),
+        )
+        ride = transition.ride
+        if not transition.changed:
+            return ride
 
-        if update_obj.status == 'canceled':
+        await self.send_notifications(session, ride.client_id, "ride_status_changed", UPDATE_MESSAGE.get(ride.status, 'Поездка обновлена'), "Проверьте информацию о поездке", ride.model_dump(mode="json"), f"{ride.id}_{transition.previous_status}_{ride.status}")
+        self.queue_ride_status_event(session, user_id, ride, transition.previous_status, "driver", update_obj.status_reason)
+
+        if target_status == 'canceled':
             await chat_service.save_message_and_send_to_ride(session=session, ride_id=ride.id, text="Поездка отменена водителем", message_type="system")
             await driver_tracker.release_ride(session, ride.driver_profile_id)
+        if target_status in {"started", "canceled"}:
+            add_after_commit(session, lambda client_id=ride.client_id: driver_location_sender.stop_task(client_id))
         return ride
 
     async def finish_ride_by_driver(self, request: Request, id: int, update_obj: RideSchemaFinishByDriver, ride: Ride = Depends(require_driver_profile(Ride)), user_id: int = Depends(get_current_user_id)) -> RideSchema:
         session = request.state.session
         update_obj = RideSchemaFinishWithAnomaly(is_anomaly=str(ride.expected_fare) != str(update_obj.actual_fare), **update_obj.model_dump())
-        ride = await self.model_crud.update(session, id, update_obj, user_id)
-        await manager_driver_feed.send_personal_message(user_id, {"type": "ride_finished", "message": "Поездка завершена", "data": ride.model_dump(mode="json")})
+        transition = await self.model_crud.transition(
+            session,
+            id,
+            "completed",
+            {"started"},
+            user_id,
+            values=update_obj.model_dump(exclude_none=True, exclude={"status", "updated_at"}),
+        )
+        ride = transition.ride
+        if not transition.changed:
+            return ride
+        self.queue_ride_status_event(session, user_id, ride, transition.previous_status, "driver", None)
         await self.send_notifications(session, ride.client_id, "ride_finished", "Поездка завершена", "Не забудьте оценить поездку", ride.model_dump(mode="json"), ride.id)
         await driver_tracker.release_ride(session, ride.driver_profile_id)
 
@@ -158,7 +201,22 @@ class RideRouter(BaseRouter[RideCrud]):
 
     async def send_notifications(self, session: AsyncSession, client_id: int, type: str, title: str, message: str, data: dict, dedup_key: Any):
         await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type=type, title=title, message=message, data=data, dedup_key=str(dedup_key) if dedup_key else None))
-        await fcm_service.send_to_user(session, client_id, PushNotificationData(title=title, body=message))
+        add_after_commit(session, lambda client_id=client_id, title=title, message=message: fcm_service.send_to_user_after_commit(client_id, PushNotificationData(title=title, body=message)))
+
+    @staticmethod
+    def queue_ride_status_event(session: AsyncSession, user_id: int | None, ride: RideSchema, previous_status: str, actor: str, reason: str | None) -> None:
+        if user_id is None:
+            return
+        payload = {
+            "type": "ride_status_changed",
+            "data": ride.model_dump(mode="json"),
+            "meta": {
+                "previous_status": previous_status,
+                "actor": actor,
+                "reason": reason,
+            },
+        }
+        add_after_commit(session, lambda user_id=user_id, payload=payload: manager_driver_feed.send_personal_message(user_id, payload))
     
 
 ride_router = RideRouter(ride_crud, "/rides").router

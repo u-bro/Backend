@@ -1,4 +1,6 @@
 import asyncio
+import logging
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from sqlalchemy import and_, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,8 +46,17 @@ ALLOWED_TRANSITIONS = {
     "accepted": {"on_the_way", "canceled"},
     'on_the_way': {"arrived", "canceled"},
     'arrived': {"started", "canceled"},
-    "started": {"completed", "canceled"},
+    "started": {"completed"},
 }
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class RideTransitionResult:
+    ride: RideSchema
+    previous_status: str
+    changed: bool
 
 
 class RideCrud(CrudBase[Ride, RideSchema]):
@@ -89,9 +100,6 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         if not data:
             return await self.get_by_id(session, id)
         
-        if update_obj.status == 'started' or update_obj.status == 'canceled':
-            await driver_location_sender.stop_task(existing.client_id)
-
         if update_obj.status and existing.status != update_obj.status:
             if not self._is_status_transition_allowed(existing.status, update_obj.status):
                 raise HTTPException(status_code=400, detail=f"Incorrect ride status transition from {existing.status} to {update_obj.status}")
@@ -107,6 +115,65 @@ class RideCrud(CrudBase[Ride, RideSchema]):
         if not result:
             return None
         return self.schema.model_validate(result)
+
+    async def transition(
+        self,
+        session: AsyncSession,
+        id: int,
+        target_status: str,
+        expected_statuses: set[str],
+        user_id: int,
+        *,
+        values: dict | None = None,
+    ) -> RideTransitionResult:
+        existing = (
+            await session.execute(select(self.model).where(self.model.id == id).with_for_update())
+        ).scalar_one_or_none()
+        if existing is None:
+            raise HTTPException(status_code=404, detail="NOT_FOUND")
+        if existing.status == target_status:
+            ride = self.schema.model_validate(existing)
+            logger.info(
+                "Ride transition ride_id=%s actor_user_id=%s from=%s to=%s changed=false",
+                id,
+                user_id,
+                existing.status,
+                target_status,
+            )
+            return RideTransitionResult(ride=ride, previous_status=existing.status, changed=False)
+        if existing.status not in expected_statuses:
+            raise HTTPException(status_code=409, detail="RIDE_STATUS_CONFLICT")
+
+        previous_status = existing.status
+        transition_values = {**(values or {}), "status": target_status, "updated_at": datetime.now(timezone.utc)}
+        stmt = (
+            update(self.model)
+            .where(self.model.id == id, self.model.status == previous_status)
+            .values(transition_values)
+            .returning(self.model)
+        )
+        changed_ride = await self.execute_get_one(session, stmt)
+        if changed_ride is None:
+            raise HTTPException(status_code=409, detail="RIDE_STATUS_CONFLICT")
+        await ride_status_history_crud.create(
+            session,
+            RideStatusHistoryCreate(
+                ride_id=id,
+                from_status=previous_status,
+                to_status=target_status,
+                changed_by=int(user_id),
+                created_at=datetime.now(timezone.utc),
+            ),
+        )
+        ride = self.schema.model_validate(changed_ride)
+        logger.info(
+            "Ride transition ride_id=%s actor_user_id=%s from=%s to=%s changed=true",
+            id,
+            user_id,
+            previous_status,
+            target_status,
+        )
+        return RideTransitionResult(ride=ride, previous_status=previous_status, changed=True)
 
     @staticmethod
     def _is_status_transition_allowed(from_status: str, to_status: str) -> bool:
@@ -381,7 +448,7 @@ class RideCrud(CrudBase[Ride, RideSchema]):
 
                 await ride_drivers_request_crud.reject_by_ride_id(session, id, "ride_expired")
                 await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за таймаута", data=updated_ride.model_dump(mode='json'), dedup_key=f"{id}_canceled"))
-                add_after_commit(session, lambda: fcm_service.send_to_user(session, client_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за таймаута')))
+                add_after_commit(session, lambda client_id=client_id: fcm_service.send_to_user_after_commit(client_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за таймаута')))
             await commit_with_callbacks(session)
 
 ride_crud = RideCrud(Ride, RideSchema)
