@@ -1,5 +1,4 @@
 import logging
-import os
 
 import requests
 from django.conf import settings
@@ -17,7 +16,7 @@ class PushAPITimeout(PushAPIError):
 
 
 def send_push(payload):
-    token = (os.getenv("PUSH_INTERNAL_TOKEN") or "").strip()
+    token = settings.PUSH_INTERNAL_TOKEN
     if not token:
         raise PushAPIError("PUSH_INTERNAL_TOKEN не настроен.")
 

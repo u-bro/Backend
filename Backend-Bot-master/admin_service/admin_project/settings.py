@@ -104,6 +104,7 @@ SUPPORT_API_BASE_URL = os.getenv('SUPPORT_API_BASE_URL', 'http://fastapi_app:500
 SUPPORT_API_TIMEOUT = int(os.getenv('SUPPORT_API_TIMEOUT', '10'))
 PUSH_API_BASE_URL = os.getenv('PUSH_API_BASE_URL', SUPPORT_API_BASE_URL)
 PUSH_API_TIMEOUT = int(os.getenv('PUSH_API_TIMEOUT', '120'))
+PUSH_INTERNAL_TOKEN = (os.getenv('PUSH_INTERNAL_TOKEN') or '').strip() or None
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

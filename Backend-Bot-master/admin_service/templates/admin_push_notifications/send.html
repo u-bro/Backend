@@ -14,6 +14,20 @@
         {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
       </div>
       {% endfor %}
+      <div class="form-row field-user">
+        {{ form.user.errors }}
+        <div>
+          <label for="push-user-search">Пользователь:</label>
+          {{ form.user }}
+          <div class="push-user-picker" data-search-url="{{ user_search_url }}">
+            <input id="push-user-search" type="search" autocomplete="off" placeholder="ID, телефон, имя или email">
+            <button type="button" id="push-user-clear" hidden>Очистить</button>
+            <div id="push-user-selected" class="help">{% if selected_user_label %}{{ selected_user_label }}{% if not selected_user_is_active %} · неактивен{% endif %}{% else %}Пользователь не выбран{% endif %}</div>
+            <div id="push-user-results" class="push-user-results" hidden></div>
+          </div>
+        </div>
+        <div class="help">Введите минимум 2 символа. Поиск выполняется на сервере и показывает до 20 результатов.</div>
+      </div>
       {{ form.confirm_all }}
       {{ form.confirm_all.errors }}
     </fieldset>
@@ -22,14 +36,90 @@
     </div>
   </form>
 </div>
+<style>
+  .push-user-picker { max-width: 720px; position: relative; }
+  #push-user-search { width: min(100%, 560px); }
+  #push-user-clear { margin-left: 8px; }
+  .push-user-results { background: var(--body-bg, #fff); border: 1px solid var(--hairline-color, #ccc); box-shadow: 0 8px 22px rgba(0,0,0,.12); max-height: 320px; overflow-y: auto; position: absolute; top: 34px; width: min(100%, 680px); z-index: 1000; }
+  .push-user-result { background: transparent; border: 0; border-bottom: 1px solid var(--hairline-color, #eee); color: inherit; cursor: pointer; display: block; padding: 10px 12px; text-align: left; width: 100%; }
+  .push-user-result:hover, .push-user-result:focus { background: var(--selected-row, #ffc); }
+  .push-user-inactive { opacity: .65; }
+</style>
 <script>
   (() => {
     const form = document.getElementById("push-send-form");
     const userRow = document.querySelector(".field-user");
     const confirmInput = document.getElementById("id_confirm_all");
+    const userInput = document.getElementById("id_user");
+    const userSearch = document.getElementById("push-user-search");
+    const userResults = document.getElementById("push-user-results");
+    const userSelected = document.getElementById("push-user-selected");
+    const userClear = document.getElementById("push-user-clear");
+    const searchUrl = document.querySelector(".push-user-picker").dataset.searchUrl;
+    let searchTimer;
+    let searchController;
+    userClear.hidden = !userInput.value;
     const selectedAudience = () => document.querySelector('input[name="audience"]:checked')?.value;
     const syncAudience = () => { userRow.hidden = selectedAudience() === "all"; };
+    const clearResults = () => { userResults.hidden = true; userResults.replaceChildren(); };
+    const selectUser = (user) => {
+      userInput.value = user.id;
+      userSearch.value = "";
+      userSelected.textContent = `${user.label}${user.is_active ? "" : " · неактивен"}`;
+      userClear.hidden = false;
+      clearResults();
+    };
+    const clearUser = () => {
+      userInput.value = "";
+      userSelected.textContent = "Пользователь не выбран";
+      userClear.hidden = true;
+      userSearch.focus();
+      clearResults();
+    };
+    const renderResults = (users) => {
+      userResults.replaceChildren();
+      if (!users.length) {
+        const empty = document.createElement("div");
+        empty.className = "push-user-result";
+        empty.textContent = "Ничего не найдено";
+        userResults.append(empty);
+      } else {
+        users.forEach((user) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `push-user-result${user.is_active ? "" : " push-user-inactive"}`;
+          button.textContent = `${user.label}${user.is_active ? "" : " · неактивен"}`;
+          button.addEventListener("click", () => selectUser(user));
+          userResults.append(button);
+        });
+      }
+      userResults.hidden = false;
+    };
+    const searchUsers = async () => {
+      const query = userSearch.value.trim();
+      if (query.length < 2 && !/^#?\d+$/.test(query)) { clearResults(); return; }
+      searchController?.abort();
+      searchController = new AbortController();
+      try {
+        const response = await fetch(`${searchUrl}?q=${encodeURIComponent(query)}`, {
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          signal: searchController.signal,
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        renderResults((await response.json()).results);
+      } catch (error) {
+        if (error.name !== "AbortError") renderResults([]);
+      }
+    };
     document.querySelectorAll('input[name="audience"]').forEach((input) => input.addEventListener("change", syncAudience));
+    userSearch.addEventListener("input", () => {
+      window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(searchUsers, 250);
+    });
+    userClear.addEventListener("click", clearUser);
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".push-user-picker")) clearResults();
+    });
     form.addEventListener("submit", (event) => {
       if (selectedAudience() !== "all") return;
       const confirmed = window.confirm("Отправить push всем аккаунтам с токенами, включая неактивные и заблокированные?");

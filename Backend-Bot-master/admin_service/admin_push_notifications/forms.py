@@ -11,10 +11,9 @@ class PushNotificationForm(forms.Form):
     )
     user = forms.ModelChoiceField(
         label="Пользователь",
-        queryset=User.objects.order_by("phone", "id"),
+        queryset=User.objects.all(),
         required=False,
-        help_text="Выберите адресата для одиночной отправки.",
-        widget=forms.Select(attrs={"class": "select2", "data-placeholder": "ID или телефон пользователя"}),
+        widget=forms.HiddenInput,
     )
     title = forms.CharField(label="Заголовок", max_length=255)
     body = forms.CharField(label="Текст", max_length=2000, widget=forms.Textarea(attrs={"rows": 6}))
