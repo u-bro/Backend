@@ -4,7 +4,7 @@ import math, asyncio, logging, app.config
 from app.services.websocket_manager import manager_driver_feed
 from app.services.driver_state_storage import driver_state_storage
 from app.db import async_session_maker
-from app.models import Ride, RideDriversRequest
+from app.models import DriverProfile, Ride, RideDriversRequest
 from app.const import ACTIVE_RIDE_STATUSES
 from app.schemas.ride import RideSchema
 from sqlalchemy import and_, func, select
@@ -62,6 +62,12 @@ class DriverFeed:
     async def get_driver_feed(self, session: AsyncSession, driver_profile_id: int, limit: int = 20) -> List[dict]:
         driver = driver_state_storage.get_driver(driver_profile_id)
         if not driver or not driver.is_available() or driver.latitude is None or driver.longitude is None :
+            return []
+
+        approved = await session.scalar(
+            select(DriverProfile.approved).where(DriverProfile.id == driver_profile_id)
+        )
+        if not approved:
             return []
 
         active_ride_id = await session.scalar(

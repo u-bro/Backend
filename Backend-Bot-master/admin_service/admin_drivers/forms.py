@@ -33,7 +33,7 @@ class DriverModerationForm(forms.ModelForm):
     classes_allowed = forms.MultipleChoiceField(
         label="Разрешённые классы",
         choices=RIDE_CLASS_CHOICES,
-        required=False,
+        required=True,
         widget=forms.CheckboxSelectMultiple,
     )
 
@@ -90,6 +90,9 @@ class DriverModerationForm(forms.ModelForm):
 
         return cleaned
 
+    def clean_classes_allowed(self):
+        return list(dict.fromkeys(self.cleaned_data["classes_allowed"]))
+
     def save_related_data(self, commit=True):
         profile = super().save(commit=False)
         user = User.objects.get(id=profile.user_id)
@@ -106,6 +109,10 @@ class DriverModerationForm(forms.ModelForm):
             value = self.cleaned_data.get(field_name)
             value = datetime.combine(value, time.min) if value else None
             setattr(profile, field_name, timezone.make_aware(value) if value else None)
+
+        classes = self.cleaned_data["classes_allowed"]
+        profile.classes_allowed = classes
+        profile.current_class = classes[-1]
 
         if commit:
             user.save(update_fields=["first_name", "last_name", "middle_name", "photo_url", "phone", "email", "city"])

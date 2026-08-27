@@ -1,7 +1,7 @@
 from typing import Optional, Literal
 from .base import BaseSchema
 from datetime import datetime, timezone
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from .car import CarSchema
 from .driver_moderation_info import DriverModerationInfoSchema
 from app.enum import RideClass
@@ -42,8 +42,16 @@ class DriverProfileCreate(DriverProfileValidated):
 
 
 class DriverProfileUpdateMe(DriverProfileValidated):
+    classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = Field(None, min_length=1)
     status: Literal['waiting_approved'] | None = Field(None, max_length=50)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("classes_allowed")
+    @classmethod
+    def classes_allowed_must_be_unique(cls, value):
+        if value is not None and len(value) != len(set(value)):
+            raise ValueError("classes_allowed must contain unique values")
+        return value
 
 
 class DriverProfileUpdate(DriverProfileValidated):
@@ -61,7 +69,14 @@ class DriverProfileApproveIn(BaseSchema):
     approved: bool = True
     approved_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: Literal['waiting_approved', 'approved'] | None = Field('approved', max_length=50)
-    classes_allowed: list[RIDE_CLASSES_LITERAL] = [RideClass.LIGHT]
+    classes_allowed: list[RIDE_CLASSES_LITERAL] = Field(default_factory=lambda: [RideClass.LIGHT], min_length=1)
+
+    @field_validator("classes_allowed")
+    @classmethod
+    def classes_allowed_must_be_unique(cls, value):
+        if len(value) != len(set(value)):
+            raise ValueError("classes_allowed must contain unique values")
+        return value
 
 
 class DriverProfileApprove(DriverProfileApproveIn):

@@ -10,6 +10,7 @@ from admin_cars.models import Car
 from admin_ride_drivers_requests.models import RideDriversRequest
 from admin_users.models import User
 
+from .forms import DriverModerationForm
 from .models import DriverProfile
 from .views import moderation_detail
 
@@ -196,3 +197,31 @@ class DriverCarAdminLifecycleTests(TransactionTestCase):
 
         reload_response = self.call_view(self.request())
         self.assertContains(reload_response, "Добавить автомобиль")
+
+    def test_moderation_form_requires_classes(self):
+        form = DriverModerationForm(
+            data={
+                "first_name": "Иван",
+                "last_name": "Иванов",
+                "classes_allowed": [],
+            },
+            instance=self.profile,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("classes_allowed", form.errors)
+
+    def test_moderation_form_syncs_current_class(self):
+        form = DriverModerationForm(
+            data={
+                "first_name": "Иван",
+                "last_name": "Иванов",
+                "classes_allowed": ["light", "vip"],
+            },
+            instance=self.profile,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        updated = form.save_related_data()
+        self.assertEqual(updated.classes_allowed, ["light", "vip"])
+        self.assertEqual(updated.current_class, "vip")

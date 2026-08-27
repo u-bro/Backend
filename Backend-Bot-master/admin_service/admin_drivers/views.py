@@ -215,17 +215,32 @@ def moderation_detail(request, profile_id: int):
                 return HttpResponseRedirect(request.get_full_path())
             messages.error(request, "Текущий автомобиль не найден.")
         elif action in ("approved", "rejected"):
-            reason_ids = [int(value) for value in request.POST.getlist("moderation_info_ids") if value.isdigit()]
-            success = api_client.moderate_driver(
-                profile.id,
-                action,
-                reason_ids,
-                request.user.id,
-            )
-            if success:
-                messages.success(request, "Решение модерации сохранено.")
-                return HttpResponseRedirect(request.get_full_path())
-            messages.error(request, "Не удалось сохранить решение через backend. Проверьте MODERATION_INTERNAL_TOKEN.")
+            if action == "approved":
+                class_order = {value: index for index, (value, _label) in enumerate(DriverProfile._meta.get_field("current_class").choices)}
+                classes = sorted(set(profile.classes_allowed or []), key=class_order.__getitem__)
+                if not classes:
+                    messages.error(request, "Для одобрения выберите хотя бы один класс.")
+                    action = None
+                else:
+                    with transaction.atomic():
+                        locked_profile = DriverProfile.objects.select_for_update().get(pk=profile.pk)
+                        locked_profile.classes_allowed = classes
+                        locked_profile.current_class = classes[-1]
+                        locked_profile.save(update_fields=["classes_allowed", "current_class"])
+            if action is None:
+                pass
+            else:
+                reason_ids = [int(value) for value in request.POST.getlist("moderation_info_ids") if value.isdigit()]
+                success = api_client.moderate_driver(
+                    profile.id,
+                    action,
+                    reason_ids,
+                    request.user.id,
+                )
+                if success:
+                    messages.success(request, "Решение модерации сохранено.")
+                    return HttpResponseRedirect(request.get_full_path())
+                messages.error(request, "Не удалось сохранить решение через backend. Проверьте MODERATION_INTERNAL_TOKEN.")
         elif action == "block":
             user.is_active = False
             user.save(update_fields=["is_active"])

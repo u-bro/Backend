@@ -1,4 +1,4 @@
-from fastapi import Request, Depends
+from fastapi import Depends, HTTPException, Request
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_document import driver_document_crud, DriverDocumentCrud
 from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverDocumentAdminUpdate, DriverDocumentDriverUpdate, DriverDocumentAdminUpdateIn, DriverDocumentSchemaWithURL
@@ -6,6 +6,7 @@ from app.backend.deps import require_role, require_driver_profile_or_admin, get_
 from app.models import DriverDocument, User
 from app.enum import RoleCode
 from datetime import datetime, timezone
+from app.services.driver_profile_changes import demoderate_approved_driver, lock_driver_profile
 
 
 class DriverDocumentRouter(BaseRouter[DriverDocumentCrud]):
@@ -31,15 +32,30 @@ class DriverDocumentRouter(BaseRouter[DriverDocumentCrud]):
         return await self.model_crud.get_by_driver_profile_id(request.state.session, driver_profile_id)
 
     async def create(self, request: Request, body: DriverDocumentCreate) -> DriverDocumentSchema:
+        profile = await lock_driver_profile(request.state.session, body.driver_profile_id)
+        await demoderate_approved_driver(request.state.session, profile)
         return await self.model_crud.create(request.state.session, body)
 
     async def update_driver(self, request: Request, id: int, body: DriverDocumentDriverUpdate) -> DriverDocumentSchema:
+        document = await self.model_crud.get_by_id(request.state.session, id)
+        if document is None:
+            raise HTTPException(status_code=404, detail="Driver document not found")
+        update_data = body.model_dump(include=body.model_fields_set, exclude_none=True)
+        if not update_data or not any(getattr(document, field) != value for field, value in update_data.items()):
+            return document
+        profile = await lock_driver_profile(request.state.session, document.driver_profile_id)
+        await demoderate_approved_driver(request.state.session, profile)
         return await self.model_crud.update(request.state.session, id, body)
 
     async def update_admin(self, request: Request, id: int, body: DriverDocumentAdminUpdateIn, user: User = Depends(require_role([RoleCode.ADMIN]))) -> DriverDocumentSchema:
         return await self.model_crud.update(request.state.session, id, DriverDocumentAdminUpdate(**body.model_dump(), reviewed_by=user.id, reviewed_at=datetime.now(timezone.utc)))
 
     async def delete(self, request: Request, id: int):
+        document = await self.model_crud.get_by_id(request.state.session, id)
+        if document is None:
+            raise HTTPException(status_code=404, detail="Driver document not found")
+        profile = await lock_driver_profile(request.state.session, document.driver_profile_id)
+        await demoderate_approved_driver(request.state.session, profile)
         return await self.model_crud.delete(request.state.session, id)
 
 

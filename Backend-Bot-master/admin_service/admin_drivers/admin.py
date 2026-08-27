@@ -25,7 +25,7 @@ from .models import DriverModerationInfo, DriverProfile, DriverProfileModeration
 class DriverProfileAdminForm(forms.ModelForm):
     classes_allowed = forms.MultipleChoiceField(
         choices=RIDE_CLASS_CHOICES,
-        required=False,
+        required=True,
         widget=forms.CheckboxSelectMultiple,
     )
 
@@ -57,13 +57,13 @@ class DriverProfileAdminForm(forms.ModelForm):
         return user_id
 
     def clean_classes_allowed(self):
-        return self.cleaned_data.get("classes_allowed", [])
+        return list(dict.fromkeys(self.cleaned_data["classes_allowed"]))
 
 
 class DriverProfileChangelistForm(forms.ModelForm):
     classes_allowed = forms.MultipleChoiceField(
         choices=RIDE_CLASS_CHOICES,
-        required=False,
+        required=True,
         widget=forms.CheckboxSelectMultiple,
     )
 
@@ -78,7 +78,7 @@ class DriverProfileChangelistForm(forms.ModelForm):
             self.initial["classes_allowed"] = classes_allowed
 
     def clean_classes_allowed(self):
-        return self.cleaned_data.get("classes_allowed", [])
+        return list(dict.fromkeys(self.cleaned_data["classes_allowed"]))
 
 
 @admin.register(DriverModerationInfo)
@@ -224,6 +224,10 @@ class DriverProfileAdmin(admin.ModelAdmin):
                 obj.rating_avg = settings.DRIVER_PROFILE_INITIAL_RATING_AVG
                 obj.rating_count = settings.DRIVER_PROFILE_INITIAL_RATING_COUNT
             if obj.status == DriverProfile.STATUS_APPROVED:
+                if not obj.classes_allowed:
+                    form.add_error("classes_allowed", "Выберите хотя бы один класс.")
+                    return
+                obj.current_class = obj.classes_allowed[-1]
                 obj.approved = True
                 if not obj.approved_at:
                     obj.approved_at = timezone.now()
@@ -281,6 +285,13 @@ class DriverProfileAdmin(admin.ModelAdmin):
         count = 0
         approved_by = self._resolve_backend_user_id(request)
         for driver in queryset:
+            if not driver.classes_allowed:
+                self.message_user(
+                    request,
+                    f"Driver {driver.id}: select at least one class before approval",
+                    messages.ERROR,
+                )
+                continue
             if api_client.moderate_driver(driver.id, "approved", [], approved_by):
                 count += 1
         self.message_user(request, f"Approved {count} drivers", messages.SUCCESS)

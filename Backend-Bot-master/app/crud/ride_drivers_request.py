@@ -84,6 +84,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         driver = (await session.execute(select(DriverProfile).where(DriverProfile.id == create_obj.driver_profile_id).with_for_update())).scalar_one_or_none()
         if not driver:
             raise HTTPException(status_code=404, detail="NOT_FOUND")
+        if not driver.approved or driver.status != "approved":
+            raise HTTPException(status_code=403, detail="DRIVER_NOT_APPROVED")
 
         active_ride = await session.scalar(select(Ride.id).where(Ride.driver_profile_id == create_obj.driver_profile_id, Ride.status.in_(ACTIVE_RIDE_STATUSES)).limit(1))
         if active_ride:

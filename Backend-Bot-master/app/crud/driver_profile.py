@@ -10,6 +10,7 @@ from .driver_location import driver_location_crud
 from app.models import Car, DriverProfileModeration
 from app.config import DRIVER_PROFILE_INITIAL_RATING_AVG, DRIVER_PROFILE_INITIAL_RATING_COUNT
 from datetime import datetime, timezone
+from app.services.driver_profile_changes import demoderate_approved_driver, lock_driver_profile
 
 CLASS_VALUE = {
     'light': 1,
@@ -78,20 +79,29 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         return self.schema.model_validate(result) if result else None
 
     async def update(self, session: AsyncSession, id: int, update_obj):
-        existing_result = await self.get_by_id(session, id)
-        if not existing_result:
-            raise HTTPException(status_code=404, detail="Driver profile not found")
-
-        update_data = update_obj.model_dump(exclude_none=True)
+        existing_item = await lock_driver_profile(session, id)
+        existing_result = self.schema.model_validate(existing_item)
+        supplied_fields = update_obj.model_fields_set
+        update_data = update_obj.model_dump(include=supplied_fields, exclude_none=True)
         if not update_data:
             return existing_result
-        
+
+        if "classes_allowed" in update_data:
+            classes = sorted(update_data["classes_allowed"], key=lambda x: CLASS_VALUE[x])
+            update_data["classes_allowed"] = classes
+            update_data["current_class"] = classes[-1]
+
+        if not any(getattr(existing_item, field) != value for field, value in update_data.items()):
+            return existing_result
+
+        await demoderate_approved_driver(session, existing_item)
+
         if existing_result.status == 'waiting_register':
-            update_obj.status = 'waiting_approved'
-        
-        if update_obj.status == 'approved':
-            update_obj.approved = True
-            update_obj.approved_at = datetime.now(timezone.utc)
+            update_data['status'] = 'waiting_approved'
+
+        if update_data.get('status') == 'approved':
+            update_data['approved'] = True
+            update_data['approved_at'] = datetime.now(timezone.utc)
 
         if "current_car_id" in update_data:
             car = await session.execute(select(Car).where(Car.id == update_data["current_car_id"]))
@@ -105,11 +115,10 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
             if update_data["current_class"] not in update_data.get("classes_allowed", existing_result.classes_allowed):
                 raise HTTPException(status_code=400, detail="Current class is not allowed")
         
-        if "classes_allowed" in update_data and "current_class" not in update_data:
-            update_obj.classes_allowed = sorted(update_obj.classes_allowed, key=lambda x: CLASS_VALUE[x])
-            update_obj.current_class = update_obj.classes_allowed[-1]
-        
-        return await super().update(session, id, update_obj)
+        update_data['updated_at'] = datetime.now(timezone.utc)
+        stmt = update(self.model).where(self.model.id == id).values(update_data).returning(self.model)
+        result = await self.execute_get_one(session, stmt)
+        return self.schema.model_validate(result) if result else None
 
     async def approve(self, session: AsyncSession, id: int, update_obj: DriverProfileApprove):
         existing = await session.execute(select(self.model).where(self.model.id == id))
@@ -117,10 +126,19 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         if not item:
             raise HTTPException(status_code=404, detail="Driver profile not found")
 
+        classes = sorted(update_obj.classes_allowed, key=lambda x: CLASS_VALUE[x])
+        update_obj.classes_allowed = classes
         driver_location = await driver_location_crud.get_by_driver_profile_id(session, item.id)
         if not driver_location:
             await driver_location_crud.create(session, DriverLocationCreate(driver_profile_id=id))
-        return await super().update(session, item.id, update_obj)
+        stmt = (
+            update(self.model)
+            .where(self.model.id == item.id)
+            .values(**update_obj.model_dump(exclude_none=True), current_class=classes[-1])
+            .returning(self.model)
+        )
+        updated = await self.execute_get_one(session, stmt)
+        return self.schema.model_validate(updated) if updated else None
 
     async def resubmit(self, session: AsyncSession, id: int):
         result = await session.execute(select(self.model).where(self.model.id == id))
@@ -165,6 +183,10 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
 
         approved = status == "approved"
         if approved:
+            if not item.classes_allowed:
+                raise HTTPException(status_code=422, detail="DRIVER_CLASSES_ALLOWED_REQUIRED")
+            item.classes_allowed = sorted(item.classes_allowed, key=lambda x: CLASS_VALUE[x])
+            item.current_class = item.classes_allowed[-1]
             driver_location = await driver_location_crud.get_by_driver_profile_id(session, id)
             if not driver_location:
                 await driver_location_crud.create(session, DriverLocationCreate(driver_profile_id=id))
@@ -176,6 +198,7 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
                 approved=approved,
                 approved_by=admin_user_id,
                 approved_at=datetime.now(timezone.utc) if approved else None,
+                current_class=item.current_class,
                 updated_at=datetime.now(timezone.utc),
             )
             .returning(self.model)

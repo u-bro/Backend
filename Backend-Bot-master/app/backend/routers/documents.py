@@ -1,6 +1,6 @@
 from fastapi import Depends, File, HTTPException, Request, UploadFile, Query
 from fastapi.responses import Response
-from app.backend.deps import require_role, get_current_user_id, get_current_driver_profile_id_without_approve
+from app.backend.deps import require_role, get_current_user, get_current_driver_profile_id_without_approve
 from app.backend.routers.base import BaseRouter
 from app.models import User
 from app.crud.document import DocumentCrud, document_crud
@@ -12,6 +12,7 @@ from app.enum import S3Bucket, RoleCode
 from app.config import S3_AVATARS_BUCKET_UUID
 from datetime import datetime, timezone
 from app.enum import DriverDocumentType
+from app.services.driver_profile_changes import demoderate_approved_driver, lock_driver_profile
 
 
 class DocumentRouter(BaseRouter[DocumentCrud]):
@@ -67,9 +68,14 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
         await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type)
         return {"key": key, "url": self.model_crud.presigned_get_url(key)}
 
-    async def upload_avatar(self, request: Request, role_code: str = Query("user"), file: UploadFile = File(...), user_id = Depends(get_current_user_id)) -> dict:
+    async def upload_avatar(self, request: Request, role_code: str = Query("user"), file: UploadFile = File(...), user: User = Depends(get_current_user)) -> dict:
+        if role_code == RoleCode.DRIVER:
+            if user.driver_profile is None:
+                raise HTTPException(status_code=404, detail="Driver profile not found")
+            profile = await lock_driver_profile(request.state.session, user.driver_profile.id)
+            await demoderate_approved_driver(request.state.session, profile)
         pdf_bytes = await file.read()
-        key = f"user/{user_id}/{role_code}/{round(datetime.now(timezone.utc).timestamp())}/avatar"
+        key = f"user/{user.id}/{role_code}/{round(datetime.now(timezone.utc).timestamp())}/avatar"
         content_type = file.content_type or "image/jpeg"
         await self.model_crud.upload_bytes(key, pdf_bytes, content_type=content_type, bucket=S3Bucket.AVATAR)
         return {"key": key, "url": self.model_crud.public_url(key, S3_AVATARS_BUCKET_UUID)}
@@ -136,6 +142,8 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
             raise HTTPException(status_code=400, detail="INCORRECT_DRIVER_DOCUMENT_TYPE")
 
         session = request.state.session
+        profile = await lock_driver_profile(session, driver_profile_id)
+        await demoderate_approved_driver(session, profile)
         document_bytes = await file.read()
         content_type = file.content_type or "image/jpeg"
         document_key = f"driver/{driver_profile_id}/{doc_type}"
