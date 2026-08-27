@@ -65,6 +65,7 @@ RIDE_REQUEST_REMOVAL_REASON_VALUES = (
     "ride_expired",
     "driver_withdrawn",
     "driver_offline",
+    "driver_profile_resubmitted",
     "driver_assigned_elsewhere",
 )
 RIDE_REQUEST_REMOVAL_REASON_CHOICES = tuple((value, value) for value in RIDE_REQUEST_REMOVAL_REASON_VALUES)

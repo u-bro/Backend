@@ -166,6 +166,12 @@ def moderation_detail(request, profile_id: int):
     car_form = DriverCarForm(initial=_car_form_initial(current_car))
     if request.method == "POST":
         action = request.POST.get("action")
+        if profile.approved and action in ("save", "add_car", "update_car", "delete_car"):
+            messages.error(
+                request,
+                "Нельзя напрямую изменять анкету или автомобиль одобренного водителя.",
+            )
+            return HttpResponseRedirect(request.get_full_path())
         if action == "save":
             form = DriverModerationForm(request.POST, instance=profile)
             if form.is_valid():
@@ -221,12 +227,6 @@ def moderation_detail(request, profile_id: int):
                 if not classes:
                     messages.error(request, "Для одобрения выберите хотя бы один класс.")
                     action = None
-                else:
-                    with transaction.atomic():
-                        locked_profile = DriverProfile.objects.select_for_update().get(pk=profile.pk)
-                        locked_profile.classes_allowed = classes
-                        locked_profile.current_class = classes[-1]
-                        locked_profile.save(update_fields=["classes_allowed", "current_class"])
             if action is None:
                 pass
             else:
@@ -236,6 +236,7 @@ def moderation_detail(request, profile_id: int):
                     action,
                     reason_ids,
                     request.user.id,
+                    classes if action == "approved" else None,
                 )
                 if success:
                     messages.success(request, "Решение модерации сохранено.")

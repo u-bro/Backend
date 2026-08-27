@@ -212,6 +212,8 @@ class DriverCarAdminLifecycleTests(TransactionTestCase):
         self.assertIn("classes_allowed", form.errors)
 
     def test_moderation_form_syncs_current_class(self):
+        self.profile.approved = False
+        self.profile.save(update_fields=["approved"])
         form = DriverModerationForm(
             data={
                 "first_name": "Иван",
@@ -225,3 +227,11 @@ class DriverCarAdminLifecycleTests(TransactionTestCase):
         updated = form.save_related_data()
         self.assertEqual(updated.classes_allowed, ["light", "vip"])
         self.assertEqual(updated.current_class, "vip")
+
+    def test_approved_profile_fields_are_disabled_in_moderation_form(self):
+        self.profile.approved = True
+        self.profile.save(update_fields=["approved"])
+
+        form = DriverModerationForm(instance=self.profile)
+
+        self.assertTrue(all(field.disabled for field in form.fields.values()))

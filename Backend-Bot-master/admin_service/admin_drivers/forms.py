@@ -71,6 +71,10 @@ class DriverModerationForm(forms.ModelForm):
         if isinstance(classes_allowed, list):
             self.initial["classes_allowed"] = classes_allowed
 
+        if getattr(self.instance, "approved", False):
+            for field in self.fields.values():
+                field.disabled = True
+
         for field_name in ("birth_date", "license_issued_at", "license_expires_at"):
             value = getattr(self.instance, field_name, None)
             if value:
@@ -91,7 +95,8 @@ class DriverModerationForm(forms.ModelForm):
         return cleaned
 
     def clean_classes_allowed(self):
-        return list(dict.fromkeys(self.cleaned_data["classes_allowed"]))
+        order = {value: index for index, (value, _label) in enumerate(RIDE_CLASS_CHOICES)}
+        return sorted(set(self.cleaned_data["classes_allowed"]), key=order.__getitem__)
 
     def save_related_data(self, commit=True):
         profile = super().save(commit=False)

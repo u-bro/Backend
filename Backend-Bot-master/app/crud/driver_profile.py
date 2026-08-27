@@ -11,6 +11,8 @@ from app.models import Car, DriverProfileModeration
 from app.config import DRIVER_PROFILE_INITIAL_RATING_AVG, DRIVER_PROFILE_INITIAL_RATING_COUNT
 from datetime import datetime, timezone
 from app.services.driver_profile_changes import demoderate_approved_driver, lock_driver_profile
+from app.services.after_commit import add_after_commit
+from app.services.driver_state_storage import driver_state_storage
 
 CLASS_VALUE = {
     'light': 1,
@@ -78,7 +80,7 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
 
         return self.schema.model_validate(result) if result else None
 
-    async def update(self, session: AsyncSession, id: int, update_obj):
+    async def update_me(self, session: AsyncSession, id: int, update_obj):
         existing_item = await lock_driver_profile(session, id)
         existing_result = self.schema.model_validate(existing_item)
         supplied_fields = update_obj.model_fields_set
@@ -90,11 +92,18 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
             classes = sorted(update_data["classes_allowed"], key=lambda x: CLASS_VALUE[x])
             update_data["classes_allowed"] = classes
             update_data["current_class"] = classes[-1]
+        elif "current_class" in update_data:
+            classes = sorted(existing_result.classes_allowed, key=lambda x: CLASS_VALUE[x])
+            update_data["current_class"] = classes[-1]
 
         if not any(getattr(existing_item, field) != value for field, value in update_data.items()):
             return existing_result
 
+        was_approved = existing_item.approved
         await demoderate_approved_driver(session, existing_item)
+
+        if was_approved:
+            update_data['status'] = 'waiting_approved'
 
         if existing_result.status == 'waiting_register':
             update_data['status'] = 'waiting_approved'
@@ -118,13 +127,40 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         update_data['updated_at'] = datetime.now(timezone.utc)
         stmt = update(self.model).where(self.model.id == id).values(update_data).returning(self.model)
         result = await self.execute_get_one(session, stmt)
+        if result and {"classes_allowed", "current_car_id"}.intersection(update_data):
+            profile_id = result.id
+            classes_allowed = result.classes_allowed
+            current_car_id = result.current_car_id
+            add_after_commit(
+                session,
+                lambda: driver_state_storage.sync_profile(
+                    profile_id, classes_allowed, current_car_id
+                ),
+            )
+        return self.schema.model_validate(result) if result else None
+
+    async def update(self, session: AsyncSession, id: int, update_obj):
+        update_data = update_obj.model_dump(exclude_none=True)
+        if "classes_allowed" in update_data:
+            classes = sorted(update_data["classes_allowed"], key=lambda value: CLASS_VALUE[value])
+            update_data["classes_allowed"] = classes
+            update_data["current_class"] = classes[-1]
+        stmt = update(self.model).where(self.model.id == id).values(update_data).returning(self.model)
+        result = await self.execute_get_one(session, stmt)
+        if result and {"classes_allowed", "current_car_id"}.intersection(update_data):
+            profile_id = result.id
+            classes_allowed = result.classes_allowed
+            current_car_id = result.current_car_id
+            add_after_commit(
+                session,
+                lambda: driver_state_storage.sync_profile(
+                    profile_id, classes_allowed, current_car_id
+                ),
+            )
         return self.schema.model_validate(result) if result else None
 
     async def approve(self, session: AsyncSession, id: int, update_obj: DriverProfileApprove):
-        existing = await session.execute(select(self.model).where(self.model.id == id))
-        item = existing.scalar_one_or_none()
-        if not item:
-            raise HTTPException(status_code=404, detail="Driver profile not found")
+        item = await lock_driver_profile(session, id)
 
         classes = sorted(update_obj.classes_allowed, key=lambda x: CLASS_VALUE[x])
         update_obj.classes_allowed = classes
@@ -138,13 +174,19 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
             .returning(self.model)
         )
         updated = await self.execute_get_one(session, stmt)
+        profile_id = updated.id
+        classes_allowed = updated.classes_allowed
+        current_car_id = updated.current_car_id
+        add_after_commit(
+            session,
+            lambda: driver_state_storage.sync_profile(
+                profile_id, classes_allowed, current_car_id
+            ),
+        )
         return self.schema.model_validate(updated) if updated else None
 
     async def resubmit(self, session: AsyncSession, id: int):
-        result = await session.execute(select(self.model).where(self.model.id == id))
-        item = result.scalar_one_or_none()
-        if not item:
-            raise HTTPException(status_code=404, detail="Driver profile not found")
+        item = await lock_driver_profile(session, id)
         if item.status != "rejected":
             raise HTTPException(status_code=409, detail="Only rejected profiles can be resubmitted")
 
@@ -163,11 +205,8 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         updated = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(updated) if updated else None
 
-    async def moderate(self, session: AsyncSession, id: int, status: str, moderation_info_ids: list[int], admin_user_id: int):
-        result = await session.execute(select(self.model).where(self.model.id == id))
-        item = result.scalar_one_or_none()
-        if not item:
-            raise HTTPException(status_code=404, detail="Driver profile not found")
+    async def moderate(self, session: AsyncSession, id: int, status: str, moderation_info_ids: list[int], admin_user_id: int, classes_allowed: list[str] | None = None):
+        item = await lock_driver_profile(session, id)
 
         await session.execute(
             delete(DriverProfileModeration).where(DriverProfileModeration.driver_profile_id == id)
@@ -183,9 +222,10 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
 
         approved = status == "approved"
         if approved:
-            if not item.classes_allowed:
+            classes = classes_allowed if classes_allowed is not None else item.classes_allowed
+            if not classes:
                 raise HTTPException(status_code=422, detail="DRIVER_CLASSES_ALLOWED_REQUIRED")
-            item.classes_allowed = sorted(item.classes_allowed, key=lambda x: CLASS_VALUE[x])
+            item.classes_allowed = sorted(classes, key=lambda x: CLASS_VALUE[x])
             item.current_class = item.classes_allowed[-1]
             driver_location = await driver_location_crud.get_by_driver_profile_id(session, id)
             if not driver_location:
@@ -198,12 +238,23 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
                 approved=approved,
                 approved_by=admin_user_id,
                 approved_at=datetime.now(timezone.utc) if approved else None,
+                classes_allowed=item.classes_allowed,
                 current_class=item.current_class,
                 updated_at=datetime.now(timezone.utc),
             )
             .returning(self.model)
         )
         updated = await self.execute_get_one(session, stmt)
+        if approved:
+            profile_id = updated.id
+            classes_allowed = updated.classes_allowed
+            current_car_id = updated.current_car_id
+            add_after_commit(
+                session,
+                lambda: driver_state_storage.sync_profile(
+                    profile_id, classes_allowed, current_car_id
+                ),
+            )
         return self.schema.model_validate(updated) if updated else None
 
 driver_profile_crud = DriverProfileCrud()

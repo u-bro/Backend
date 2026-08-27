@@ -13,6 +13,8 @@ from app.config import S3_AVATARS_BUCKET_UUID
 from datetime import datetime, timezone
 from app.enum import DriverDocumentType
 from app.services.driver_profile_changes import demoderate_approved_driver, lock_driver_profile
+from app.services.after_commit import add_after_commit
+from uuid import uuid4
 
 
 class DocumentRouter(BaseRouter[DocumentCrud]):
@@ -144,13 +146,23 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
         session = request.state.session
         profile = await lock_driver_profile(session, driver_profile_id)
         await demoderate_approved_driver(session, profile)
+        existing = await driver_document_crud.get_by_driver_profile_id_and_doc_type(
+            session, driver_profile_id, doc_type
+        )
         document_bytes = await file.read()
         content_type = file.content_type or "image/jpeg"
-        document_key = f"driver/{driver_profile_id}/{doc_type}"
+        document_key = f"driver/{driver_profile_id}/{doc_type}/{uuid4().hex}"
         await self.model_crud.upload_bytes(document_key, document_bytes, content_type=content_type, bucket=S3Bucket.DOCUMENT)
 
         driver_document = await driver_document_crud.upsert(session, DriverDocumentCreate(driver_profile_id=driver_profile_id, doc_type=doc_type, file_bucket_key=document_key))
         await driver_moderation_info_crud.delete_by_driver_profile_id_and_doc_type(session, driver_profile_id, doc_type)
+        if existing and existing.file_bucket_key and existing.file_bucket_key != document_key:
+            add_after_commit(
+                session,
+                lambda old_key=existing.file_bucket_key: self.model_crud.delete_by_key(
+                    old_key, S3Bucket.DOCUMENT
+                ),
+            )
         return {"document": driver_document, "key": document_key, "url": self.model_crud.presigned_get_url(document_key)}
 
 

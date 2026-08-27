@@ -136,7 +136,7 @@ class FastAPIClient:
             logger.error(f"Failed to review anomaly {anomaly_id}: {e}")
             return False
 
-    def moderate_driver(self, driver_id: int, status: str, moderation_info_ids: list[int], admin_user_id: int) -> bool:
+    def moderate_driver(self, driver_id: int, status: str, moderation_info_ids: list[int], admin_user_id: int, classes_allowed: list[str] | None = None) -> bool:
         try:
             token = (os.getenv("MODERATION_INTERNAL_TOKEN") or "").strip()
             if not token:
@@ -148,6 +148,7 @@ class FastAPIClient:
                     "status": status,
                     "moderation_info_ids": moderation_info_ids,
                     "admin_user_id": admin_user_id,
+                    "classes_allowed": classes_allowed,
                 },
                 headers={"X-Moderation-Token": token or ""},
             )

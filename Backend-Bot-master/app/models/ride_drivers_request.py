@@ -25,7 +25,8 @@ class RideDriversRequest(Base):
             "removal_reason IS NULL OR "
             "(status = 'rejected' AND removal_reason = 'selected_other_driver') OR "
             "(status = 'canceled' AND removal_reason IN "
-            "('ride_canceled', 'ride_expired', 'driver_withdrawn', 'driver_offline', 'driver_assigned_elsewhere'))",
+            "('ride_canceled', 'ride_expired', 'driver_withdrawn', 'driver_offline', "
+            "'driver_profile_resubmitted', 'driver_assigned_elsewhere'))",
             name="ck_ride_request_status_removal_reason",
         ),
         Index(

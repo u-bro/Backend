@@ -203,7 +203,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
             }
             if driver:
                 add_after_commit(session, lambda driver=driver, payload=payload: manager_driver_feed.send_personal_message(driver.user_id, payload))
-            if reason in ("driver_withdrawn", "driver_offline"):
+            if reason in ("driver_withdrawn", "driver_offline", "driver_profile_resubmitted"):
                 ride = await ride_crud.get_by_id(session, row.ride_id)
                 if ride:
                     await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=ride.client_id, type="ride_request_canceled", title="Отклик на поездку отозван", message="Отклик на поездку отозван водителем", data=changed[-1].model_dump(mode="json"), dedup_key=f"ride_request:{row.id}:removed:{reason}"))
@@ -237,7 +237,7 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
         for driver_id in {row.driver_profile_id for row in rows}:
             active = await session.scalar(select(Ride.id).where(Ride.driver_profile_id == driver_id, Ride.status.in_(ACTIVE_RIDE_STATUSES)).limit(1))
             pending = await session.scalar(select(self.model.id).where(self.model.driver_profile_id == driver_id, self.model.status == "requested").limit(1))
-            if not active and reason != "driver_offline":
+            if not active and reason not in ("driver_offline", "driver_profile_resubmitted"):
                 location = await driver_location_crud.get_by_driver_profile_id(session, driver_id)
                 status = DriverStatus.OFFLINE if location and location.status == DriverStatus.OFFLINE else DriverStatus.WAITING_RIDE if pending else DriverStatus.ONLINE
                 await driver_tracker.set_status_by_driver(session, driver_id, status)

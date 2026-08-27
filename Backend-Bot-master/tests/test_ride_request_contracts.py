@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from app.config import DRIVER_PENDING_REQUEST_LIMIT
 from app.const import ACTIVE_RIDE_STATUSES, RIDE_REQUEST_REMOVAL_REASONS
 from app.crud.ride import ALLOWED_TRANSITIONS, STATUSES
+from app.schemas.driver_profile import DriverProfileApproveIn, DriverProfileUpdate, DriverProfileUpdateMe
 from app.schemas.ride_drivers_request import RideDriversRequestUpdate
 
 
@@ -16,6 +17,7 @@ def test_ride_request_contract_constants():
         "ride_expired",
         "driver_withdrawn",
         "driver_offline",
+        "driver_profile_resubmitted",
         "driver_assigned_elsewhere",
     }
 
@@ -28,6 +30,27 @@ def test_public_ride_request_update_only_accepts_selection():
 def test_public_ride_request_update_rejects_removal_semantics():
     with pytest.raises(ValidationError):
         RideDriversRequestUpdate(status="canceled", removal_reason="driver_offline")
+
+
+def test_driver_update_classes_are_optional_unique_and_non_empty():
+    assert DriverProfileUpdateMe().classes_allowed is None
+    assert DriverProfileUpdateMe(classes_allowed=["vip", "light"]).classes_allowed == ["vip", "light"]
+
+    for classes in ([], ["light", "light"], ["comfort"]):
+        with pytest.raises(ValidationError):
+            DriverProfileUpdateMe(classes_allowed=classes)
+
+
+def test_admin_approve_requires_non_empty_unique_classes():
+    for classes in ([], ["light", "light"]):
+        with pytest.raises(ValidationError):
+            DriverProfileApproveIn(classes_allowed=classes)
+
+
+def test_admin_update_requires_non_empty_unique_classes_when_supplied():
+    for classes in ([], ["light", "light"]):
+        with pytest.raises(ValidationError):
+            DriverProfileUpdate(classes_allowed=classes)
 
 
 def test_ride_status_contract_and_ordinary_transitions():

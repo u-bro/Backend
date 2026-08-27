@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, Request
 from app.backend.routers.base import BaseRouter
 from app.crud.driver_document import driver_document_crud, DriverDocumentCrud
 from app.schemas.driver_document import DriverDocumentSchema, DriverDocumentCreate, DriverDocumentAdminUpdate, DriverDocumentDriverUpdate, DriverDocumentAdminUpdateIn, DriverDocumentSchemaWithURL
-from app.backend.deps import require_role, require_driver_profile_or_admin, get_current_driver_profile_id_without_approve
+from app.backend.deps import get_current_user, require_role, require_driver_profile_or_admin, get_current_driver_profile_id_without_approve
 from app.models import DriverDocument, User
 from app.enum import RoleCode
 from datetime import datetime, timezone
@@ -31,7 +31,11 @@ class DriverDocumentRouter(BaseRouter[DriverDocumentCrud]):
     async def get_me(self, request: Request, driver_profile_id: int = Depends(get_current_driver_profile_id_without_approve)) -> list[DriverDocumentSchemaWithURL]:
         return await self.model_crud.get_by_driver_profile_id(request.state.session, driver_profile_id)
 
-    async def create(self, request: Request, body: DriverDocumentCreate) -> DriverDocumentSchema:
+    async def create(self, request: Request, body: DriverDocumentCreate, user: User = Depends(get_current_user)) -> DriverDocumentSchema:
+        if user.role.code != RoleCode.ADMIN and (
+            user.driver_profile is None or user.driver_profile.id != body.driver_profile_id
+        ):
+            raise HTTPException(status_code=403, detail="Forbidden")
         profile = await lock_driver_profile(request.state.session, body.driver_profile_id)
         await demoderate_approved_driver(request.state.session, profile)
         return await self.model_crud.create(request.state.session, body)

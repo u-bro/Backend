@@ -50,7 +50,7 @@ class DriverProfileRouter(BaseRouter[DriverProfileCrud]):
         return profile
 
     async def update_me(self, request: Request, body: DriverProfileUpdateMe, id = Depends(get_current_driver_profile_id_without_approve)) -> DriverProfileSchema:
-        return await self.model_crud.update(request.state.session, id, body)
+        return await self.model_crud.update_me(request.state.session, id, body)
 
     async def resubmit(self, request: Request, id: int = Depends(get_current_driver_profile_id_without_approve)) -> DriverProfileSchema:
         profile = await self.model_crud.resubmit(request.state.session, id)
@@ -73,6 +73,7 @@ class DriverProfileRouter(BaseRouter[DriverProfileCrud]):
             body.status,
             body.moderation_info_ids,
             body.admin_user_id,
+            body.classes_allowed,
         )
         await send_moderation_notification(
             request.state.session,

@@ -82,6 +82,13 @@ class DriverStateStorage:
         driver_id = self._user_to_driver.get(user_id)
         return self._drivers.get(driver_id)
 
+    def sync_profile(self, driver_profile_id: int, classes_allowed: list[str], car_id: int | None) -> None:
+        state = self._drivers.get(driver_profile_id)
+        if state is None:
+            return
+        state.classes_allowed = set(classes_allowed)
+        state.car_id = car_id
+
     def get_stats(self) -> dict:
         return {
             "total_registered": len(self._drivers),

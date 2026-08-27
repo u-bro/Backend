@@ -15,6 +15,7 @@ RIDE_REQUEST_REMOVAL_REASONS = (
     "ride_expired",
     "driver_withdrawn",
     "driver_offline",
+    "driver_profile_resubmitted",
     "driver_assigned_elsewhere",
 )
 

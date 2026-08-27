@@ -48,6 +48,6 @@ async def demoderate_approved_driver(session: AsyncSession, profile: DriverProfi
     from app.crud.ride_drivers_request import ride_drivers_request_crud
 
     await ride_drivers_request_crud.cancel_by_driver_profile_id(
-        session, profile.id, "driver_offline"
+        session, profile.id, "driver_profile_resubmitted"
     )
     await driver_tracker.set_status_by_driver(session, profile.id, DriverStatus.OFFLINE)

@@ -57,7 +57,8 @@ class DriverProfileAdminForm(forms.ModelForm):
         return user_id
 
     def clean_classes_allowed(self):
-        return list(dict.fromkeys(self.cleaned_data["classes_allowed"]))
+        order = {value: index for index, (value, _label) in enumerate(RIDE_CLASS_CHOICES)}
+        return sorted(set(self.cleaned_data["classes_allowed"]), key=order.__getitem__)
 
 
 class DriverProfileChangelistForm(forms.ModelForm):
@@ -78,7 +79,8 @@ class DriverProfileChangelistForm(forms.ModelForm):
             self.initial["classes_allowed"] = classes_allowed
 
     def clean_classes_allowed(self):
-        return list(dict.fromkeys(self.cleaned_data["classes_allowed"]))
+        order = {value: index for index, (value, _label) in enumerate(RIDE_CLASS_CHOICES)}
+        return sorted(set(self.cleaned_data["classes_allowed"]), key=order.__getitem__)
 
 
 @admin.register(DriverModerationInfo)
@@ -140,9 +142,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
         "updated_at",
     )
     list_per_page = 25
-    list_editable = tuple(
-        [f for f in list_display if f != 'id' and any(f == fld.name for fld in DriverProfile._meta.fields) and f not in ['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years']]
-    )
+    list_editable = ()
     list_filter = ("approved", "status")
     search_fields = ("user_id", "first_name", "last_name", "_user_phone")
     actions = ["approve_drivers", "reject_drivers", "block_drivers", "unblock_drivers"]
@@ -197,7 +197,12 @@ class DriverProfileAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)
         if obj and obj.approved:
-            readonly.extend(['license_number', 'license_category', 'license_issued_at', 'license_expires_at', 'experience_years'])
+            readonly.extend([
+                'first_name', 'last_name', 'middle_name', 'birth_date', 'photo_url',
+                'license_number', 'license_category', 'license_issued_at',
+                'license_expires_at', 'experience_years', 'classes_allowed',
+                'current_class', 'current_car_id', 'status', 'approved', 'approved_by',
+            ])
         return readonly
 
     def has_add_permission(self, request): 
@@ -292,7 +297,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
                     messages.ERROR,
                 )
                 continue
-            if api_client.moderate_driver(driver.id, "approved", [], approved_by):
+            if api_client.moderate_driver(driver.id, "approved", [], approved_by, driver.classes_allowed):
                 count += 1
         self.message_user(request, f"Approved {count} drivers", messages.SUCCESS)
 

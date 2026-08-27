@@ -62,7 +62,14 @@ class DriverProfileUpdate(DriverProfileValidated):
     rating_count: Optional[int] = Field(None, ge=0)
     status: Literal['waiting_moderation'] | None = Field(None, max_length=50)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
-    classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = None
+    classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = Field(None, min_length=1)
+
+    @field_validator("classes_allowed")
+    @classmethod
+    def classes_allowed_must_be_unique(cls, value):
+        if value is not None and len(value) != len(set(value)):
+            raise ValueError("classes_allowed must contain unique values")
+        return value
 
 
 class DriverProfileApproveIn(BaseSchema):
@@ -101,3 +108,11 @@ class DriverModerationAction(BaseSchema):
     status: Literal['approved', 'rejected']
     moderation_info_ids: list[int] = Field(default_factory=list)
     admin_user_id: int = Field(..., gt=0)
+    classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = Field(None, min_length=1)
+
+    @field_validator("classes_allowed")
+    @classmethod
+    def classes_allowed_must_be_unique(cls, value):
+        if value is not None and len(value) != len(set(value)):
+            raise ValueError("classes_allowed must contain unique values")
+        return value
