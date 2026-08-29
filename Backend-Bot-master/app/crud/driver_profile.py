@@ -20,6 +20,12 @@ CLASS_VALUE = {
     'vip': 3,
     'elite': 4
 }
+ADMIN_UPDATE_SENSITIVE_FIELDS = {
+    "first_name", "last_name", "middle_name", "birth_date", "photo_url",
+    "license_number", "license_category", "license_issued_at",
+    "license_expires_at", "experience_years", "current_class",
+    "current_car_id", "classes_allowed", "status",
+}
 
 
 class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
@@ -140,7 +146,15 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         return self.schema.model_validate(result) if result else None
 
     async def update(self, session: AsyncSession, id: int, update_obj):
-        update_data = update_obj.model_dump(exclude_none=True)
+        item = await lock_driver_profile(session, id)
+        update_data = update_obj.model_dump(include=update_obj.model_fields_set, exclude_none=True)
+        if item.approved and ADMIN_UPDATE_SENSITIVE_FIELDS.intersection(update_data):
+            raise HTTPException(
+                status_code=409,
+                detail="APPROVED_DRIVER_PROFILE_ADMIN_UPDATE_FORBIDDEN",
+            )
+        if not update_data:
+            return self.schema.model_validate(item)
         if "classes_allowed" in update_data:
             classes = sorted(update_data["classes_allowed"], key=lambda value: CLASS_VALUE[value])
             update_data["classes_allowed"] = classes
@@ -205,8 +219,13 @@ class DriverProfileCrud(CrudBase[DriverProfile, DriverProfileSchema]):
         updated = await self.execute_get_one(session, stmt)
         return self.schema.model_validate(updated) if updated else None
 
-    async def moderate(self, session: AsyncSession, id: int, status: str, moderation_info_ids: list[int], admin_user_id: int, classes_allowed: list[str] | None = None):
+    async def moderate(self, session: AsyncSession, id: int, status: str, moderation_info_ids: list[int], admin_user_id: int, expected_updated_at: datetime, classes_allowed: list[str] | None = None):
         item = await lock_driver_profile(session, id)
+        if item.updated_at != expected_updated_at:
+            raise HTTPException(
+                status_code=409,
+                detail="DRIVER_PROFILE_CHANGED_DURING_MODERATION",
+            )
 
         await session.execute(
             delete(DriverProfileModeration).where(DriverProfileModeration.driver_profile_id == id)

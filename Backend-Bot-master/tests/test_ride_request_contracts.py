@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from app.config import DRIVER_PENDING_REQUEST_LIMIT
 from app.const import ACTIVE_RIDE_STATUSES, RIDE_REQUEST_REMOVAL_REASONS
 from app.crud.ride import ALLOWED_TRANSITIONS, STATUSES
-from app.schemas.driver_profile import DriverProfileApproveIn, DriverProfileUpdate, DriverProfileUpdateMe
+from app.schemas.driver_profile import DriverModerationAction, DriverProfileApproveIn, DriverProfileUpdate, DriverProfileUpdateMe
 from app.schemas.ride_drivers_request import RideDriversRequestUpdate
 
 
@@ -51,6 +51,15 @@ def test_admin_update_requires_non_empty_unique_classes_when_supplied():
     for classes in ([], ["light", "light"]):
         with pytest.raises(ValidationError):
             DriverProfileUpdate(classes_allowed=classes)
+
+
+def test_moderation_requires_profile_revision():
+    with pytest.raises(ValidationError):
+        DriverModerationAction(
+            status="approved",
+            admin_user_id=1,
+            classes_allowed=["light"],
+        )
 
 
 def test_ride_status_contract_and_ordinary_transitions():

@@ -178,6 +178,7 @@
         <h2>Решение</h2>
         <form method="post" class="moderation-actions" onsubmit="return confirm('Изменить статус заявки?');">
           {% csrf_token %}
+          <input type="hidden" name="expected_updated_at" value="{{ profile.updated_at|date:'c' }}">
           {% for reason in all_reasons %}
             <label><input type="checkbox" name="moderation_info_ids" value="{{ reason.id }}"{% if reason in reasons %} checked{% endif %}> {{ reason.code }}: {{ reason.message }}</label>
           {% endfor %}

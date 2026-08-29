@@ -297,7 +297,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
                     messages.ERROR,
                 )
                 continue
-            if api_client.moderate_driver(driver.id, "approved", [], approved_by, driver.classes_allowed):
+            if api_client.moderate_driver(driver.id, "approved", [], approved_by, driver.updated_at, driver.classes_allowed):
                 count += 1
         self.message_user(request, f"Approved {count} drivers", messages.SUCCESS)
 
@@ -310,7 +310,7 @@ class DriverProfileAdmin(admin.ModelAdmin):
         approved_by = self._resolve_backend_user_id(request)
         for driver in queryset:
             reason_ids = list(driver.moderation_info.values_list("id", flat=True))
-            if api_client.moderate_driver(driver.id, "rejected", reason_ids, approved_by):
+            if api_client.moderate_driver(driver.id, "rejected", reason_ids, approved_by, driver.updated_at):
                 count += 1
         self.message_user(request, f"Rejected {count} drivers", messages.SUCCESS)
 

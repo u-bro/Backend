@@ -13,7 +13,7 @@ from app.config import S3_AVATARS_BUCKET_UUID
 from datetime import datetime, timezone
 from app.enum import DriverDocumentType
 from app.services.driver_profile_changes import demoderate_approved_driver, lock_driver_profile
-from app.services.after_commit import add_after_commit
+from app.services.after_commit import add_after_commit, add_after_rollback
 from uuid import uuid4
 
 
@@ -153,6 +153,12 @@ class DocumentRouter(BaseRouter[DocumentCrud]):
         content_type = file.content_type or "image/jpeg"
         document_key = f"driver/{driver_profile_id}/{doc_type}/{uuid4().hex}"
         await self.model_crud.upload_bytes(document_key, document_bytes, content_type=content_type, bucket=S3Bucket.DOCUMENT)
+        add_after_rollback(
+            session,
+            lambda new_key=document_key: self.model_crud.delete_by_key(
+                new_key, S3Bucket.DOCUMENT
+            ),
+        )
 
         driver_document = await driver_document_crud.upsert(session, DriverDocumentCreate(driver_profile_id=driver_profile_id, doc_type=doc_type, file_bucket_key=document_key))
         await driver_moderation_info_crud.delete_by_driver_profile_id_and_doc_type(session, driver_profile_id, doc_type)

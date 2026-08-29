@@ -228,6 +228,30 @@ class ModelAdminCheckTests(SimpleTestCase):
         errors = [error for model_admin in model_admins for error in model_admin.check()]
         self.assertEqual(errors, [])
 
+    @patch("admin_cars.admin.DriverProfile.objects.filter")
+    def test_car_admin_denies_changes_for_approved_driver(self, profile_filter):
+        profile_filter.return_value.exists.return_value = True
+        request = SimpleNamespace(user=MagicMock())
+        request.user.groups.filter.return_value.exists.return_value = True
+        model_admin = CarAdmin(Car, admin.site)
+        car = SimpleNamespace(driver_profile_id=7)
+
+        self.assertFalse(model_admin.has_change_permission(request, car))
+        self.assertFalse(model_admin.has_delete_permission(request, car))
+
+    @patch("admin_car_photos.admin.DriverProfile.objects.filter")
+    @patch("admin_car_photos.admin.Car.objects.filter")
+    def test_car_photo_admin_denies_changes_for_approved_driver(self, car_filter, profile_filter):
+        car_filter.return_value.values_list.return_value.first.return_value = 7
+        profile_filter.return_value.exists.return_value = True
+        request = SimpleNamespace(user=MagicMock())
+        request.user.groups.filter.return_value.exists.return_value = True
+        model_admin = CarPhotoAdmin(CarPhoto, admin.site)
+        photo = SimpleNamespace(car_id=9)
+
+        self.assertFalse(model_admin.has_change_permission(request, photo))
+        self.assertFalse(model_admin.has_delete_permission(request, photo))
+
     def test_custom_templates_load(self):
         for template_name in (
             "admin_drivers/moderation_detail.html",

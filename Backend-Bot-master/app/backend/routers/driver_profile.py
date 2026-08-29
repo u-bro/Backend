@@ -73,6 +73,7 @@ class DriverProfileRouter(BaseRouter[DriverProfileCrud]):
             body.status,
             body.moderation_info_ids,
             body.admin_user_id,
+            body.expected_updated_at,
             body.classes_allowed,
         )
         await send_moderation_notification(

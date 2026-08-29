@@ -9,6 +9,7 @@ from django.db.models import Case, IntegerField, Q, Subquery, Value, When
 from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
+from django.utils.dateparse import parse_datetime
 
 from admin_cars.models import Car
 from admin_car_photos.models import CarPhoto
@@ -221,6 +222,10 @@ def moderation_detail(request, profile_id: int):
                 return HttpResponseRedirect(request.get_full_path())
             messages.error(request, "Текущий автомобиль не найден.")
         elif action in ("approved", "rejected"):
+            expected_updated_at = parse_datetime(request.POST.get("expected_updated_at", ""))
+            if expected_updated_at is None:
+                messages.error(request, "Версия анкеты устарела. Обновите страницу.")
+                action = None
             if action == "approved":
                 class_order = {value: index for index, (value, _label) in enumerate(DriverProfile._meta.get_field("current_class").choices)}
                 classes = sorted(set(profile.classes_allowed or []), key=class_order.__getitem__)
@@ -236,6 +241,7 @@ def moderation_detail(request, profile_id: int):
                     action,
                     reason_ids,
                     request.user.id,
+                    expected_updated_at,
                     classes if action == "approved" else None,
                 )
                 if success:

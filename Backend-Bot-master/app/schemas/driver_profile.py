@@ -108,6 +108,7 @@ class DriverModerationAction(BaseSchema):
     status: Literal['approved', 'rejected']
     moderation_info_ids: list[int] = Field(default_factory=list)
     admin_user_id: int = Field(..., gt=0)
+    expected_updated_at: datetime
     classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = Field(None, min_length=1)
 
     @field_validator("classes_allowed")

@@ -1,4 +1,6 @@
+from django import forms
 from django.contrib import admin
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.html import format_html, format_html_join
 
@@ -9,8 +11,21 @@ from admin_drivers.models import DriverProfile
 from utils.admin_links import driver_profile_link, safe_external_url
 
 
+class CarAdminForm(forms.ModelForm):
+    class Meta:
+        model = Car
+        fields = "__all__"
+
+    def clean_driver_profile_id(self):
+        profile_id = self.cleaned_data["driver_profile_id"]
+        if DriverProfile.objects.filter(id=profile_id, approved=True).exists():
+            raise ValidationError("Нельзя изменять автомобиль одобренного водителя.")
+        return profile_id
+
+
 @admin.register(Car)
 class CarAdmin(admin.ModelAdmin):
+    form = CarAdminForm
     change_form_template = "admin/admin_cars/car/change_form.html"
     list_display = (
         "id",
@@ -129,11 +144,28 @@ class CarAdmin(admin.ModelAdmin):
         if not change and getattr(obj, "driver_profile_id", None) and getattr(obj, "id", None):
             DriverProfile.objects.filter(id=obj.driver_profile_id).update(current_car_id=obj.id)
 
+    @staticmethod
+    def _profile_is_approved(obj):
+        return bool(
+            obj
+            and getattr(obj, "driver_profile_id", None)
+            and DriverProfile.objects.filter(
+                id=obj.driver_profile_id, approved=True
+            ).exists()
+        )
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(super().get_readonly_fields(request, obj))
+        if self._profile_is_approved(obj):
+            readonly.extend("driver_profile_id model number region vin year".split())
+        return tuple(dict.fromkeys(readonly))
+
     def has_add_permission(self, request):
         return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
 
     def has_change_permission(self, request, obj=None):
-        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        allowed = request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        return allowed and not self._profile_is_approved(obj)
 
     def has_delete_permission(self, request, obj=None):
-        return request.user.groups.filter(name='Admin').exists()
+        return request.user.groups.filter(name='Admin').exists() and not self._profile_is_approved(obj)
