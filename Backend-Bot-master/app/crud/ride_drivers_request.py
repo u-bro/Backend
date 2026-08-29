@@ -115,8 +115,9 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
 
         await driver_tracker.set_status_by_driver(session, result.driver_profile_id, DriverStatus.WAITING_RIDE)
         notification = InAppNotificationCreate(user_id=ride.client_id, type="ride_offer", title="Новый отклик", message="На поездку откликнулся ещё один водитель", data={"offer_id": result.id, "ride_id": result.ride_id, "driver_profile_id": result.driver_profile_id}, dedup_key=f"ride_request:{result.id}:created")
-        await in_app_notification_crud.create(session, notification)
-        add_after_commit(session, lambda client_id=ride.client_id, title=notification.title, message=notification.message: fcm_service.send_to_user_after_commit(client_id, PushNotificationData(title=title, body=message)))
+        inserted = await in_app_notification_crud.create(session, notification)
+        if inserted is not None:
+            add_after_commit(session, lambda client_id=ride.client_id, title=notification.title, message=notification.message: fcm_service.send_to_user_after_commit(client_id, PushNotificationData(title=title, body=message)))
         return self.schema.model_validate(result)
 
     async def update(self, session: AsyncSession, id: int, update_obj: RideDriversRequestUpdate) -> RideDriversRequestSchema:
@@ -227,9 +228,8 @@ class RideDriversRequestCrud(CrudBase[RideDriversRequest, RideDriversRequestSche
                 if notification is not None:
                     add_after_commit(
                         session,
-                        lambda driver=driver, title=title, message=message, payload=payload: fcm_service.send_to_user(
-                            session,
-                            driver.user_id,
+                        lambda user_id=driver.user_id, title=title, message=message, payload=payload: fcm_service.send_to_user_after_commit(
+                            user_id,
                             PushNotificationData(title=title, body=message, data=payload),
                         ),
                     )

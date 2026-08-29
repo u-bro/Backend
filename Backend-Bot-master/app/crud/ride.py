@@ -244,7 +244,7 @@ class RideCrud(CrudBase[Ride, RideSchema]):
             await ride_drivers_request_crud.reject_by_ride_id(session, ride_id, "ride_canceled")
         
         ride = self.schema.model_validate(existing_rides[0])
-        await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена, т.к. была создана новая", data=ride.model_dump(mode='json'), dedup_key=f"{ride.id}_canceled"))
+        await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена, т.к. была создана новая", data=ride.model_dump(mode='json'), dedup_key=f"ride:{ride.id}:canceled:replaced"))
 
     async def get_by_client_id(self, session: AsyncSession, client_id: int, order_by: str | None = None) -> list[RideSchema]:
         stmt = select(self.model).where(self.model.client_id == client_id).order_by(text(order_by) if order_by else None)
@@ -447,8 +447,9 @@ class RideCrud(CrudBase[Ride, RideSchema]):
                 from .ride_drivers_request import ride_drivers_request_crud
 
                 await ride_drivers_request_crud.reject_by_ride_id(session, id, "ride_expired")
-                await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за таймаута", data=updated_ride.model_dump(mode='json'), dedup_key=f"{id}_canceled"))
-                add_after_commit(session, lambda client_id=client_id: fcm_service.send_to_user_after_commit(client_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за таймаута')))
+                notification = await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за таймаута", data=updated_ride.model_dump(mode='json'), dedup_key=f"ride:{id}:canceled:timeout"))
+                if notification is not None:
+                    add_after_commit(session, lambda client_id=client_id: fcm_service.send_to_user_after_commit(client_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за таймаута')))
             await commit_with_callbacks(session)
 
 ride_crud = RideCrud(Ride, RideSchema)

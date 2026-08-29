@@ -200,8 +200,9 @@ class RideRouter(BaseRouter[RideCrud]):
         return ride
 
     async def send_notifications(self, session: AsyncSession, client_id: int, type: str, title: str, message: str, data: dict, dedup_key: Any):
-        await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type=type, title=title, message=message, data=data, dedup_key=str(dedup_key) if dedup_key else None))
-        add_after_commit(session, lambda client_id=client_id, title=title, message=message: fcm_service.send_to_user_after_commit(client_id, PushNotificationData(title=title, body=message)))
+        notification = await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=client_id, type=type, title=title, message=message, data=data, dedup_key=str(dedup_key) if dedup_key else None))
+        if notification is not None:
+            add_after_commit(session, lambda client_id=client_id, title=title, message=message: fcm_service.send_to_user_after_commit(client_id, PushNotificationData(title=title, body=message)))
 
     @staticmethod
     def queue_ride_status_event(session: AsyncSession, user_id: int | None, ride: RideSchema, previous_status: str, actor: str, reason: str | None) -> None:

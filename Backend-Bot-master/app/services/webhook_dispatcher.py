@@ -90,7 +90,7 @@ class WebhookDispatcher:
             title="Комиссия оплачена",
             message="Проверьте информацию о поездке",
             data=updated_ride.model_dump(mode='json'),
-            dedup_key=None,
+            dedup_key=f"ride:{updated_ride.id}:status:{transition.previous_status}:accepted:commission_paid",
         ))
         await in_app_notification_crud.create(session, InAppNotificationCreate(
             user_id=commission_payment.user_id,
@@ -98,7 +98,7 @@ class WebhookDispatcher:
             title='Комиссия оплачена',
             message='Ваша комиссия за поездку оплачена',
             data=updated.model_dump(mode='json'),
-            dedup_key=str(commission_payment.id),
+            dedup_key=f"commission_payment:{commission_payment.id}:paid",
         ))
         driver_profile = await driver_profile_crud.get_by_id(session, ride.driver_profile_id)
         driver_id = driver_profile.user_id if driver_profile else 0
@@ -134,7 +134,7 @@ class WebhookDispatcher:
             title='Комиссия не оплачена',
             message=f'Ваша комиссия за поездку не оплачена. Текущий статус платежа: {updated.status}',
             data=updated.model_dump(mode='json'),
-            dedup_key=f"failed_{commission_payment.payment_id}_{updated.status}",
+            dedup_key=f"commission_payment:{commission_payment.id}:failed:{updated.status}",
         ))
 
 

@@ -16,6 +16,7 @@ class AdminPushNotification(Base):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     operator_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     operator_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="processing")
     recipient_user_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     attempted_token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

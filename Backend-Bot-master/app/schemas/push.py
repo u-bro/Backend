@@ -41,7 +41,7 @@ class AdminPushSendRequest(BaseSchema):
 
 class AdminPushSendResponse(BaseSchema):
     history_id: int
-    status: Literal["sent", "partial", "failed"]
+    status: Literal["sent", "partial", "failed", "unknown"]
     recipient_user_count: int
     attempted_token_count: int
     success_count: int

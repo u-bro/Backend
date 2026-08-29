@@ -18,6 +18,7 @@ class BatchSendResult:
     success_count: int
     failure_count: int
     errors: tuple[str, ...] = ()
+    permanent_invalid_tokens: tuple[str, ...] = ()
 
 
 class FCMService:
@@ -152,6 +153,7 @@ class FCMService:
         success_count = 0
         failure_count = 0
         errors: list[str] = []
+        permanent_invalid_tokens: list[str] = []
 
         for offset in range(0, len(unique_tokens), batch_size):
             batch = unique_tokens[offset:offset + batch_size]
@@ -167,6 +169,9 @@ class FCMService:
                 if failure_types:
                     summary = ", ".join(f"{name}={count}" for name, count in sorted(failure_types.items()))
                     errors.append(f"FCM token failures: {summary}")
+                for token, item in zip(batch, getattr(response, "responses", ())):
+                    if not item.success and self._is_unregistered_error(item.exception):
+                        permanent_invalid_tokens.append(token)
             except Exception as exc:
                 logger.exception(f"FCM batch send failed at offset {offset}")
                 failure_count += len(batch)
@@ -177,25 +182,45 @@ class FCMService:
             success_count=success_count,
             failure_count=failure_count,
             errors=tuple(errors),
+            permanent_invalid_tokens=tuple(permanent_invalid_tokens),
         )
 
-    async def send_to_user(self, session: AsyncSession, user_id: int, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.BatchResponse | None:
-        tokens = await device_token_crud.get_by_user_id(session, user_id)
-        token_values = [t.token for t in tokens]
-        if not token_values:
-            return None
-        
-        result = None
-        try:
-            result = await self.send_to_tokens(token_values, payload)
-        except Exception as e:
-            logger.error(f"Error sending push notification to user {user_id}: {e}")
-        
+    @staticmethod
+    def _is_unregistered_error(exception: Exception | None) -> bool:
+        if exception is None:
+            return False
+        unregistered_error = getattr(messaging, "UnregisteredError", None)
+        return bool(
+            (unregistered_error and isinstance(exception, unregistered_error))
+            or getattr(exception, "code", None) == "UNREGISTERED"
+        )
+
+    async def send_to_user(
+        self,
+        session: AsyncSession,
+        user_id: int,
+        payload: Union[PushNotificationData, PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest],
+    ) -> BatchSendResult:
+        snapshots, _ = await device_token_crud.get_recipient_snapshots(session, user_id)
+        token_values = [snapshot.token for snapshot in snapshots]
+        result = await self.send_to_tokens_batched(token_values, payload)
+        if result.permanent_invalid_tokens:
+            invalid_tokens = set(result.permanent_invalid_tokens)
+            await device_token_crud.delete_snapshots(
+                session,
+                [snapshot for snapshot in snapshots if snapshot.token in invalid_tokens],
+            )
         return result
 
-    async def send_to_user_after_commit(self, user_id: int, payload: Union[PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest]) -> messaging.BatchResponse | None:
+    async def send_to_user_after_commit(
+        self,
+        user_id: int,
+        payload: Union[PushNotificationData, PushSendToUserRequest, PushSendToTokenRequest, PushSendToTopicRequest],
+    ) -> BatchSendResult:
         async with async_session_maker() as session:
-            return await self.send_to_user(session, user_id, payload)
+            result = await self.send_to_user(session, user_id, payload)
+            await session.commit()
+            return result
 
     async def send_to_topic(self, payload: PushSendToTopicRequest) -> str:
         await self.initialize()

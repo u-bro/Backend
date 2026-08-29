@@ -30,3 +30,4 @@ class TokenResponseRegister(TokenResponse):
 
 class RefreshTokenVerifyRequest(BaseSchema):
     refresh_token: str = Field(...)
+    device_token: str | None = Field(default=None, max_length=255)

@@ -146,8 +146,7 @@ async def notify_about_new_ride(ride_id: int) -> None:
 
                 add_after_commit(
                     session,
-                    lambda user_id=driver_profile.user_id, title=title, body=body, data=data: fcm_service.send_to_user(
-                        session,
+                    lambda user_id=driver_profile.user_id, title=title, body=body, data=data: fcm_service.send_to_user_after_commit(
                         user_id,
                         PushNotificationData(title=title, body=body, data=data),
                     ),

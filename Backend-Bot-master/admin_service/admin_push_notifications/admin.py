@@ -19,9 +19,10 @@ class AdminPushNotificationAdmin(admin.ModelAdmin):
         "attempted_token_count",
         "success_count",
         "failure_count",
+        "duplicate_fingerprint_link",
     )
     list_filter = ("audience", "status", "created_at")
-    search_fields = ("title", "body", "operator_name", "target_user_id")
+    search_fields = ("title", "body", "operator_name", "target_user_id", "fingerprint")
     readonly_fields = tuple(field.name for field in AdminPushNotification._meta.fields)
     ordering = ("-created_at", "-id")
 
@@ -34,6 +35,11 @@ class AdminPushNotificationAdmin(admin.ModelAdmin):
             reverse("admin:admin_users_user_change", args=[obj.target_user_id]),
             obj.target_user_id,
         )
+
+    @admin.display(description="Похожие отправки")
+    def duplicate_fingerprint_link(self, obj):
+        url = reverse("admin:admin_push_notifications_adminpushnotification_changelist")
+        return format_html('<a href="{}?q={}">По fingerprint</a>', url, obj.fingerprint)
 
     def has_add_permission(self, request):
         return False

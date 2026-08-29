@@ -14,6 +14,7 @@ class AdminPushNotification(models.Model):
         ("sent", "Отправлено"),
         ("partial", "Частично"),
         ("failed", "Ошибка"),
+        ("unknown", "Результат неизвестен"),
     )
 
     id = models.BigAutoField(primary_key=True)
@@ -23,6 +24,7 @@ class AdminPushNotification(models.Model):
     body = models.TextField()
     operator_id = models.BigIntegerField()
     operator_name = models.CharField(max_length=150)
+    fingerprint = models.CharField(max_length=64)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
     recipient_user_count = models.IntegerField(default=0)
     attempted_token_count = models.IntegerField(default=0)

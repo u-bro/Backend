@@ -96,7 +96,20 @@ def send_push_view(request):
         except PushAPITimeout as exc:
             messages.warning(request, str(exc))
         except PushAPIError as exc:
-            messages.error(request, str(exc))
+            if exc.code == "ADMIN_PUSH_DUPLICATE_RECENT" and exc.history_id:
+                history_url = reverse(
+                    "admin:admin_push_notifications_adminpushnotification_change",
+                    args=[exc.history_id],
+                )
+                messages.error(
+                    request,
+                    format_html(
+                        '{} <a href="{}">Открыть предыдущую отправку #{}</a>.',
+                        str(exc), history_url, exc.history_id,
+                    ),
+                )
+            else:
+                messages.error(request, str(exc))
         else:
             history_url = reverse("admin:admin_push_notifications_adminpushnotification_change", args=[result["history_id"]])
             message = format_html(

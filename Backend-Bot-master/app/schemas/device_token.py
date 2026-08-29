@@ -10,7 +10,7 @@ class DeviceTokenIn(BaseSchema):
 
 class DeviceTokenCreate(DeviceTokenIn):
     user_id: int = Field(..., gt=0)
-    created_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DeviceTokenUpdate(BaseSchema):

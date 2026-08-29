@@ -86,8 +86,9 @@ class CommissionPaymentCrud(CrudBase[CommissionPayment, CommissionPaymentSchema]
             if driver_profile:
                 payload = {"type": "ride_status_changed", "data": updated_ride.model_dump(mode="json"), "meta": {"previous_status": transition.previous_status, "actor": "system", "reason": "waiting_commission_timeout"}}
                 add_after_commit(session, lambda driver_id=driver_profile.user_id, payload=payload: manager_driver_feed.send_personal_message(driver_id, payload))
-            await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за истечения срока оплаты комиссии", data=updated_ride.model_dump(mode='json'), dedup_key=f"{updated_ride.id}_canceled"))
-            add_after_commit(session, lambda user_id=user_id: fcm_service.send_to_user_after_commit(user_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за истечения срока оплаты комиссии')))
+            notification = await in_app_notification_crud.create(session, InAppNotificationCreate(user_id=user_id, type="ride_canceled", title="Поездка отменена", message="Поездка отменена из-за истечения срока оплаты комиссии", data=updated_ride.model_dump(mode='json'), dedup_key=f"ride:{updated_ride.id}:canceled:commission_timeout"))
+            if notification is not None:
+                add_after_commit(session, lambda user_id=user_id: fcm_service.send_to_user_after_commit(user_id, PushNotificationData(title='Поездка отменена', body='Поездка отменена из-за истечения срока оплаты комиссии')))
             await driver_tracker.release_ride(session, updated_ride.driver_profile_id)
             await commit_with_callbacks(session)
 

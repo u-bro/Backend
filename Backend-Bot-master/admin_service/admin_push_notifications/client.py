@@ -8,7 +8,10 @@ logger = logging.getLogger(__name__)
 
 
 class PushAPIError(Exception):
-    pass
+    def __init__(self, message, *, code=None, history_id=None):
+        super().__init__(message)
+        self.code = code
+        self.history_id = history_id
 
 
 class PushAPITimeout(PushAPIError):
@@ -39,5 +42,14 @@ def send_push(payload):
             detail = response.json().get("detail")
         except (ValueError, AttributeError):
             detail = None
+        if isinstance(detail, dict):
+            code = detail.get("code")
+            history_id = detail.get("history_id")
+            message = (
+                "Такое push-уведомление уже отправлялось в последние 5 минут."
+                if code == "ADMIN_PUSH_DUPLICATE_RECENT"
+                else detail.get("message") or code
+            )
+            raise PushAPIError(message, code=code, history_id=history_id)
         raise PushAPIError(detail or f"Backend push-уведомлений вернул HTTP {response.status_code}.")
     return response.json()

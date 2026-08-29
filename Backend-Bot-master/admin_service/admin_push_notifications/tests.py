@@ -170,3 +170,24 @@ class PushClientTests(SimpleTestCase):
     def test_timeout_has_unknown_result_message(self, post):
         with self.assertRaisesRegex(PushAPITimeout, "Не повторяйте"):
             send_push({})
+
+    @override_settings(
+        PUSH_API_BASE_URL="http://backend:5000",
+        PUSH_API_TIMEOUT=12,
+        PUSH_INTERNAL_TOKEN="secret-from-settings",
+    )
+    @patch("admin_push_notifications.client.requests.post")
+    def test_duplicate_error_exposes_history(self, post):
+        post.return_value.status_code = 409
+        post.return_value.json.return_value = {
+            "detail": {
+                "code": "ADMIN_PUSH_DUPLICATE_RECENT",
+                "history_id": 42,
+            }
+        }
+
+        with self.assertRaises(PushAPIError) as exc_info:
+            send_push({})
+
+        self.assertEqual(exc_info.exception.code, "ADMIN_PUSH_DUPLICATE_RECENT")
+        self.assertEqual(exc_info.exception.history_id, 42)

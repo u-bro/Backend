@@ -2,6 +2,7 @@ from fastapi import Request, Depends
 from app.crud.phone_verification import phone_verification_crud
 from app.crud.auth import AuthCrud, auth_crud
 from app.crud.refresh_token import refresh_token_crud
+from app.crud.device_token import device_token_crud
 from app.schemas import AuthSchemaLogin, PhoneVerificationSchema, TokenResponse, RefreshTokenVerifyRequest, TokenResponseRegister
 from app.schemas.phone_verification import PhoneVerificationSchemaCreate, PhoneVerificationVerifyRequest, PhoneVerificationUpdate
 from app.backend.routers.base import BaseRouter
@@ -50,8 +51,19 @@ class AuthRouter(BaseRouter[AuthCrud]):
     async def refresh(self, request: Request, refresh_obj: RefreshTokenVerifyRequest) -> TokenResponse:
         return await self.model_crud.refresh(request.state.session, refresh_obj)
 
-    async def logout(self, request: Request, refresh_obj: RefreshTokenVerifyRequest) -> dict:
+    async def logout(
+        self,
+        request: Request,
+        refresh_obj: RefreshTokenVerifyRequest,
+        user_id: int = Depends(get_current_user_id),
+    ) -> dict:
         await refresh_token_crud.revoke(request.state.session, refresh_obj.refresh_token)
+        if refresh_obj.device_token:
+            await device_token_crud.delete_by_user_id_and_token(
+                request.state.session,
+                user_id,
+                refresh_obj.device_token,
+            )
         return {"ok": True}
 
     @staticmethod
