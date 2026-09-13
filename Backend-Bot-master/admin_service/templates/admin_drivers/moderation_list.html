@@ -1,8 +1,11 @@
 {% extends "admin/base_site.html" %}
+{% load static %}
 
 {% block title %}Модерация водителей{% endblock %}
 
 {% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin_dashboard/dashboard.css' %}">
 <style>
   .moderation-toolbar { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 18px; }
   .moderation-toolbar label { display: block; font-weight: 600; margin-bottom: 4px; }
@@ -19,6 +22,7 @@
 
 {% block content %}
 <div id="content-main">
+  {% include "admin/includes/entity_stats.html" %}
   <div class="moderation-count">Очередь модерации <span>{{ queue_count }}</span></div>
 
   <form method="get" class="moderation-toolbar">
@@ -68,4 +72,9 @@
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+<script src="{% static 'admin_dashboard/dashboard.js' %}" defer></script>
 {% endblock %}

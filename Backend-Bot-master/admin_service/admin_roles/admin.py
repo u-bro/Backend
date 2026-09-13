@@ -1,10 +1,11 @@
 from django.contrib import admin
 
 from .models import Role
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 @admin.register(Role)
-class RoleAdmin(admin.ModelAdmin):
+class RoleAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = ("id", "code", "name", "description", "created_at", "updated_at")
     list_editable = tuple([f for f in list_display if f != 'id'])
     list_filter = ("created_at", "updated_at")

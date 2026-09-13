@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 
 from utils.admin_links import safe_external_url
+from utils.admin_stats import entity_stats, get_entity_spec
 
 from .client import SupportAPIError, support_action
 from .models import SupportConversation, SupportMessage
@@ -99,6 +100,7 @@ def workspace(request, conversation_id=None):
             for attachment in item.attachments.all():
                 attachment.safe_url = safe_external_url(attachment.provider_url)
 
+    stats_spec = get_entity_spec("admin_support", "SupportConversation")
     context = {
         **admin.site.each_context(request),
         "title": "Поддержка",
@@ -111,6 +113,11 @@ def workspace(request, conversation_id=None):
         "open_count": open_count,
         "new_count": new_count,
         "closed_count": closed_count,
+        "entity_stats": entity_stats(stats_spec),
+        "entity_stats_url": reverse(
+            "admin-entity-stats",
+            args=(stats_spec.app_label, stats_spec.model_name),
+        ),
     }
     return render(request, "admin_support/workspace.html", context)
 

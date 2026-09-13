@@ -2,10 +2,11 @@ from django.contrib import admin
 
 from .models import CommissionPayment
 from utils.admin_links import ride_link, user_link
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 @admin.register(CommissionPayment)
-class CommissionPaymentAdmin(admin.ModelAdmin):
+class CommissionPaymentAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "ride_id_link",

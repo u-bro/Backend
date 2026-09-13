@@ -7,6 +7,7 @@ from .models import CarPhoto
 from admin_cars.models import Car
 from admin_drivers.models import DriverProfile
 from utils.admin_links import safe_external_url
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 class CarPhotoAdminForm(forms.ModelForm):
@@ -25,7 +26,7 @@ class CarPhotoAdminForm(forms.ModelForm):
 
 
 @admin.register(CarPhoto)
-class CarPhotoAdmin(admin.ModelAdmin):
+class CarPhotoAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     form = CarPhotoAdminForm
     list_display = (
         "id",

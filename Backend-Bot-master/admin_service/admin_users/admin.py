@@ -7,12 +7,13 @@ from django.utils.html import format_html
 import re
 from utils.api_client import api_client
 from utils.admin_links import safe_external_url
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 from .models import User
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     change_form_template = "admin/admin_users/user/change_form.html"
     list_display = (
         "id",

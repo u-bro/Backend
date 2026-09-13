@@ -3,10 +3,11 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from .models import AdminPushNotification
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 @admin.register(AdminPushNotification)
-class AdminPushNotificationAdmin(admin.ModelAdmin):
+class AdminPushNotificationAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     change_list_template = "admin/admin_push_notifications/adminpushnotification/change_list.html"
     list_display = (
         "id",

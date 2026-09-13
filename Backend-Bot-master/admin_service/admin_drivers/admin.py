@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.conf import settings
 from utils.api_client import api_client
 from utils.admin_links import user_link
+from utils.admin_stats_admin import EntityStatsAdminMixin
 from utils.schema_choices import RIDE_CLASS_CHOICES
 
 from admin_car_photos.models import CarPhoto
@@ -84,7 +85,7 @@ class DriverProfileChangelistForm(forms.ModelForm):
 
 
 @admin.register(DriverModerationInfo)
-class DriverModerationInfoAdmin(admin.ModelAdmin):
+class DriverModerationInfoAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "code",
@@ -109,7 +110,7 @@ class DriverProfileModerationInline(admin.TabularInline):
 
 
 @admin.register(DriverProfileModeration)
-class DriverProfileModerationAdmin(admin.ModelAdmin):
+class DriverProfileModerationAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "driver_profile",
@@ -122,7 +123,7 @@ class DriverProfileModerationAdmin(admin.ModelAdmin):
 
 
 @admin.register(DriverProfile)
-class DriverProfileAdmin(admin.ModelAdmin):
+class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     form = DriverProfileAdminForm
     inlines = (DriverProfileModerationInline,)
     list_display = (

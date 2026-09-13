@@ -1,12 +1,13 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.contrib import admin
 from django.contrib.auth.models import AnonymousUser
+from django.http import Http404
 from django.test import RequestFactory, SimpleTestCase
 from django.template.loader import get_template
-from django.urls import reverse
+from django.urls import resolve, reverse
 
 from admin_cars.admin import CarAdmin
 from admin_cars.models import Car
@@ -30,6 +31,9 @@ from admin_rides.models import Ride
 from admin_users.admin import UserAdmin
 from admin_users.models import User
 from utils.admin_links import admin_change_link, driver_profile_link, safe_external_url
+from utils.admin_stats import ENTITY_SPECS, entity_stats, get_entity_spec
+from utils.admin_stats_admin import EntityStatsAdminMixin
+from .dashboard_views import FAILED_PAYMENT_STATUSES, PAYMENT_STATUS_LABELS, _can_view_model
 
 from .settings import (
     DRIVER_PROFILE_INITIAL_RATING_AVG,
@@ -254,6 +258,9 @@ class ModelAdminCheckTests(SimpleTestCase):
 
     def test_custom_templates_load(self):
         for template_name in (
+            "admin/dashboard.html",
+            "admin/entity_stats_change_list.html",
+            "admin/includes/entity_stats.html",
             "admin_drivers/moderation_detail.html",
             "admin/admin_cars/car/change_form.html",
             "admin/admin_users/user/change_form.html",
@@ -261,6 +268,120 @@ class ModelAdminCheckTests(SimpleTestCase):
         ):
             with self.subTest(template=template_name):
                 self.assertIsNotNone(get_template(template_name))
+
+    def test_all_business_model_admins_use_entity_stats_mixin(self):
+        for spec in ENTITY_SPECS:
+            if spec.app_label == "admin_support":
+                continue
+            with self.subTest(model=spec.key):
+                self.assertIsInstance(
+                    admin.site._registry[spec.model],
+                    EntityStatsAdminMixin,
+                )
+
+
+class EntityStatsTests(SimpleTestCase):
+    @patch.object(User._default_manager, "aggregate")
+    def test_entity_stats_returns_total_and_sliding_24_hour_count(self, aggregate):
+        aggregate.return_value = {"total": 120, "new_24h": 7}
+        now = datetime(2026, 9, 13, 12, 0, tzinfo=timezone.utc)
+        spec = get_entity_spec("admin_users", "User")
+
+        result = entity_stats(spec, now=now)
+
+        self.assertEqual(result["total"], 120)
+        self.assertEqual(result["new_24h"], 7)
+        self.assertTrue(result["available"])
+        recent_count = aggregate.call_args.kwargs["new_24h"]
+        self.assertEqual(
+            recent_count.filter.children,
+            [("created_at__gte", now - timedelta(hours=24))],
+        )
+
+    def test_only_whitelisted_business_models_are_resolved(self):
+        self.assertIsNotNone(get_entity_spec("admin_rides", "Ride"))
+        self.assertIsNone(get_entity_spec("auth", "User"))
+        self.assertIsNone(get_entity_spec("axes", "AccessAttempt"))
+
+    def test_tbank_confirmed_payment_is_not_reported_as_problem(self):
+        self.assertNotIn("CONFIRMED", FAILED_PAYMENT_STATUSES)
+        self.assertEqual(PAYMENT_STATUS_LABELS["CONFIRMED"], "Оплачены")
+        self.assertIn("AUTH_FAIL", FAILED_PAYMENT_STATUSES)
+
+    def test_recent_records_follow_model_view_permission(self):
+        request = SimpleNamespace(user=MagicMock())
+        model_admin = admin.site._registry[User]
+        with patch.object(model_admin, "has_view_permission", return_value=False):
+            self.assertFalse(_can_view_model(request, User))
+
+
+class DashboardTemplateTests(SimpleTestCase):
+    def setUp(self):
+        self.request = RequestFactory().get("/admin/")
+        self.request.user = AnonymousUser()
+
+    def test_admin_root_resolves_to_operational_dashboard(self):
+        self.assertEqual(resolve("/admin/").url_name, "admin-dashboard")
+        self.assertEqual(reverse("admin-dashboard-stats"), "/admin/dashboard/stats/")
+
+    def test_stats_endpoints_require_staff_and_reject_system_models(self):
+        anonymous_request = RequestFactory().get("/admin/dashboard/stats/")
+        anonymous_request.user = AnonymousUser()
+        anonymous_response = resolve("/admin/dashboard/stats/").func(anonymous_request)
+        self.assertEqual(anonymous_response.status_code, 302)
+
+        staff_request = RequestFactory().get("/admin/entity-stats/auth/user/")
+        staff_request.user = SimpleNamespace(is_active=True, is_staff=True)
+        with self.assertRaises(Http404):
+            resolve("/admin/entity-stats/auth/user/").func(
+                staff_request,
+                app_label="auth",
+                model_name="user",
+            )
+
+    def test_dashboard_renders_cards_attention_and_statuses(self):
+        template = get_template("admin/dashboard.html")
+        context = {
+            **admin.site.each_context(self.request),
+            "dashboard_stats_url": reverse("admin-dashboard-stats"),
+            "dashboard": {
+                "cards": [{
+                    "key": "admin_users.User",
+                    "label": "Пользователи",
+                    "icon": "fas fa-users",
+                    "url": None,
+                    "total": 25,
+                    "new_24h": 4,
+                    "available": True,
+                }],
+                "attention": {
+                    "moderation_queue": 2,
+                    "open_support": 3,
+                    "unread_support": 1,
+                    "active_rides": 5,
+                    "failed_pushes": 0,
+                    "problem_payments": 1,
+                },
+                "statuses": {
+                    "drivers": {"На модерации": 2},
+                    "rides": {"Ожидает": 5},
+                    "support": {"Открытые": 3},
+                    "pushes": {"Отправлено": 9},
+                    "payments": {"Оплачены": 7},
+                },
+            },
+            "recent_users": [],
+            "recent_drivers": [],
+            "recent_rides": [],
+            "recent_support": [],
+        }
+
+        rendered = template.render(context, self.request)
+
+        self.assertIn("Операционный дашборд", rendered)
+        self.assertIn("Пользователи", rendered)
+        self.assertIn("+4 за 24 часа", rendered)
+        self.assertIn('data-dashboard-endpoint="/admin/dashboard/stats/"', rendered)
 
 
 class SupportWorkspaceTemplateTests(SimpleTestCase):

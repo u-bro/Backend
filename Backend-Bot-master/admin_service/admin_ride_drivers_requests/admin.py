@@ -2,10 +2,11 @@ from django.contrib import admin
 
 from .models import RideDriversRequest
 from utils.admin_links import driver_profile_link, ride_link
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 @admin.register(RideDriversRequest)
-class RideDriversRequestAdmin(admin.ModelAdmin):
+class RideDriversRequestAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "ride_id_link",

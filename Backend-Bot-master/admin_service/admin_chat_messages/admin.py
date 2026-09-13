@@ -2,10 +2,11 @@ from django.contrib import admin
 
 from .models import ChatMessage
 from utils.admin_links import ride_link, user_link
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 @admin.register(ChatMessage)
-class ChatMessageAdmin(admin.ModelAdmin):
+class ChatMessageAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "ride_id_link",

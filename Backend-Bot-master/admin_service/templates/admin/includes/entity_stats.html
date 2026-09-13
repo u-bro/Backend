@@ -1,0 +1,19 @@
+{% if entity_stats %}
+<section class="entity-stats"
+         data-stats-endpoint="{{ entity_stats_url }}"
+         aria-label="Статистика раздела">
+  <div class="entity-stats__identity">
+    <span class="entity-stats__eyebrow">Статистика раздела</span>
+    <strong class="entity-stats__title">{{ entity_stats.label }}</strong>
+  </div>
+  <div class="entity-stats__metric">
+    <span class="entity-stats__value" data-stat="total">{% if entity_stats.total != None %}{{ entity_stats.total }}{% else %}—{% endif %}</span>
+    <span class="entity-stats__label">всего</span>
+  </div>
+  <div class="entity-stats__metric entity-stats__metric--new">
+    <span class="entity-stats__value" data-stat="new_24h">{% if entity_stats.new_24h != None %}+{{ entity_stats.new_24h }}{% else %}—{% endif %}</span>
+    <span class="entity-stats__label">за последние 24 часа</span>
+  </div>
+  <span class="entity-stats__updated" data-stats-updated aria-live="polite">Обновлено при загрузке</span>
+</section>
+{% endif %}

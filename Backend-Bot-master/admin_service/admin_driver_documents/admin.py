@@ -6,10 +6,11 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from .models import DriverDocument
 from utils.s3_storage import s3_storage
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 @admin.register(DriverDocument)
-class DriverDocumentAdmin(admin.ModelAdmin):
+class DriverDocumentAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "driver_profile_id",

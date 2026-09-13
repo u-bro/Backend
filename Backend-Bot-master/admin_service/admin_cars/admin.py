@@ -9,6 +9,7 @@ from admin_car_photos.models import CarPhoto
 from admin_driver_documents.models import DriverDocument
 from admin_drivers.models import DriverProfile
 from utils.admin_links import driver_profile_link, safe_external_url
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 class CarAdminForm(forms.ModelForm):
@@ -24,7 +25,7 @@ class CarAdminForm(forms.ModelForm):
 
 
 @admin.register(Car)
-class CarAdmin(admin.ModelAdmin):
+class CarAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     form = CarAdminForm
     change_form_template = "admin/admin_cars/car/change_form.html"
     list_display = (

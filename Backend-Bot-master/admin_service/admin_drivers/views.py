@@ -20,6 +20,7 @@ from admin_rides.models import Ride
 from admin_users.models import User
 from utils.api_client import api_client
 from utils.admin_links import car_link, safe_external_url, user_link
+from utils.admin_stats import entity_stats, get_entity_spec
 
 from .forms import DriverCarForm, DriverModerationForm
 from .models import DriverModerationInfo, DriverProfile, DriverProfileModeration
@@ -138,6 +139,7 @@ def moderation_list(request):
         )
 
     profiles = profiles.order_by("status_order", "-updated_at", "-id")
+    stats_spec = get_entity_spec("admin_drivers", "DriverProfile")
     return render(
         request,
         "admin_drivers/moderation_list.html",
@@ -148,6 +150,11 @@ def moderation_list(request):
             "search_query": query,
             "status_choices": [(key, STATUS_LABELS[key]) for key in MODERATION_STATUSES],
             "query_params": _status_url_params(request),
+            "entity_stats": entity_stats(stats_spec),
+            "entity_stats_url": reverse(
+                "admin-entity-stats",
+                args=(stats_spec.app_label, stats_spec.model_name),
+            ),
         },
     )
 

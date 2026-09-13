@@ -6,6 +6,7 @@ from .policy_views import policy_management_view, policy_preview_view
 from admin_drivers.views import moderation_detail, moderation_list
 from admin_support.views import conversation_action, unread_count, workspace
 from admin_push_notifications.views import send_push_view, user_search
+from .dashboard_views import dashboard_stats, dashboard_view, entity_stats_view
 
 
 class AdminAuthenticationForm(AuthenticationForm):
@@ -20,6 +21,9 @@ class AdminAuthenticationForm(AuthenticationForm):
 admin.site.login_form = AdminAuthenticationForm
 
 urlpatterns = [
+    path('admin/', admin.site.admin_view(dashboard_view), name='admin-dashboard'),
+    path('admin/dashboard/stats/', admin.site.admin_view(dashboard_stats), name='admin-dashboard-stats'),
+    path('admin/entity-stats/<str:app_label>/<str:model_name>/', admin.site.admin_view(entity_stats_view), name='admin-entity-stats'),
     path('admin/push-notifications/send/', admin.site.admin_view(send_push_view), name='admin-push-send'),
     path('admin/push-notifications/users/search/', admin.site.admin_view(user_search), name='admin-push-user-search'),
     path('admin/driver-moderation/', admin.site.admin_view(moderation_list), name='driver-moderation-list'),

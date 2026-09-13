@@ -1,10 +1,11 @@
 from django.contrib import admin
 
 from .models import Commission
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 @admin.register(Commission)
-class CommissionAdmin(admin.ModelAdmin):
+class CommissionAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "name",

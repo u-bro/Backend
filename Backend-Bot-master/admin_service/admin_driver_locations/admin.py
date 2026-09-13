@@ -2,10 +2,11 @@ from django.contrib import admin
 
 from .models import DriverLocation
 from utils.admin_links import driver_profile_link
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 @admin.register(DriverLocation)
-class DriverLocationAdmin(admin.ModelAdmin):
+class DriverLocationAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "driver_profile_id_link",

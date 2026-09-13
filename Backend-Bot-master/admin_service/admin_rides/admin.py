@@ -7,6 +7,7 @@ from django.utils.safestring import mark_safe
 from django.utils import timezone
 from utils.api_client import api_client
 from utils.admin_links import driver_profile_link, user_link
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 from admin_ride_drivers_requests.models import RideDriversRequest
 from .models import Ride
@@ -23,7 +24,7 @@ class RideActionForm(forms.Form):
 
 
 @admin.register(Ride)
-class RideAdmin(admin.ModelAdmin):
+class RideAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "client_id_link",

@@ -2,10 +2,11 @@ from django.contrib import admin
 
 from .models import RideStatusHistory
 from utils.admin_links import ride_link
+from utils.admin_stats_admin import EntityStatsAdminMixin
 
 
 @admin.register(RideStatusHistory)
-class RideStatusHistoryAdmin(admin.ModelAdmin):
+class RideStatusHistoryAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_display = (
         "id",
         "ride_id_link",
