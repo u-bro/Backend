@@ -86,7 +86,7 @@
         label.className = 'ops-status-row__label';
         track.className = 'ops-status-row__track';
         bar.className = 'ops-status-row__bar';
-        bar.style.setProperty('--status-ratio', Math.max(4, count / maxValue * 100) + '%');
+        bar.style.setProperty('--status-ratio', Math.max(0, count / maxValue * 100) + '%');
         label.appendChild(dot);
         label.appendChild(document.createTextNode(status));
         track.appendChild(bar);
@@ -125,6 +125,19 @@
     refreshEntities();
     refreshDashboard();
   }
+
+  // Size server-rendered bars immediately, before the first polling interval.
+  document.querySelectorAll('.ops-status-list').forEach(function (list) {
+    var rows = Array.from(list.querySelectorAll('.ops-status-row'));
+    var counts = rows.map(function (row) {
+      return Number(row.querySelector('strong').textContent.replace(/\s/g, '')) || 0;
+    });
+    var maxValue = Math.max.apply(null, counts.concat([1]));
+    rows.forEach(function (row, index) {
+      var bar = row.querySelector('.ops-status-row__bar');
+      if (bar) bar.style.setProperty('--status-ratio', Math.max(0, counts[index] / maxValue * 100) + '%');
+    });
+  });
 
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) refreshAll();
