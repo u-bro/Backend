@@ -99,6 +99,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 SUPPORT_API_BASE_URL = os.getenv('SUPPORT_API_BASE_URL', 'http://fastapi_app:5000')
 SUPPORT_API_TIMEOUT = int(os.getenv('SUPPORT_API_TIMEOUT', '10'))

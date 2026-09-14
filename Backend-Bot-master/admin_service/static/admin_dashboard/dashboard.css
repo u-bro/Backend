@@ -35,6 +35,10 @@
   --ops-shadow: 0 8px 24px rgba(32, 59, 54, .035);
   border-radius: 28px;
   font-variant-numeric: tabular-nums;
+  /* Jazzmin places the content block directly inside a Bootstrap flex row. */
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 0;
   background: var(--ops-page-bg);
   color: var(--ops-ink);
   display: grid;
