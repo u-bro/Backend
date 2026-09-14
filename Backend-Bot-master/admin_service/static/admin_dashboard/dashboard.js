@@ -67,19 +67,32 @@
       if (!groupNode) return;
       var list = groupNode.querySelector('.ops-status-list');
       if (!list) return;
+      var values = Object.keys(data.statuses[group]).map(function (status) {
+        return Number(data.statuses[group][status]) || 0;
+      });
+      var maxValue = Math.max.apply(null, values.concat([1]));
       list.textContent = '';
       Object.keys(data.statuses[group]).forEach(function (status) {
+        var count = Number(data.statuses[group][status]) || 0;
         var row = document.createElement('div');
         var label = document.createElement('span');
         var dot = document.createElement('i');
+        var track = document.createElement('span');
+        var bar = document.createElement('span');
         var value = document.createElement('strong');
         row.className = 'ops-status-row';
         row.dataset.statusKey = status;
         dot.setAttribute('aria-hidden', 'true');
+        label.className = 'ops-status-row__label';
+        track.className = 'ops-status-row__track';
+        bar.className = 'ops-status-row__bar';
+        bar.style.setProperty('--status-ratio', Math.max(4, count / maxValue * 100) + '%');
         label.appendChild(dot);
         label.appendChild(document.createTextNode(status));
-        value.textContent = data.statuses[group][status];
+        track.appendChild(bar);
+        value.textContent = count;
         row.appendChild(label);
+        row.appendChild(track);
         row.appendChild(value);
         list.appendChild(row);
       });

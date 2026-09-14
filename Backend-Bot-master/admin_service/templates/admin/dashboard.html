@@ -11,10 +11,15 @@
 {% block content %}
 <main class="ops-dashboard" data-dashboard-endpoint="{{ dashboard_stats_url }}">
   <header class="ops-dashboard__hero">
-    <div>
+    <div class="ops-dashboard__hero-copy">
       <span class="ops-dashboard__eyebrow">U-Bro · центр управления</span>
       <h1>Операционный дашборд</h1>
       <p>Ключевые показатели сервиса и задачи, которые требуют внимания.</p>
+      <div class="ops-hero-actions">
+        {% if can_view_drivers %}<a class="ops-hero-action" href="{% url 'driver-moderation-list' %}"><i class="fas fa-user-check" aria-hidden="true"></i>Модерация</a>{% endif %}
+        {% if can_view_support %}<a class="ops-hero-action" href="{% url 'support-workspace' %}"><i class="fas fa-headset" aria-hidden="true"></i>Поддержка</a>{% endif %}
+        {% if can_view_rides %}<a class="ops-hero-action" href="{% url 'admin:admin_rides_ride_changelist' %}"><i class="fas fa-route" aria-hidden="true"></i>Поездки</a>{% endif %}
+      </div>
     </div>
     <div class="ops-dashboard__refresh">
       <span class="ops-dashboard__live-dot" aria-hidden="true"></span>
@@ -22,6 +27,7 @@
     </div>
   </header>
 
+  <div class="ops-section-shell">
   <section class="ops-section" aria-labelledby="overview-title">
     <div class="ops-section__heading">
       <div><span>Обзор</span><h2 id="overview-title">Бизнес-сущности</h2></div>
@@ -41,21 +47,25 @@
       {% endfor %}
     </div>
   </section>
+  </div>
 
+  <div class="ops-section-shell">
   <section class="ops-section" aria-labelledby="attention-title">
     <div class="ops-section__heading">
       <div><span>Сейчас</span><h2 id="attention-title">Требуют внимания</h2></div>
     </div>
     <div class="ops-attention-grid">
-      <a class="ops-attention ops-attention--warn" href="{% url 'driver-moderation-list' %}"><span>Очередь модерации</span><strong data-attention="moderation_queue">{{ dashboard.attention.moderation_queue|default_if_none:"—" }}</strong></a>
-      <a class="ops-attention" href="{% url 'support-workspace' %}"><span>Открытые обращения</span><strong data-attention="open_support">{{ dashboard.attention.open_support|default_if_none:"—" }}</strong></a>
-      <a class="ops-attention ops-attention--danger" href="{% url 'support-workspace' %}?unread=1"><span>Непрочитанные обращения</span><strong data-attention="unread_support">{{ dashboard.attention.unread_support|default_if_none:"—" }}</strong></a>
-      <a class="ops-attention" href="{% url 'admin:admin_rides_ride_changelist' %}"><span>Незавершённые поездки</span><strong data-attention="active_rides">{{ dashboard.attention.active_rides|default_if_none:"—" }}</strong></a>
-      <a class="ops-attention ops-attention--danger" href="{% url 'admin:admin_push_notifications_adminpushnotification_changelist' %}"><span>Push с ошибками</span><strong data-attention="failed_pushes">{{ dashboard.attention.failed_pushes|default_if_none:"—" }}</strong></a>
-      <a class="ops-attention ops-attention--warn" href="{% url 'admin:admin_commission_payments_commissionpayment_changelist' %}"><span>Платежи с ошибкой</span><strong data-attention="problem_payments">{{ dashboard.attention.problem_payments|default_if_none:"—" }}</strong></a>
+      <a class="ops-attention ops-attention--warn" href="{% url 'driver-moderation-list' %}"><span class="ops-attention__icon"><i class="fas fa-user-clock" aria-hidden="true"></i></span><span class="ops-attention__copy">Очередь модерации</span><strong data-attention="moderation_queue">{{ dashboard.attention.moderation_queue|default_if_none:"—" }}</strong></a>
+      <a class="ops-attention" href="{% url 'support-workspace' %}"><span class="ops-attention__icon"><i class="fas fa-headset" aria-hidden="true"></i></span><span class="ops-attention__copy">Открытые обращения</span><strong data-attention="open_support">{{ dashboard.attention.open_support|default_if_none:"—" }}</strong></a>
+      <a class="ops-attention ops-attention--danger" href="{% url 'support-workspace' %}?unread=1"><span class="ops-attention__icon"><i class="fas fa-inbox" aria-hidden="true"></i></span><span class="ops-attention__copy">Непрочитанные обращения</span><strong data-attention="unread_support">{{ dashboard.attention.unread_support|default_if_none:"—" }}</strong></a>
+      <a class="ops-attention" href="{% url 'admin:admin_rides_ride_changelist' %}"><span class="ops-attention__icon"><i class="fas fa-route" aria-hidden="true"></i></span><span class="ops-attention__copy">Незавершённые поездки</span><strong data-attention="active_rides">{{ dashboard.attention.active_rides|default_if_none:"—" }}</strong></a>
+      <a class="ops-attention ops-attention--danger" href="{% url 'admin:admin_push_notifications_adminpushnotification_changelist' %}"><span class="ops-attention__icon"><i class="fas fa-bell-slash" aria-hidden="true"></i></span><span class="ops-attention__copy">Push с ошибками</span><strong data-attention="failed_pushes">{{ dashboard.attention.failed_pushes|default_if_none:"—" }}</strong></a>
+      <a class="ops-attention ops-attention--warn" href="{% url 'admin:admin_commission_payments_commissionpayment_changelist' %}"><span class="ops-attention__icon"><i class="fas fa-credit-card" aria-hidden="true"></i></span><span class="ops-attention__copy">Платежи с ошибкой</span><strong data-attention="problem_payments">{{ dashboard.attention.problem_payments|default_if_none:"—" }}</strong></a>
     </div>
   </section>
+  </div>
 
+  <div class="ops-section-shell">
   <section class="ops-section" aria-labelledby="status-title">
     <div class="ops-section__heading">
       <div><span>Структура</span><h2 id="status-title">Распределение по статусам</h2></div>
@@ -63,28 +73,43 @@
     <div class="ops-status-grid">
       {% for group, rows in dashboard.statuses.items %}
       <article class="ops-status-card" data-status-group="{{ group }}">
-        <h3>{% if group == 'drivers' %}Водители{% elif group == 'rides' %}Поездки{% elif group == 'support' %}Поддержка{% elif group == 'pushes' %}Push-уведомления{% else %}Платежи{% endif %}</h3>
+        <h3><span class="ops-status-card__icon"><i class="fas fa-chart-pie" aria-hidden="true"></i></span>{% if group == 'drivers' %}Водители{% elif group == 'rides' %}Поездки{% elif group == 'support' %}Поддержка{% elif group == 'pushes' %}Push-уведомления{% else %}Платежи{% endif %}</h3>
         <div class="ops-status-list">
           {% for status, count in rows.items %}
-          <div class="ops-status-row" data-status-key="{{ status }}"><span><i aria-hidden="true"></i>{{ status }}</span><strong>{{ count }}</strong></div>
+          <div class="ops-status-row" data-status-key="{{ status }}"><span class="ops-status-row__label"><i aria-hidden="true"></i>{{ status }}</span><span class="ops-status-row__track"><span class="ops-status-row__bar" aria-hidden="true"></span></span><strong>{{ count }}</strong></div>
           {% empty %}<p class="ops-empty">Нет данных</p>{% endfor %}
         </div>
       </article>
       {% endfor %}
     </div>
   </section>
+  </div>
 
+  <div class="ops-section-shell">
   <section class="ops-section" aria-labelledby="recent-title">
     <div class="ops-section__heading">
       <div><span>Последние события</span><h2 id="recent-title">Недавно добавленные</h2></div>
     </div>
     <div class="ops-recent-grid">
-      {% if can_view_users %}<article class="ops-recent-card"><h3>Пользователи</h3>{% for item in recent_users %}<a href="{% url 'admin:admin_users_user_change' item.id %}"><span>#{{ item.id }} · {{ item.phone|default:"Без телефона" }}</span><time>{{ item.created_at|date:"d.m H:i" }}</time></a>{% empty %}<p>Нет записей</p>{% endfor %}</article>{% endif %}
-      {% if can_view_drivers %}<article class="ops-recent-card"><h3>Водители</h3>{% for item in recent_drivers %}<a href="{% url 'driver-moderation-detail' item.id %}?from=profiles"><span>#{{ item.id }} · {{ item|default:"Без имени" }}</span><time>{{ item.created_at|date:"d.m H:i" }}</time></a>{% empty %}<p>Нет записей</p>{% endfor %}</article>{% endif %}
-      {% if can_view_rides %}<article class="ops-recent-card"><h3>Поездки</h3>{% for item in recent_rides %}<a href="{% url 'admin:admin_rides_ride_change' item.id %}"><span>#{{ item.id }} · {{ item.status|default:"без статуса" }}</span><time>{{ item.created_at|date:"d.m H:i" }}</time></a>{% empty %}<p>Нет записей</p>{% endfor %}</article>{% endif %}
-      {% if can_view_support %}<article class="ops-recent-card"><h3>Поддержка</h3>{% for item in recent_support %}<a href="{% url 'support-conversation' item.id %}"><span>#{{ item.id }} · {{ item.contact_label }}</span><time>{{ item.created_at|date:"d.m H:i" }}</time></a>{% empty %}<p>Нет записей</p>{% endfor %}</article>{% endif %}
+      {% if can_view_users %}<article class="ops-recent-card">
+        <h3><span class="ops-recent-card__icon"><i class="fas fa-users" aria-hidden="true"></i></span>Пользователи</h3>
+        {% for item in recent_users %}<a href="{% url 'admin:admin_users_user_change' item.id %}"><span class="ops-recent-avatar">{{ item.get_full_name|default:item.phone|slice:":1"|upper }}</span><span class="ops-recent-item"><strong>{{ item.phone|default:"Без телефона" }}</strong><small>#{{ item.id }}</small></span><time>{{ item.created_at|date:"d.m H:i" }}</time></a>{% empty %}<p>Нет записей</p>{% endfor %}
+      </article>{% endif %}
+      {% if can_view_drivers %}<article class="ops-recent-card">
+        <h3><span class="ops-recent-card__icon"><i class="fas fa-id-card" aria-hidden="true"></i></span>Водители</h3>
+        {% for item in recent_drivers %}<a href="{% url 'driver-moderation-detail' item.id %}?from=profiles"><span class="ops-recent-avatar">{{ item.first_name|default:"В"|slice:":1"|upper }}</span><span class="ops-recent-item"><strong>{{ item|default:"Водитель" }}</strong><small>#{{ item.id }}</small></span><time>{{ item.created_at|date:"d.m H:i" }}</time></a>{% empty %}<p>Нет записей</p>{% endfor %}
+      </article>{% endif %}
+      {% if can_view_rides %}<article class="ops-recent-card">
+        <h3><span class="ops-recent-card__icon"><i class="fas fa-route" aria-hidden="true"></i></span>Поездки</h3>
+        {% for item in recent_rides %}<a href="{% url 'admin:admin_rides_ride_change' item.id %}"><span class="ops-recent-avatar ops-recent-avatar--icon"><i class="fas fa-route" aria-hidden="true"></i></span><span class="ops-recent-item"><strong>{{ item.status|default:"без статуса" }}</strong><small>#{{ item.id }}</small></span><time>{{ item.created_at|date:"d.m H:i" }}</time></a>{% empty %}<p>Нет записей</p>{% endfor %}
+      </article>{% endif %}
+      {% if can_view_support %}<article class="ops-recent-card">
+        <h3><span class="ops-recent-card__icon"><i class="fas fa-headset" aria-hidden="true"></i></span>Поддержка</h3>
+        {% for item in recent_support %}<a href="{% url 'support-conversation' item.id %}"><span class="ops-recent-avatar">{{ item.contact_label|default:"О"|slice:":1"|upper }}</span><span class="ops-recent-item"><strong>{{ item.contact_label|default:"Обращение" }}</strong><small>#{{ item.id }}</small></span><time>{{ item.created_at|date:"d.m H:i" }}</time></a>{% empty %}<p>Нет записей</p>{% endfor %}
+      </article>{% endif %}
     </div>
   </section>
+  </div>
 </main>
 {% endblock %}
 
