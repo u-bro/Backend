@@ -1,3 +1,4 @@
+from utils.admin_permissions import has_service_permission
 from django.contrib import admin
 
 from .models import DriverLocation
@@ -30,7 +31,7 @@ class DriverLocationAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
-        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator"))
 
     def has_delete_permission(self, request, obj=None):
-        return request.user.groups.filter(name='Admin').exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.delete_{self.opts.model_name}", ("Admin",))

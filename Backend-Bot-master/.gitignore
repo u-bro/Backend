@@ -15,6 +15,7 @@ test*.py
 !tests/services/test_new_ride_notifications.py
 !tests/services/test_admin_push.py
 !admin_service/admin_project/tests.py
+!admin_service/admin_roles/tests.py
 !admin_service/admin_drivers/tests.py
 !admin_service/admin_push_notifications/tests.py
 

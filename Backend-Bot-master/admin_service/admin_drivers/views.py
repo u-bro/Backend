@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from utils.admin_permissions import has_service_permission
+
 from collections import defaultdict
 from urllib.parse import urlencode
 
@@ -47,8 +49,7 @@ REQUIRED_DOCUMENT_TYPES = (
 
 def _is_moderator(request):
     return request.user.is_authenticated and (
-        request.user.is_superuser
-        or request.user.groups.filter(name__in=("Admin", "Operator")).exists()
+        has_service_permission(request.user, "admin_drivers.change_driverprofile", ("Admin", "Operator"))
     )
 
 

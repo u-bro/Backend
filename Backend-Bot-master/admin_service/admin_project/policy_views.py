@@ -1,3 +1,4 @@
+from utils.admin_permissions import has_service_permission
 from django.contrib import admin, messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import Http404, HttpResponse, HttpResponseRedirect
@@ -23,7 +24,7 @@ def _validate_policy_key(policy_key: str) -> None:
 
 
 def _has_policy_access(user) -> bool:
-    return user.is_superuser or user.groups.filter(name="Admin").exists()
+    return has_service_permission(user, "auth.manage_service_policies", ("Admin",))
 
 
 @staff_member_required

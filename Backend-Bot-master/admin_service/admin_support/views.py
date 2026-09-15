@@ -1,3 +1,4 @@
+from utils.admin_permissions import has_service_permission
 import uuid
 
 from django.contrib import admin, messages
@@ -19,7 +20,7 @@ def can_access_support(user):
     return bool(
         user.is_active
         and user.is_staff
-        and (user.is_superuser or user.groups.filter(name__in=("Admin", "Operator")).exists())
+        and (has_service_permission(user, "admin_support.view_supportconversation", ("Admin", "Operator")))
     )
 
 

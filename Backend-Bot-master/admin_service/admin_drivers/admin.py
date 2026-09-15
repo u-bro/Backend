@@ -1,3 +1,4 @@
+from utils.admin_permissions import has_service_permission
 from django import forms
 from django.contrib import admin
 from django.contrib import messages
@@ -103,10 +104,10 @@ class DriverProfileModerationInline(admin.TabularInline):
     readonly_fields = ("created_at",)
 
     def has_add_permission(self, request, obj=None):
-        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.add_{self.opts.model_name}", ("Admin", "Operator"))
 
     def has_delete_permission(self, request, obj=None):
-        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.delete_{self.opts.model_name}", ("Admin", "Operator"))
 
 
 @admin.register(DriverProfileModeration)
@@ -207,13 +208,13 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         return readonly
 
     def has_add_permission(self, request): 
-        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.add_{self.opts.model_name}", ("Admin", "Operator"))
 
     def has_change_permission(self, request, obj=None):  
-        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator"))
 
     def has_delete_permission(self, request, obj=None):  
-        return request.user.groups.filter(name='Admin').exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.delete_{self.opts.model_name}", ("Admin",))
 
     def user_is_active(self, obj):  
         try:
@@ -284,7 +285,7 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
             Car.objects.filter(id__in=car_ids).delete()
 
     def approve_drivers(self, request, queryset):
-        if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
+        if not has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator")):
             self.message_user(request, "No permission", messages.ERROR)
             return
 
@@ -303,7 +304,7 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         self.message_user(request, f"Approved {count} drivers", messages.SUCCESS)
 
     def reject_drivers(self, request, queryset):
-        if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
+        if not has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator")):
             self.message_user(request, "No permission", messages.ERROR)
             return
             
@@ -316,7 +317,7 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         self.message_user(request, f"Rejected {count} drivers", messages.SUCCESS)
 
     def block_drivers(self, request, queryset):  
-        if not request.user.groups.filter(name='Admin').exists():
+        if not has_service_permission(request.user, "admin_users.change_user", ("Admin",)):
             self.message_user(request, "Only Admin can block drivers", messages.ERROR)
             return
             
@@ -331,7 +332,7 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         self.message_user(request, f"Blocked {count} drivers", messages.SUCCESS)
 
     def unblock_drivers(self, request, queryset): 
-        if not request.user.groups.filter(name='Admin').exists():
+        if not has_service_permission(request.user, "admin_users.change_user", ("Admin",)):
             self.message_user(request, "Only Admin can unblock drivers", messages.ERROR)
             return
             

@@ -1,3 +1,4 @@
+from utils.admin_permissions import has_service_permission
 from django.contrib import admin
 from django.contrib import messages
 from django import forms
@@ -74,10 +75,10 @@ class RideAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):  
-        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator"))
 
     def has_delete_permission(self, request, obj=None):  
-        return request.user.groups.filter(name='Admin').exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.delete_{self.opts.model_name}", ("Admin",))
 
     def ride_actions(self, obj=None):
         if not obj:
@@ -95,7 +96,7 @@ class RideAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     ride_actions.short_description = "Actions"
 
     def cancel_rides(self, request, queryset):  
-        if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
+        if not has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator")):
             self.message_user(request, "No permission", messages.ERROR)
             return
 
@@ -112,7 +113,7 @@ class RideAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         self.message_user(request, f"Cancelled {count} rides", messages.SUCCESS)
 
     def mark_anomaly_resolved(self, request, queryset):  
-        if not request.user.groups.filter(name__in=['Admin', 'Operator']).exists():
+        if not has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator")):
             self.message_user(request, "No permission", messages.ERROR)
             return
             

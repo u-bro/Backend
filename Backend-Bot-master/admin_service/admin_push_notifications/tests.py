@@ -18,7 +18,7 @@ from .models import AdminPushNotification
 from .views import can_send_push, send_push_view, user_search
 
 
-def make_user(*, superuser=False, groups=()):
+def make_user(*, superuser=False, groups=(), permissions=()):
     group_manager = MagicMock()
     group_manager.filter.return_value.exists.return_value = "Admin" in groups
     return SimpleNamespace(
@@ -27,17 +27,19 @@ def make_user(*, superuser=False, groups=()):
         is_staff=True,
         is_superuser=superuser,
         groups=group_manager,
+        has_perm=lambda permission: permission in permissions,
         get_full_name=lambda: "Admin User",
         get_username=lambda: "admin",
     )
 
 
 class PushAccessTests(SimpleTestCase):
-    def test_only_admin_group_or_superuser_can_send(self):
+    def test_admin_superuser_or_explicit_permission_can_send(self):
         self.assertTrue(can_send_push(make_user(groups=("Admin",))))
         self.assertTrue(can_send_push(make_user(superuser=True)))
         self.assertFalse(can_send_push(make_user(groups=("Operator",))))
         self.assertFalse(can_send_push(AnonymousUser()))
+        self.assertTrue(can_send_push(make_user(permissions=("admin_push_notifications.add_adminpushnotification",))))
 
     def test_operator_gets_not_found(self):
         request = RequestFactory().get("/admin/push-notifications/send/")

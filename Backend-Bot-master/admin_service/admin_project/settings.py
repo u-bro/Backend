@@ -155,11 +155,13 @@ JAZZMIN_SETTINGS = {
     ],
     "hide_models": [
         "auth.User",
+        "auth.Group",
         "admin_drivers.DriverProfileModeration",
         "admin_drivers.DriverModerationInfo",
     ],
     "custom_links": {
         "auth": [
+            {"name": "Роли админки", "url": "admin:auth_group_changelist", "icon": "fas fa-user-tag", "permissions": ["auth.change_group"]},
             {"name": "Администраторы", "url": "admin:auth_user_changelist", "icon": "fas fa-user-shield", "permissions": ["auth.view_user"]},
             {"name": "Пользователи", "url": "admin:admin_users_user_changelist", "icon": "fas fa-users", "permissions": ["admin_users.view_user"]},
         ],

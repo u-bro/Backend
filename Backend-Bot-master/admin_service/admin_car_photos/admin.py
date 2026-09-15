@@ -1,3 +1,4 @@
+from utils.admin_permissions import has_service_permission
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
@@ -87,11 +88,11 @@ class CarPhotoAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         )
 
     def has_add_permission(self, request):
-        return request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.add_{self.opts.model_name}", ("Admin", "Operator"))
 
     def has_change_permission(self, request, obj=None):
-        allowed = request.user.groups.filter(name__in=['Admin', 'Operator']).exists()
+        allowed = has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator"))
         return allowed and not self._profile_is_approved(obj)
 
     def has_delete_permission(self, request, obj=None):
-        return request.user.groups.filter(name='Admin').exists() and not self._profile_is_approved(obj)
+        return has_service_permission(request.user, f"{self.opts.app_label}.delete_{self.opts.model_name}", ("Admin",)) and not self._profile_is_approved(obj)

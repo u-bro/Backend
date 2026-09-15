@@ -1,3 +1,4 @@
+from utils.admin_permissions import has_service_permission
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
@@ -49,7 +50,7 @@ class AdminPushNotificationAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         return bool(
             request.user.is_active
             and request.user.is_staff
-            and (request.user.is_superuser or request.user.groups.filter(name="Admin").exists())
+            and (request.user.is_superuser or has_service_permission(request.user, f"{self.opts.app_label}.view_{self.opts.model_name}", ("Admin",)))
         )
 
     def has_module_permission(self, request):

@@ -1,3 +1,4 @@
+from utils.admin_permissions import has_service_permission
 from django.contrib import admin
 
 from .models import Role
@@ -17,7 +18,10 @@ class RoleAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None): 
-        return request.user.groups.filter(name='Admin').exists()
+        return has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin",))
 
     def has_delete_permission(self, request, obj=None):  
         return False
+
+# Register staff access roles separately from the backend's roles table.
+from . import access_admin  # noqa: E402, F401

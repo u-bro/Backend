@@ -1,3 +1,4 @@
+from utils.admin_permissions import has_service_permission
 import re
 
 from django.contrib import admin, messages
@@ -18,7 +19,7 @@ def can_send_push(user):
     return bool(
         user.is_active
         and user.is_staff
-        and (user.is_superuser or user.groups.filter(name="Admin").exists())
+        and (has_service_permission(user, "admin_push_notifications.add_adminpushnotification", ("Admin",)))
     )
 
 

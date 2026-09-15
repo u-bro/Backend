@@ -207,7 +207,7 @@ class SidebarSettingsTests(SimpleTestCase):
         self.assertIn("Локации водителей", driver_links)
 
         auth_links = [item["name"] for item in JAZZMIN_SETTINGS["custom_links"]["auth"]]
-        self.assertEqual(auth_links, ["Администраторы", "Пользователи"])
+        self.assertEqual(auth_links, ["Роли админки", "Администраторы", "Пользователи"])
         self.assertEqual(JAZZMIN_SETTINGS["order_with_respect_to"][-1], "axes")
         top_links = [item["name"] for item in JAZZMIN_SETTINGS["topmenu_links"]]
         self.assertEqual(top_links.index("Поддержка"), top_links.index("Модерация водителей") + 1)
