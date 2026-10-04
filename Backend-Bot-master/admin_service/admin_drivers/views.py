@@ -255,7 +255,7 @@ def moderation_detail(request, profile_id: int):
                 if success:
                     messages.success(request, "Решение модерации сохранено.")
                     return HttpResponseRedirect(request.get_full_path())
-                messages.error(request, "Не удалось сохранить решение через backend. Проверьте MODERATION_INTERNAL_TOKEN.")
+                messages.error(request, "Не удалось сохранить решение. Обновите страницу и повторите попытку. Если ошибка повторится, обратитесь к техническому администратору.")
         elif action == "block":
             user.is_active = False
             user.save(update_fields=["is_active"])

@@ -1,4 +1,5 @@
 {% extends "admin/base_site.html" %}
+{% load moderation_labels %}
 
 {% block title %}Модерация: {{ profile }}{% endblock %}
 
@@ -46,9 +47,15 @@
         <p>Статус: <strong>{{ status_label }}</strong> · ID профиля: {{ profile.id }}</p>
         {% if warning_documents or missing_documents %}
           <div class="warning">
-            <strong>Есть документы, требующие внимания:</strong>
-            {% if missing_documents %}<p>Не загружены: {{ missing_documents|join:", " }}</p>{% endif %}
-            <ul>{% for document in warning_documents %}<li>{{ document.doc_type }}: {{ document.status|default:"не загружен" }}</li>{% endfor %}</ul>
+            <strong>Документы: что нужно проверить</strong>
+            {% if missing_documents %}
+              <p>Не загружены:</p>
+              <ul>{% for doc_type in missing_documents %}<li>{{ doc_type|document_label }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if warning_documents %}
+              <p>Требуют внимания:</p>
+              <ul>{% for document in warning_documents %}<li>{{ document.doc_type|document_label }}: {% if document.file_bucket_key %}{{ document.status|moderation_status }}{% else %}Файл отсутствует — требуется загрузка{% endif %}</li>{% endfor %}</ul>
+            {% endif %}
           </div>
         {% endif %}
       </div>
@@ -98,13 +105,13 @@
         <div class="document-list">
           {% for doc_type, docs in document_groups %}
             <div class="document-item">
-              <strong>{{ doc_type }}</strong>
+              <strong>{{ doc_type|document_label }}</strong>
               {% for document in docs %}
                 <div>
-                  <span>Статус: {{ document.status|default:"не указан" }}</span><br>
+                  <span>Статус: {{ document.status|moderation_status }}</span><br>
                   {% if document.file_bucket_key %}
                     <a href="{% url 'admin:admin_driver_document_preview' document.id %}" target="_blank" rel="noopener">
-                      <img class="document-preview" src="{% url 'admin:admin_driver_document_preview' document.id %}" alt="{{ doc_type }}">
+                      <img class="document-preview" src="{% url 'admin:admin_driver_document_preview' document.id %}" alt="{{ doc_type|document_label }}">
                       Открыть документ
                     </a>
                   {% else %}Файл отсутствует{% endif %}
@@ -136,13 +143,13 @@
                   <div class="car-photo">
                     {% if photo_item.url %}
                       <a href="{{ photo_item.url }}" target="_blank" rel="noopener">
-                        <img src="{{ photo_item.url }}" alt="{{ photo_item.photo.type|default:'Фото автомобиля' }}">
+                        <img src="{{ photo_item.url }}" alt="{{ photo_item.photo.type|car_photo_label }}">
                       </a>
                     {% endif %}
                     <div class="car-photo-info">
-                      <strong>{{ photo_item.photo.type|default:"Фото" }}</strong>
+                      <strong>{{ photo_item.photo.type|car_photo_label }}</strong>
                       <small>{{ photo_item.photo.description|default:"Без описания" }}</small>
-                      <small>Статус: {{ photo_item.photo.status|default:"—" }}</small>
+                      <small>Статус: {{ photo_item.photo.status|moderation_status }}</small>
                     </div>
                   </div>
                 {% empty %}<p>Фотографии не загружены.</p>{% endfor %}
@@ -159,13 +166,13 @@
           <div class="document-list">
             {% for document in car_documents %}
               <div class="document-item">
-                <strong>{{ document.doc_type }}</strong>
+                <strong>{{ document.doc_type|document_label }}</strong>
                 {% if document.file_bucket_key %}
                   <a href="{% url 'admin:admin_driver_document_preview' document.id %}" target="_blank" rel="noopener">
-                    <img class="document-preview" src="{% url 'admin:admin_driver_document_preview' document.id %}" alt="{{ document.doc_type }}">
+                    <img class="document-preview" src="{% url 'admin:admin_driver_document_preview' document.id %}" alt="{{ document.doc_type|document_label }}">
                   </a>
                 {% else %}<p>Файл отсутствует.</p>{% endif %}
-                <small>Статус: {{ document.status|default:"—" }}</small>
+                <small>Статус: {{ document.status|moderation_status }}</small>
               </div>
             {% endfor %}
           </div>
@@ -179,13 +186,16 @@
         <form method="post" class="moderation-actions" onsubmit="return confirm('Изменить статус заявки?');">
           {% csrf_token %}
           <input type="hidden" name="expected_updated_at" value="{{ profile.updated_at|date:'c' }}">
-          {% for reason in all_reasons %}
-            <label><input type="checkbox" name="moderation_info_ids" value="{{ reason.id }}"{% if reason in reasons %} checked{% endif %}> {{ reason.code }}: {{ reason.message }}</label>
-          {% endfor %}
+          <div class="reason-list">
+            <p>Отметьте актуальные замечания. Снимите отметки с пунктов, которые уже проверены.</p>
+            {% for reason in all_reasons %}
+              <label><input type="checkbox" name="moderation_info_ids" value="{{ reason.id }}"{% if reason in reasons %} checked{% endif %}> {{ reason|moderation_reason }}</label>
+            {% endfor %}
+          </div>
           <button class="approve" type="submit" name="action" value="approved">Принять</button>
           <button class="reject" type="submit" name="action" value="rejected">Отклонить</button>
         </form>
-        {% if reasons %}<p><strong>Текущие причины:</strong></p><ul>{% for reason in reasons %}<li>{{ reason.message }}</li>{% endfor %}</ul>{% endif %}
+        {% if reasons %}<p><strong>Текущие замечания к профилю:</strong></p><ul>{% for reason in reasons %}<li>{{ reason|moderation_reason }}</li>{% endfor %}</ul>{% endif %}
       </div>
 
       <div class="moderation-card">
