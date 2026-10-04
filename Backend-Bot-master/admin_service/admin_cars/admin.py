@@ -50,7 +50,7 @@ class CarAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         ("Служебная информация", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
 
-    @admin.display(description="Driver profile ID", ordering="driver_profile_id")
+    @admin.display(description="Номер профиля водителя", ordering="driver_profile_id")
     def driver_profile_id_link(self, obj):
         return driver_profile_link(getattr(obj, "driver_profile_id", None))
 

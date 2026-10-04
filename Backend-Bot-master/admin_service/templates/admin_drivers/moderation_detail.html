@@ -207,8 +207,8 @@
           <p>Аватарка не загружена.</p>
         {% endif %}
         <p>Телефон: {{ profile_user.phone|default:"—" }}</p>
-        <p>User ID: {{ profile_user_link }}</p>
-        <p>Email: {{ profile_user.email|default:"—" }}</p>
+        <p>Номер пользователя: {{ profile_user_link }}</p>
+        <p>Электронная почта: {{ profile_user.email|default:"—" }}</p>
         <p>Город: {{ profile_user.city|default:"—" }}</p>
         <p>Активен: {% if profile_user.is_active %}да{% else %}нет{% endif %}</p>
         <form method="post" onsubmit="return confirm('Заблокировать пользователя?');">

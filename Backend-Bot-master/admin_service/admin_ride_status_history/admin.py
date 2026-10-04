@@ -22,6 +22,6 @@ class RideStatusHistoryAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
 
     readonly_fields = ('id', 'created_at', 'ride_id_link')
 
-    @admin.display(description="Ride ID", ordering="ride_id")
+    @admin.display(description="Номер поездки", ordering="ride_id")
     def ride_id_link(self, obj):
         return ride_link(getattr(obj, "ride_id", None))

@@ -24,11 +24,11 @@ class CommissionPaymentAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_per_page = 25
     readonly_fields = ("ride_id_link", "user_id_link")
 
-    @admin.display(description="Ride ID", ordering="ride_id")
+    @admin.display(description="Номер поездки", ordering="ride_id")
     def ride_id_link(self, obj):
         return ride_link(getattr(obj, "ride_id", None))
 
-    @admin.display(description="User ID", ordering="user_id")
+    @admin.display(description="Номер пользователя", ordering="user_id")
     def user_id_link(self, obj):
         return user_link(getattr(obj, "user_id", None))
 

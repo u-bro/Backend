@@ -23,7 +23,7 @@ class DriverLocationAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_per_page = 25
     readonly_fields = ("id", "created_at", "last_seen_at", "driver_profile_id_link")
 
-    @admin.display(description="Driver profile ID", ordering="driver_profile_id")
+    @admin.display(description="Номер профиля водителя", ordering="driver_profile_id")
     def driver_profile_id_link(self, obj):
         return driver_profile_link(getattr(obj, "driver_profile_id", None))
 

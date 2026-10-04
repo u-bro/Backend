@@ -41,6 +41,7 @@ class RideAnomalyAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):  
         return True
 
+    @admin.action(description="Отметить проверенными")
     def mark_as_reviewed(self, request, queryset):  
         """Mark anomalies as reviewed"""
         count = 0
@@ -48,8 +49,9 @@ class RideAnomalyAdmin(admin.ModelAdmin):
             if api_client.review_anomaly(anomaly.id, request.user.id):
                 count += 1
                 AuditLogger.log_anomaly_review(request.user.id, anomaly.id)
-        self.message_user(request, f"Marked {count} anomalies as reviewed", messages.SUCCESS)
+        self.message_user(request, f"Проверено отклонений: {count}", messages.SUCCESS)
 
+    @admin.action(description="Назначить себе")
     def assign_to_me(self, request, queryset):  
         """Assign anomalies to current admin"""
         count = 0
@@ -57,4 +59,4 @@ class RideAnomalyAdmin(admin.ModelAdmin):
             if api_client.review_anomaly(anomaly.id, request.user.id):
                 count += 1
                 AuditLogger.log_anomaly_review(request.user.id, anomaly.id)
-        self.message_user(request, f"Assigned {count} anomalies to you", messages.SUCCESS)
+        self.message_user(request, f"Назначено вам отклонений: {count}", messages.SUCCESS)

@@ -9,15 +9,15 @@ class RideStatusHistory(models.Model):
         verbose_name = 'История статуса поездки'
         verbose_name_plural = 'Истории статусов поездок'
 
-    id = models.AutoField(primary_key=True)
-    ride_id = models.IntegerField(null=True, blank=True)
-    from_status = models.CharField(max_length=50, null=True, blank=True, choices=RIDE_STATUS_CHOICES)
-    to_status = models.CharField(max_length=50, null=True, blank=True, choices=RIDE_STATUS_CHOICES)
-    changed_by = models.IntegerField(null=True, blank=True)
-    actor_role = models.CharField(max_length=50, null=True, blank=True, choices=ROLE_CODE_CHOICES)
-    reason = models.CharField(max_length=255, null=True, blank=True)
-    meta = models.JSONField(null=True, blank=True)
-    created_at = models.DateTimeField(null=True, blank=True)
+    id = models.AutoField(verbose_name="Номер записи", primary_key=True)
+    ride_id = models.IntegerField(verbose_name="Номер поездки", null=True, blank=True)
+    from_status = models.CharField(verbose_name="Предыдущий статус", max_length=50, null=True, blank=True, choices=RIDE_STATUS_CHOICES)
+    to_status = models.CharField(verbose_name="Новый статус", max_length=50, null=True, blank=True, choices=RIDE_STATUS_CHOICES)
+    changed_by = models.IntegerField(verbose_name="Кем изменено", null=True, blank=True)
+    actor_role = models.CharField(verbose_name="Роль сотрудника", max_length=50, null=True, blank=True, choices=ROLE_CODE_CHOICES)
+    reason = models.CharField(verbose_name="Причина", max_length=255, null=True, blank=True)
+    meta = models.JSONField(verbose_name="Дополнительные данные", null=True, blank=True)
+    created_at = models.DateTimeField(verbose_name="Дата создания", null=True, blank=True)
 
     def __str__(self) -> str:  
-        return f"Status change for ride {self.ride_id}"
+        return f"Изменение статуса поездки №{self.ride_id}"

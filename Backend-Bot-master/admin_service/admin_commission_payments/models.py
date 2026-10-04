@@ -8,26 +8,26 @@ class CommissionPayment(models.Model):
         verbose_name = 'Платеж комиссии'
         verbose_name_plural = 'Платежи комиссий'
 
-    id = models.AutoField(primary_key=True)
+    id = models.AutoField(verbose_name="Номер записи", primary_key=True)
 
-    ride_id = models.IntegerField(null=True, blank=True)
-    user_id = models.IntegerField()
+    ride_id = models.IntegerField(verbose_name="Номер поездки", null=True, blank=True)
+    user_id = models.IntegerField(verbose_name="Номер пользователя")
 
-    amount = models.DecimalField(max_digits=15, decimal_places=2)
-    currency = models.CharField(max_length=10)
+    amount = models.DecimalField(verbose_name="Сумма", max_digits=15, decimal_places=2)
+    currency = models.CharField(verbose_name="Валюта", max_length=10)
 
-    status = models.CharField(max_length=32)
-    payment_link = models.CharField(max_length=2048, null=True, blank=True)
+    status = models.CharField(verbose_name="Статус", max_length=32)
+    payment_link = models.CharField(verbose_name="Ссылка на оплату", max_length=2048, null=True, blank=True)
 
-    purpose = models.CharField(max_length=255, null=True, blank=True)
+    purpose = models.CharField(verbose_name="Назначение", max_length=255, null=True, blank=True)
 
-    paid_at = models.DateTimeField(null=True, blank=True)
-    payment_id = models.CharField(max_length=128, null=True, blank=True)
+    paid_at = models.DateTimeField(verbose_name="Дата оплаты", null=True, blank=True)
+    payment_id = models.CharField(verbose_name="Номер платежа", max_length=128, null=True, blank=True)
 
-    is_refund = models.BooleanField(default=False)
+    is_refund = models.BooleanField(verbose_name="Возврат", default=False)
 
-    created_at = models.DateTimeField(null=True, blank=True)
-    updated_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(verbose_name="Дата создания", null=True, blank=True)
+    updated_at = models.DateTimeField(verbose_name="Дата изменения", null=True, blank=True)
 
     def __str__(self) -> str:
-        return f"CommissionPayment {self.id}"
+        return f"Оплата комиссии №{self.id}"

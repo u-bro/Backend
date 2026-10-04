@@ -9,13 +9,13 @@ class DriverLocation(models.Model):
         verbose_name = 'Локация водителя'
         verbose_name_plural = 'Локации водителей'
 
-    id = models.AutoField(primary_key=True)
-    driver_profile_id = models.IntegerField()
-    latitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
-    longitude = models.DecimalField(max_digits=12, decimal_places=8, null=True, blank=True)
-    status = models.CharField(max_length=50, choices=DRIVER_LOCATION_STATUS_CHOICES)
-    last_seen_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(null=True, blank=True)
+    id = models.AutoField(verbose_name="Номер записи", primary_key=True)
+    driver_profile_id = models.IntegerField(verbose_name="Номер профиля водителя")
+    latitude = models.DecimalField(verbose_name="Широта", max_digits=12, decimal_places=8, null=True, blank=True)
+    longitude = models.DecimalField(verbose_name="Долгота", max_digits=12, decimal_places=8, null=True, blank=True)
+    status = models.CharField(verbose_name="Статус", max_length=50, choices=DRIVER_LOCATION_STATUS_CHOICES)
+    last_seen_at = models.DateTimeField(verbose_name="Последнее посещение", null=True, blank=True)
+    created_at = models.DateTimeField(verbose_name="Дата создания", null=True, blank=True)
 
     def __str__(self) -> str:
-        return f"Location {self.id}"
+        return f"Местоположение №{self.id}"

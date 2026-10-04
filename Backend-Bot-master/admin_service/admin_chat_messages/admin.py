@@ -26,15 +26,15 @@ class ChatMessageAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
 
     readonly_fields = ('id', 'created_at', 'edited_at', 'deleted_at', 'ride_id_link', 'sender_id_link', 'receiver_id_link')
 
-    @admin.display(description="Ride ID", ordering="ride_id")
+    @admin.display(description="Номер поездки", ordering="ride_id")
     def ride_id_link(self, obj):
         return ride_link(getattr(obj, "ride_id", None))
 
-    @admin.display(description="Sender ID", ordering="sender_id")
+    @admin.display(description="Номер отправителя", ordering="sender_id")
     def sender_id_link(self, obj):
         return user_link(getattr(obj, "sender_id", None))
 
-    @admin.display(description="Receiver ID", ordering="receiver_id")
+    @admin.display(description="Номер получателя", ordering="receiver_id")
     def receiver_id_link(self, obj):
         return user_link(getattr(obj, "receiver_id", None))
 

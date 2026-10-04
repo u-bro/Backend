@@ -15,13 +15,13 @@ from .models import Ride
 
 
 class RideActionForm(forms.Form):
-    action_type = forms.ChoiceField(choices=[
-        ('cancel', 'Cancel ride'),
-        ('assign', 'Assign driver'),
-        ('complete', 'Mark as completed')
+    action_type = forms.ChoiceField(label="Действие", choices=[
+        ('cancel', 'Отменить поездку'),
+        ('assign', 'Назначить водителя'),
+        ('complete', 'Завершить поездку')
     ])
-    reason = forms.CharField(required=False, widget=forms.Textarea)
-    driver_id = forms.IntegerField(required=False, help_text="For assign action")
+    reason = forms.CharField(label="Причина", required=False, widget=forms.Textarea)
+    driver_id = forms.IntegerField(required=False, label="Номер водителя", help_text="Для назначения водителя")
 
 
 @admin.register(Ride)
@@ -57,11 +57,11 @@ class RideAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
 
     readonly_fields = ('id', 'created_at', 'updated_at', 'started_at', 'completed_at', 'canceled_at', 'client_id_link', 'driver_profile_id_link')
 
-    @admin.display(description="Client ID", ordering="client_id")
+    @admin.display(description="Номер клиента", ordering="client_id")
     def client_id_link(self, obj):
         return user_link(getattr(obj, "client_id", None))
 
-    @admin.display(description="Driver profile ID", ordering="driver_profile_id")
+    @admin.display(description="Номер профиля водителя", ordering="driver_profile_id")
     def driver_profile_id_link(self, obj):
         return driver_profile_link(getattr(obj, "driver_profile_id", None))
 
@@ -93,11 +93,12 @@ class RideAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
             actions.append(f'<a href="/admin/admin_rides/ride/{obj.id}/resolve/" class="button">Resolve Anomaly</a>')
             
         return mark_safe(' | '.join(actions)) if actions else "No actions available"
-    ride_actions.short_description = "Actions"
+    ride_actions.short_description = "Действия"
 
+    @admin.action(description="Отменить поездки")
     def cancel_rides(self, request, queryset):  
         if not has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator")):
-            self.message_user(request, "No permission", messages.ERROR)
+            self.message_user(request, "Недостаточно прав для этого действия", messages.ERROR)
             return
 
         canceled_at = timezone.now()
@@ -110,11 +111,11 @@ class RideAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
                 ride.save()
                 RideDriversRequest.objects.filter(ride_id=ride.id).update(status="canceled")
                 count += 1
-        self.message_user(request, f"Cancelled {count} rides", messages.SUCCESS)
+        self.message_user(request, f"Отменено поездок: {count}", messages.SUCCESS)
 
     def mark_anomaly_resolved(self, request, queryset):  
         if not has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator")):
-            self.message_user(request, "No permission", messages.ERROR)
+            self.message_user(request, "Недостаточно прав для этого действия", messages.ERROR)
             return
             
         count = 0
@@ -123,7 +124,7 @@ class RideAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
             ride.anomaly_reason = ""
             ride.save()
             count += 1
-        self.message_user(request, f"Resolved {count} anomalies", messages.SUCCESS)
+        self.message_user(request, f"Устранено отклонений: {count}", messages.SUCCESS)
 
     @staticmethod
     def _detach_related_records(ride_ids):

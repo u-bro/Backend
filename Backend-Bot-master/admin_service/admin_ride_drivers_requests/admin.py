@@ -22,11 +22,11 @@ class RideDriversRequestAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     list_per_page = 25
     readonly_fields = ("ride_id_link", "driver_profile_id_link")
 
-    @admin.display(description="Ride ID", ordering="ride_id")
+    @admin.display(description="Номер поездки", ordering="ride_id")
     def ride_id_link(self, obj):
         return ride_link(getattr(obj, "ride_id", None))
 
-    @admin.display(description="Driver profile ID", ordering="driver_profile_id")
+    @admin.display(description="Номер профиля водителя", ordering="driver_profile_id")
     def driver_profile_id_link(self, obj):
         return driver_profile_link(getattr(obj, "driver_profile_id", None))
 

@@ -98,10 +98,11 @@ class UserAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None): 
         return has_service_permission(request.user, f"{self.opts.app_label}.delete_{self.opts.model_name}", ("Admin",))
 
+    @admin.action(description="Заблокировать пользователей")
     def block_users(self, request, queryset):  
 
         if not has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator")):
-            self.message_user(request, "No permission", messages.ERROR)
+            self.message_user(request, "Недостаточно прав для этого действия", messages.ERROR)
             return
             
         count = 0
@@ -109,11 +110,12 @@ class UserAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
             user.is_active = False
             user.save()
             count += 1
-        self.message_user(request, f"Blocked {count} users", messages.SUCCESS)
+        self.message_user(request, f"Заблокировано пользователей: {count}", messages.SUCCESS)
 
+    @admin.action(description="Разблокировать пользователей")
     def unblock_users(self, request, queryset):  
         if not has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin",)):
-            self.message_user(request, "Only Admin can unblock users", messages.ERROR)
+            self.message_user(request, "Разблокировать пользователей может только администратор", messages.ERROR)
             return
             
         count = 0
@@ -121,4 +123,4 @@ class UserAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
             user.is_active = True
             user.save()
             count += 1
-        self.message_user(request, f"Unblocked {count} users", messages.SUCCESS)
+        self.message_user(request, f"Разблокировано пользователей: {count}", messages.SUCCESS)

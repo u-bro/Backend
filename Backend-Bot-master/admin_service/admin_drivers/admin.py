@@ -26,6 +26,7 @@ from .models import DriverModerationInfo, DriverProfile, DriverProfileModeration
 
 class DriverProfileAdminForm(forms.ModelForm):
     classes_allowed = forms.MultipleChoiceField(
+        label="Разрешённые классы",
         choices=RIDE_CLASS_CHOICES,
         required=True,
         widget=forms.CheckboxSelectMultiple,
@@ -54,7 +55,7 @@ class DriverProfileAdminForm(forms.ModelForm):
         )
         if existing:
             raise ValidationError(
-                f"Профиль водителя для user_id={user_id} уже существует (id профиля: {existing.id})."
+                f"Профиль водителя для пользователя №{user_id} уже существует (id профиля: {existing.id})."
             )
         return user_id
 
@@ -65,6 +66,7 @@ class DriverProfileAdminForm(forms.ModelForm):
 
 class DriverProfileChangelistForm(forms.ModelForm):
     classes_allowed = forms.MultipleChoiceField(
+        label="Разрешённые классы",
         choices=RIDE_CLASS_CHOICES,
         required=True,
         widget=forms.CheckboxSelectMultiple,
@@ -135,7 +137,7 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         "first_name",
         "last_name",
         "status",
-        "classes_allowed",
+        "allowed_classes_display",
         "moderation_reasons",
         "approved",
         "user_is_active",
@@ -151,9 +153,14 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
 
     readonly_fields = ('id', 'created_at', 'updated_at', 'approved_at')
 
-    @admin.display(description="User ID", ordering="user_id")
+    @admin.display(description="Номер пользователя", ordering="user_id")
     def user_id_link(self, obj):
         return user_link(obj.user_id)
+
+    @admin.display(description="Разрешённые классы")
+    def allowed_classes_display(self, obj):
+        labels = dict(RIDE_CLASS_CHOICES)
+        return ", ".join(labels.get(value, value) for value in (obj.classes_allowed or [])) or "—"
 
     def change_view(self, request, object_id, form_url="", extra_context=None):
         url = reverse("driver-moderation-detail", args=[object_id])
@@ -172,9 +179,10 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         except Exception:
             return qs
 
+    @admin.display(description="ФИО")
     def display_name(self, obj):
         name_parts = [p for p in [getattr(obj, 'first_name', None), getattr(obj, 'last_name', None)] if p]
-        return " ".join(name_parts) if name_parts else f"Driver {obj.id}"
+        return " ".join(name_parts) if name_parts else f"Водитель {obj.id}"
 
     def user_phone(self, obj):
         phone = getattr(obj, "_user_phone", None)
@@ -186,7 +194,7 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
             return getattr(user, "phone", None) or ""
         except Exception:
             return ""
-    user_phone.short_description = "Phone"
+    user_phone.short_description = "Телефон"
 
     def moderation_reasons(self, obj):
         try:
@@ -194,7 +202,7 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
             return ", ".join(str(i) for i in items)
         except Exception:
             return ""
-    moderation_reasons.short_description = "Moderation reasons"
+    moderation_reasons.short_description = "Замечания к профилю"
 
     def get_readonly_fields(self, request, obj=None):
         readonly = list(self.readonly_fields)
@@ -220,10 +228,10 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
         try:
             from admin_users.models import User
             user = User.objects.filter(id=obj.user_id).first()
-            return "Active" if user and user.is_active else "Blocked"
+            return "Активен" if user and user.is_active else "Заблокирован"
         except:
-            return "Unknown"
-    user_is_active.short_description = "User Status"
+            return "Неизвестно"
+    user_is_active.short_description = "Статус пользователя"
 
     def save_model(self, request, obj, form, change):
         try:
@@ -253,7 +261,7 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
                 form.add_error(
                     "user_id",
                     ValidationError(
-                        f"Профиль водителя для user_id={obj.user_id} уже существует (id профиля: {existing.id})."
+                        f"Профиль водителя для пользователя №{obj.user_id} уже существует (id профиля: {existing.id})."
                     ),
                 )
                 return
@@ -284,9 +292,10 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
             RideDriversRequest.objects.filter(car_id__in=car_ids).delete()
             Car.objects.filter(id__in=car_ids).delete()
 
+    @admin.action(description="Одобрить водителей")
     def approve_drivers(self, request, queryset):
         if not has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator")):
-            self.message_user(request, "No permission", messages.ERROR)
+            self.message_user(request, "Недостаточно прав для этого действия", messages.ERROR)
             return
 
         count = 0
@@ -295,17 +304,18 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
             if not driver.classes_allowed:
                 self.message_user(
                     request,
-                    f"Driver {driver.id}: select at least one class before approval",
+                    f"Водитель {driver.id}: перед одобрением выберите хотя бы один класс",
                     messages.ERROR,
                 )
                 continue
             if api_client.moderate_driver(driver.id, "approved", [], approved_by, driver.updated_at, driver.classes_allowed):
                 count += 1
-        self.message_user(request, f"Approved {count} drivers", messages.SUCCESS)
+        self.message_user(request, f"Одобрено водителей: {count}", messages.SUCCESS)
 
+    @admin.action(description="Отклонить заявки водителей")
     def reject_drivers(self, request, queryset):
         if not has_service_permission(request.user, f"{self.opts.app_label}.change_{self.opts.model_name}", ("Admin", "Operator")):
-            self.message_user(request, "No permission", messages.ERROR)
+            self.message_user(request, "Недостаточно прав для этого действия", messages.ERROR)
             return
             
         count = 0
@@ -314,11 +324,12 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
             reason_ids = list(driver.moderation_info.values_list("id", flat=True))
             if api_client.moderate_driver(driver.id, "rejected", reason_ids, approved_by, driver.updated_at):
                 count += 1
-        self.message_user(request, f"Rejected {count} drivers", messages.SUCCESS)
+        self.message_user(request, f"Отклонено заявок водителей: {count}", messages.SUCCESS)
 
+    @admin.action(description="Заблокировать водителей")
     def block_drivers(self, request, queryset):  
         if not has_service_permission(request.user, "admin_users.change_user", ("Admin",)):
-            self.message_user(request, "Only Admin can block drivers", messages.ERROR)
+            self.message_user(request, "Блокировать водителей может только администратор", messages.ERROR)
             return
             
         count = 0
@@ -329,11 +340,12 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
                 user.is_active = False
                 user.save()
                 count += 1
-        self.message_user(request, f"Blocked {count} drivers", messages.SUCCESS)
+        self.message_user(request, f"Заблокировано водителей: {count}", messages.SUCCESS)
 
+    @admin.action(description="Разблокировать водителей")
     def unblock_drivers(self, request, queryset): 
         if not has_service_permission(request.user, "admin_users.change_user", ("Admin",)):
-            self.message_user(request, "Only Admin can unblock drivers", messages.ERROR)
+            self.message_user(request, "Разблокировать водителей может только администратор", messages.ERROR)
             return
             
         count = 0
@@ -344,4 +356,4 @@ class DriverProfileAdmin(EntityStatsAdminMixin, admin.ModelAdmin):
                 user.is_active = True
                 user.save()
                 count += 1
-        self.message_user(request, f"Unblocked {count} drivers", messages.SUCCESS)
+        self.message_user(request, f"Разблокировано водителей: {count}", messages.SUCCESS)

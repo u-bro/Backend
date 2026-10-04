@@ -10,7 +10,7 @@ from .models import DriverProfile
 
 class DriverModerationForm(forms.ModelForm):
     phone = forms.CharField(label="Номер телефона", max_length=20, required=False)
-    email = forms.EmailField(label="Email", max_length=255, required=False)
+    email = forms.EmailField(label="Электронная почта", max_length=255, required=False)
     city = forms.CharField(label="Город", max_length=100, required=False)
     birth_date = forms.DateField(
         label="Дата рождения",
@@ -90,7 +90,7 @@ class DriverModerationForm(forms.ModelForm):
         if phone and User.objects.filter(phone=phone).exclude(id=user_id).exists():
             self.add_error("phone", "Этот номер уже используется другим пользователем.")
         if email and User.objects.filter(email=email).exclude(id=user_id).exists():
-            self.add_error("email", "Этот email уже используется другим пользователем.")
+            self.add_error("email", "Этот адрес электронной почты уже используется другим пользователем.")
 
         return cleaned
 
@@ -132,7 +132,7 @@ class DriverCarForm(forms.Form):
     car_model = forms.CharField(label="Модель", max_length=100)
     car_number = forms.CharField(label="Госномер", max_length=100)
     car_region = forms.CharField(label="Регион", max_length=20, required=False)
-    car_vin = forms.CharField(label="VIN", max_length=100, required=False)
+    car_vin = forms.CharField(label="Идентификационный номер автомобиля (VIN)", max_length=100, required=False)
     car_year = forms.CharField(label="Год выпуска", max_length=10, required=False)
 
     def cleaned_car_values(self):
