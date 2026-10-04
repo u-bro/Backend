@@ -11,6 +11,7 @@ __pycache__/
 *.db
 test*.py
 !tests/test_ride_request_contracts.py
+!tests/test_alembic_configuration.py
 !tests/services/test_after_commit.py
 !tests/services/test_new_ride_notifications.py
 !tests/services/test_admin_push.py
