@@ -1,5 +1,6 @@
 import logging
 import os
+from urllib.parse import quote
 
 import requests
 from django.conf import settings
@@ -24,7 +25,8 @@ def support_action(conversation_id, action, operator_name, payload=None):
             json=payload,
             headers={
                 "X-Support-Internal-Token": token,
-                "X-Support-Operator": operator_name[:150],
+                "X-Support-Operator": operator_name[:150] if operator_name[:150].isascii() else "operator",
+                "X-Support-Operator-Utf8": quote(operator_name[:150], safe=""),
             },
             timeout=settings.SUPPORT_API_TIMEOUT,
         )

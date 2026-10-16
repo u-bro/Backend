@@ -87,3 +87,6 @@ ztest/
 models_data/
 0002_create_test_data.py
 ws_results/
+
+# Regression tests for support operator header encoding.
+!admin_service/admin_support/tests.py

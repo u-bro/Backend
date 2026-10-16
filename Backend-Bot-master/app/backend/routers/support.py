@@ -5,6 +5,7 @@ import time
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import unquote
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy import and_, case, delete, desc, func, or_, select
@@ -494,13 +495,26 @@ def _require_internal(supplied: str | None) -> None:
         raise HTTPException(status_code=403, detail="Invalid support internal token")
 
 
+def _internal_operator_name(
+    legacy: str = Header("operator", alias="X-Support-Operator"),
+    encoded: str | None = Header(None, alias="X-Support-Operator-Utf8"),
+) -> str:
+    # Explicit UTF-8 header keeps legacy callers and literal percent signs intact.
+    if encoded is None:
+        return legacy[:150]
+    try:
+        return unquote(encoded, encoding="utf-8", errors="strict")[:150]
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid operator name encoding")
+
+
 @support_router.post("/internal/support/conversations/{conversation_id}/messages", response_model=SupportMessageResponse)
 async def internal_operator_message(
     request: Request,
     conversation_id: int,
     body: SupportMessageCreate,
     x_support_internal_token: str | None = Header(None, alias="X-Support-Internal-Token"),
-    x_support_operator: str = Header("operator", alias="X-Support-Operator"),
+    x_support_operator: str = Depends(_internal_operator_name),
 ):
     _require_internal(x_support_internal_token)
     conversation = await request.state.session.get(SupportConversation, conversation_id)
@@ -521,7 +535,7 @@ async def internal_status(
     conversation_id: int,
     action: str,
     x_support_internal_token: str | None = Header(None, alias="X-Support-Internal-Token"),
-    x_support_operator: str = Header("operator", alias="X-Support-Operator"),
+    x_support_operator: str = Depends(_internal_operator_name),
 ):
     _require_internal(x_support_internal_token)
     if action not in {"close", "reopen"}:
