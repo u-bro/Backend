@@ -8,7 +8,7 @@ from app.enum import RideClass
 from app.config import DRIVER_PROFILE_INITIAL_RATING_AVG, DRIVER_PROFILE_INITIAL_RATING_COUNT
 
 
-RIDE_CLASSES_LITERAL = Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]
+from .ride_class import RideClassValue as RIDE_CLASSES_LITERAL, RideClasses
 
 class DriverProfileValidated(BaseSchema):
     first_name: Optional[str] = Field(None, min_length=2, max_length=100, pattern=r"^[A-Za-zА-Яа-яЁё\-\s]+$")
@@ -33,7 +33,7 @@ class DriverProfileCreate(DriverProfileValidated):
     user_id: int | None = None
     license_issued_at: Optional[datetime] = None
     license_expires_at: Optional[datetime] = None
-    classes_allowed: list[RIDE_CLASSES_LITERAL] = []
+    classes_allowed: RideClasses = []
     ride_count: int = Field(0, ge=0)
     rating_avg: float = Field(DRIVER_PROFILE_INITIAL_RATING_AVG, ge=0)
     rating_count: int = Field(DRIVER_PROFILE_INITIAL_RATING_COUNT, ge=0)
@@ -42,7 +42,7 @@ class DriverProfileCreate(DriverProfileValidated):
 
 
 class DriverProfileUpdateMe(DriverProfileValidated):
-    classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = Field(None, min_length=1)
+    classes_allowed: Optional[RideClasses] = Field(None, min_length=1)
     status: Literal['waiting_approved'] | None = Field(None, max_length=50)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -62,7 +62,7 @@ class DriverProfileUpdate(DriverProfileValidated):
     rating_count: Optional[int] = Field(None, ge=0)
     status: Literal['waiting_moderation'] | None = Field(None, max_length=50)
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
-    classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = Field(None, min_length=1)
+    classes_allowed: Optional[RideClasses] = Field(None, min_length=1)
 
     @field_validator("classes_allowed")
     @classmethod
@@ -76,7 +76,7 @@ class DriverProfileApproveIn(BaseSchema):
     approved: bool = True
     approved_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: Literal['waiting_approved', 'approved'] | None = Field('approved', max_length=50)
-    classes_allowed: list[RIDE_CLASSES_LITERAL] = Field(default_factory=lambda: [RideClass.LIGHT], min_length=1)
+    classes_allowed: RideClasses = Field(default_factory=lambda: [RideClass.LIGHT], min_length=1)
 
     @field_validator("classes_allowed")
     @classmethod
@@ -109,7 +109,7 @@ class DriverModerationAction(BaseSchema):
     moderation_info_ids: list[int] = Field(default_factory=list)
     admin_user_id: int = Field(..., gt=0)
     expected_updated_at: datetime
-    classes_allowed: Optional[list[RIDE_CLASSES_LITERAL]] = Field(None, min_length=1)
+    classes_allowed: Optional[RideClasses] = Field(None, min_length=1)
 
     @field_validator("classes_allowed")
     @classmethod

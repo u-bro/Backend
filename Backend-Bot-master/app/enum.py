@@ -33,7 +33,7 @@ class RideClass:
     LIGHT = "light"
     PRO = "pro"
     VIP = "vip"
-    ELITE = "elite"
+    MINIVAN = "minivan"
 
 class DriverDocumentType(Enum):
     PASSPORT_FRONT = "PASSPORT_FRONT"

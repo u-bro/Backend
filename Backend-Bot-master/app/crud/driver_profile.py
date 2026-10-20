@@ -18,7 +18,7 @@ CLASS_VALUE = {
     'light': 1,
     'pro': 2,
     'vip': 3,
-    'elite': 4
+    'minivan': 4
 }
 ADMIN_UPDATE_SENSITIVE_FIELDS = {
     "first_name", "last_name", "middle_name", "birth_date", "photo_url",

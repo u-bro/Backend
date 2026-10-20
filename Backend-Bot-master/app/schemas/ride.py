@@ -8,7 +8,7 @@ from .chat_message import ChatMessageSchema
 from app.enum import RideClass
 
 
-RIDE_CLASSES_LITERAL = Literal[RideClass.LIGHT, RideClass.PRO, RideClass.VIP, RideClass.ELITE]
+from .ride_class import RideClassValue as RIDE_CLASSES_LITERAL, RideClasses
 
 class RideSchemaIn(BaseSchema):
     status: Literal["requested"] = Field("requested", max_length=50)
@@ -33,6 +33,8 @@ class RideSchemaIn(BaseSchema):
 
     @model_validator(mode="after")
     def check_delivery_fields(self):
+        if self.ride_class == "minivan" and self.ride_type != "with_car":
+            raise ValueError("Minivan requires the driver vehicle")
         if self.ride_type != "delivery" and (self.delivery_receiver_name or self.delivery_receiver_phone):
             raise ValueError('Ride type is not \"delivery\", delivery_receiver_name and delivery_receiver_phone must be null')
         

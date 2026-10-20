@@ -1,11 +1,11 @@
 from utils.moderation_labels import DOCUMENT_LABELS, STATUS_LABELS
 
-RIDE_CLASS_VALUES = ("light", "pro", "vip", "elite")
+RIDE_CLASS_VALUES = ("light", "pro", "vip", "minivan")
 RIDE_CLASS_CHOICES = (
     ("light", "Лайт"),
     ("pro", "Про"),
     ("vip", "ВИП"),
-    ("elite", "Элит"),
+    ("minivan", "Минивэн"),
 )
 
 RIDE_STATUS_VALUES = (
