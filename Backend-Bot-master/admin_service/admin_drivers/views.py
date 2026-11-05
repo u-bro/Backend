@@ -42,6 +42,8 @@ REQUIRED_DOCUMENT_TYPES = (
     "PASSPORT_REGISTRATION",
     "DRIVER_LICENSE_FRONT",
     "DRIVER_LICENSE_BACK",
+)
+CAR_DOCUMENT_TYPES = (
     "STS_FRONT",
     "STS_BACK",
 )
@@ -300,7 +302,8 @@ def moderation_detail(request, profile_id: int):
         document for document in driver_documents if document.status != "approved"
     ]
     uploaded_document_types = set(documents.values_list("doc_type", flat=True))
-    missing_documents = [doc_type for doc_type in REQUIRED_DOCUMENT_TYPES if doc_type not in uploaded_document_types]
+    required_document_types = REQUIRED_DOCUMENT_TYPES + (CAR_DOCUMENT_TYPES if current_car else ())
+    missing_documents = [doc_type for doc_type in required_document_types if doc_type not in uploaded_document_types]
     document_groups = defaultdict(list)
     for document in driver_documents:
         document_groups[document.doc_type].append(document)

@@ -126,6 +126,22 @@ class DriverCarAdminLifecycleTests(TransactionTestCase):
         self.assertNotContains(response, "Новая машина:")
         self.assertContains(response, 'id="car-editor" hidden')
 
+    def test_driver_without_car_does_not_warn_about_missing_sts(self):
+        response = self.call_view(self.request())
+
+        self.assertContains(response, "Паспорт — разворот с фотографией")
+        self.assertContains(response, "Водительское удостоверение — лицевая сторона")
+        self.assertNotContains(response, "СТС — лицевая сторона")
+        self.assertNotContains(response, "СТС — обратная сторона")
+
+    def test_driver_with_car_warns_about_missing_sts(self):
+        self.create_current_car()
+
+        response = self.call_view(self.request())
+
+        self.assertContains(response, "СТС — лицевая сторона")
+        self.assertContains(response, "СТС — обратная сторона")
+
     def test_create_car_persists_owner_current_car_and_reload_form(self):
         response = self.call_view(self.request("post", self.car_data("add_car")))
 
