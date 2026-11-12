@@ -5,7 +5,23 @@ from app.config import DRIVER_PENDING_REQUEST_LIMIT
 from app.const import ACTIVE_RIDE_STATUSES, RIDE_REQUEST_REMOVAL_REASONS
 from app.crud.ride import ALLOWED_TRANSITIONS, STATUSES
 from app.schemas.driver_profile import DriverModerationAction, DriverProfileApproveIn, DriverProfileUpdate, DriverProfileUpdateMe
+from app.schemas.ride import RideSchemaCreate
 from app.schemas.ride_drivers_request import RideDriversRequestUpdate
+
+
+def test_ride_publication_uses_coordinates_to_distinguish_stops():
+    route = dict(
+        client_id=1, pickup_address="Москва", pickup_lat=55.74, pickup_lng=37.62,
+        dropoff_address="Москва", dropoff_lat=55.62, dropoff_lng=37.49,
+        distance_meters=22000, commission_id=1, ride_class="light",
+    )
+    ride = RideSchemaCreate(**route)
+    assert ride.pickup_address == ride.dropoff_address == "Москва"
+
+    route.update(dropoff_lat=ride.pickup_lat, dropoff_lng=ride.pickup_lng,
+                 dropoff_address="Другая подпись")
+    with pytest.raises(ValidationError, match="coordinates are equal"):
+        RideSchemaCreate(**route)
 
 
 def test_ride_request_contract_constants():
